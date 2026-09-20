@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Politique reseau en debug uniquement.
+  * HTTPS reste la regle par defaut.
+  * HTTP en clair est autorise vers l'hote de l'emulateur (10.0.2.2), vers
+    localhost et vers l'adresse cablee d'un telephone/tablette de test.
+  Le build release n'inclut PAS ce fichier.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false"/>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>
