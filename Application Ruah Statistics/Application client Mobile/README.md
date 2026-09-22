@@ -51,26 +51,37 @@ L'administration (gestion des services, realisations, publications, temoignages,
 ## Demarrage
 
 ```bash
-flutter create --org com.ruahstatistics ruah_statistics_mobile
-cd ruah_statistics_mobile
 flutter pub get
 flutter run
 ```
 
-## Configuration
+Par defaut l'app cible l'API de production Railway — aucun parametre necessaire.
+Pour cibler l'API locale (Docker) :
 
-Creer un fichier `lib/config/api_config.dart` :
+```bash
+# Emulateur Android
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8001/api/v1
 
-```dart
-class ApiConfig {
-  static const String baseUrl = 'https://api.ruah-statistics.com/api/v1';
-  // En dev : 'http://localhost:8001/api/v1'
-}
+# Telephone physique en USB (apres adb reverse tcp:8001 tcp:8001)
+flutter run --dart-define=API_BASE_URL=http://localhost:8001/api/v1
 ```
+
+> **Note chemin non-ASCII** : sur ce PC, lancer les builds depuis un
+> drive virtuel (`subst X: "<chemin>"` puis `cd X:\`).
+
+## Documentation complementaire
+
+- [docs/SETUP.md](docs/SETUP.md) — **actions manuelles a mener** :
+  cles SHA, projet Firebase, google-services.json, services FCM/Crashlytics
+  a activer, configuration reseau dev/prod, keystore release, publication
+  Google Play, GeniusPay (non applicable), Meta (non applicable).
+- [docs/API_INTEGRATION.md](docs/API_INTEGRATION.md) — schemas API testes
+  contre le backend cabinet-etudes, divergences avec le CLAUDE.md et
+  ajustements UX (WhatsApp remplace email partout).
 
 ## Contact
 
 - **Site web** : ruah-statistics.com
 - **Email** : contact@ruah-statistics.com
-- **Telephone** : +225 05 45 07 98 50
+- **Telephone / WhatsApp** : +225 05 45 07 98 50
 - **Adresse** : 123 Avenue de l'Independance, Abidjan, Cote d'Ivoire
