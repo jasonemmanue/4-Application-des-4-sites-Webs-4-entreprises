@@ -1,0 +1,64 @@
+name: flora_hair_mobile
+description: Application mobile Flutter du salon Flora Hair (Abidjan).
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+  flutter: '>=3.19.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+
+  # State management
+  flutter_riverpod: ^2.5.1
+
+  # Navigation
+  go_router: ^14.2.0
+
+  # HTTP
+  dio: ^5.4.0
+
+  # UI / assets
+  cached_network_image: ^3.3.1
+  google_fonts: ^6.2.1
+  shimmer: ^3.0.0
+  flutter_animate: ^4.5.0
+  share_plus: ^9.0.0
+  image_picker: ^1.1.2
+  intl: ^0.19.0
+
+  # Utils
+  url_launcher: ^6.2.5
+
+  # Firebase (push)
+  firebase_core: ^3.3.0
+  firebase_messaging: ^15.0.4
+
+dev_dependencies:
+  flutter_lints: ^4.0.0
+  flutter_test:
+    sdk: flutter
+  flutter_launcher_icons: ^0.13.1
+  image: ^4.2.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/branding/
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  remove_alpha_ios: true
+  image_path: "assets/branding/app_icon.png"
+  adaptive_icon_background: "#F5F0E1"
+  adaptive_icon_foreground: "assets/branding/app_icon_fg.png"
+  # Icone monochrome affichee par la barre de notifications Android
+  # (drawable "ic_stat_notification" declarable via AndroidManifest).
+  # flutter_launcher_icons ne genere pas directement les icones de notif ;
+  # on les copie a la main dans android/app/src/main/res/drawable-*.

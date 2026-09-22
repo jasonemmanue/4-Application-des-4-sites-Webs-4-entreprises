@@ -38,7 +38,6 @@ flora_hair_mobile/
       service.dart
       category.dart
       team_member.dart
-      team_availability.dart
       booking.dart
       payment.dart
       article.dart

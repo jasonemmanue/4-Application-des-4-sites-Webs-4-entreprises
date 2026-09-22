@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#F5F0E1</color>
+    <!-- Couleur de teinte appliquee par Android a l'icone monochrome des
+         notifications FCM. Or Flora Hair. -->
+    <color name="notification_color">#C5A55A</color>
+</resources>
