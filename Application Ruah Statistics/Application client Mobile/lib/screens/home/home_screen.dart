@@ -11,6 +11,7 @@ import '../../providers/providers.dart';
 import '../../services/api_client.dart' show PagedResult;
 import '../../widgets/error_state.dart';
 import '../../widgets/loading_state.dart';
+import '../../widgets/quote_notice.dart';
 
 /// Categorie active dans les chips « Tout / Services / Realisations » — pilote
 /// ce qui est visible dans le feed d'accueil (Airbnb-like).
@@ -33,8 +34,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final services = ref.watch(servicesProvider);
-    final projects =
-        ref.watch(projectsProvider(const ProjectFilter()));
+    final projects = ref.watch(projectsProvider(const ProjectFilter()));
     final themeMode = ref.watch(themeModeProvider);
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final Color bg = isDark ? AppColors.charcoal900 : AppColors.lightBg;
@@ -55,11 +55,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 _SearchAppBar(
                   isDark: isDark,
                   themeMode: themeMode,
-                  onToggleTheme: () => ref
-                      .read(themeModeProvider.notifier)
-                      .state = themeMode == ThemeMode.dark
-                      ? ThemeMode.light
-                      : ThemeMode.dark,
+                  onToggleTheme: () =>
+                      ref.read(themeModeProvider.notifier).state =
+                          themeMode == ThemeMode.dark
+                              ? ThemeMode.light
+                              : ThemeMode.dark,
                 ),
                 SliverToBoxAdapter(
                   child: Padding(
@@ -91,14 +91,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ],
             ),
           ),
-          // Pill flottante en bas — pendant du « Prices include all fees »
-          // d'Airbnb. Sur un site vitrine, on met en avant la consultation
-          // gratuite : c'est le principal levier de conversion.
-          Positioned(
-            left: 0,
-            right: 0,
+          // Pastille flottante — pendant du « Les prix comprennent tous les
+          // frais » d'Airbnb. Un tap ouvre le pop-up explicatif, qui mène au
+          // devis : le principal levier de conversion d'un site vitrine.
+          const Positioned(
+            left: AppSpacing.md,
+            right: AppSpacing.md,
             bottom: AppSpacing.md,
-            child: Center(child: _FloatingCta(isDark: isDark)),
+            child: Center(child: QuoteNoticePill()),
           ),
         ],
       ),
@@ -119,14 +119,10 @@ class _SearchAppBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color bg =
-        isDark ? AppColors.charcoal900 : AppColors.lightBg;
-    final Color pillBg =
-        isDark ? AppColors.charcoal800 : Colors.white;
-    final Color pillFg =
-        isDark ? Colors.white : AppColors.charcoal900;
-    final Color hint =
-        isDark ? Colors.white54 : Colors.black45;
+    final Color bg = isDark ? AppColors.charcoal900 : AppColors.lightBg;
+    final Color pillBg = isDark ? AppColors.charcoal800 : Colors.white;
+    final Color pillFg = isDark ? Colors.white : AppColors.charcoal900;
+    final Color hint = isDark ? Colors.white54 : Colors.black45;
 
     return SliverAppBar(
       pinned: true,
@@ -155,8 +151,8 @@ class _SearchAppBar extends StatelessWidget {
                   onTap: () => context.push(AppRoutes.search),
                   child: Container(
                     height: 56,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(999),
                       boxShadow: [
@@ -286,8 +282,7 @@ class _Chip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         onTap: onTap,
         child: Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
             border: Border.all(color: border),
@@ -342,8 +337,7 @@ class _SectionTitle extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
-                    color:
-                        isDark ? Colors.white : AppColors.charcoal900,
+                    color: isDark ? Colors.white : AppColors.charcoal900,
                     height: 1.2,
                   ),
                 ),
@@ -419,8 +413,7 @@ class _ServicesSection extends StatelessWidget {
               height: 300,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                 itemCount: items.length,
                 separatorBuilder: (_, __) =>
                     const SizedBox(width: AppSpacing.md),
@@ -431,10 +424,7 @@ class _ServicesSection extends StatelessWidget {
                     imageUrl: s.coverImage,
                     badge: i == 0 ? "Coup de coeur" : null,
                     title: s.title,
-                    subtitle: (s.description ?? '')
-                        .split('.')
-                        .first
-                        .trim(),
+                    subtitle: (s.description ?? '').split('.').first.trim(),
                     onTap: () =>
                         context.push('${AppRoutes.services}/${s.slug}'),
                   );
@@ -474,8 +464,7 @@ class _ProjectsSection extends StatelessWidget {
               height: 300,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                 itemCount: page.items.length,
                 separatorBuilder: (_, __) =>
                     const SizedBox(width: AppSpacing.md),
@@ -533,12 +522,9 @@ class _AirbnbCardState extends State<_AirbnbCard> {
 
   @override
   Widget build(BuildContext context) {
-    final Color cardBg =
-        widget.isDark ? AppColors.charcoal800 : Colors.white;
-    final Color titleFg =
-        widget.isDark ? Colors.white : AppColors.charcoal900;
-    final Color subFg =
-        widget.isDark ? Colors.white70 : Colors.black54;
+    final Color cardBg = widget.isDark ? AppColors.charcoal800 : Colors.white;
+    final Color titleFg = widget.isDark ? Colors.white : AppColors.charcoal900;
+    final Color subFg = widget.isDark ? Colors.white70 : Colors.black54;
 
     return SizedBox(
       width: 240,
@@ -574,8 +560,7 @@ class _AirbnbCardState extends State<_AirbnbCard> {
                               borderRadius: BorderRadius.circular(999),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black
-                                      .withValues(alpha: 0.15),
+                                  color: Colors.black.withValues(alpha: 0.15),
                                   blurRadius: 6,
                                   offset: const Offset(0, 2),
                                 ),
@@ -601,13 +586,10 @@ class _AirbnbCardState extends State<_AirbnbCard> {
                             padding: const EdgeInsets.all(6),
                             child: Icon(
                               _fav ? Icons.favorite : Icons.favorite_border,
-                              color: _fav
-                                  ? AppColors.brand400
-                                  : Colors.white,
+                              color: _fav ? AppColors.brand400 : Colors.white,
                               size: 26,
                               shadows: const [
-                                Shadow(
-                                    color: Colors.black45, blurRadius: 6),
+                                Shadow(color: Colors.black45, blurRadius: 6),
                               ],
                             ),
                           ),
@@ -618,8 +600,7 @@ class _AirbnbCardState extends State<_AirbnbCard> {
                 ),
               ),
               Padding(
-                padding:
-                    const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -675,55 +656,8 @@ class _AirbnbCardState extends State<_AirbnbCard> {
         gradient: AppColors.ctaGradient,
       ),
       alignment: Alignment.center,
-      child: const Icon(Icons.insights_outlined,
-          color: Colors.white70, size: 42),
-    );
-  }
-}
-
-class _FloatingCta extends StatelessWidget {
-  final bool isDark;
-  const _FloatingCta({required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: isDark ? AppColors.charcoal800 : Colors.white,
-      borderRadius: BorderRadius.circular(999),
-      elevation: 8,
-      shadowColor: Colors.black.withValues(alpha: 0.4),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(999),
-        onTap: () => context.push(AppRoutes.quote),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: const BoxDecoration(
-                  gradient: AppColors.ctaGradient,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: const Icon(Icons.chat_outlined,
-                    size: 18, color: Colors.white),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                'Consultation gratuite',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: isDark ? Colors.white : AppColors.charcoal900,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      child:
+          const Icon(Icons.insights_outlined, color: Colors.white70, size: 42),
     );
   }
 }

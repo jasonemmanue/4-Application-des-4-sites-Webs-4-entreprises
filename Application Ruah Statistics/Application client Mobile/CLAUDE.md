@@ -117,7 +117,11 @@ ruah_statistics_mobile/
 2. **Services** — Catalogue des domaines d'expertise avec fiches detaillees
 3. **Realisations** — Portfolio de projets filtrable (secteur, pays, annee)
 4. **Publications** — Articles et livres blancs avec telechargement (capture email)
-5. **Plus** — Equipe, A propos, Videos, Temoignages, Contact, Devis
+5. **Profil** (ex-« Plus ») — carte d'identite (nom + entreprise de la derniere demande de devis, « Visiteur » sinon), cartes Demander un devis / Nos realisations, carte large Parler a un consultant (WhatsApp), puis Equipe, A propos, Videos, Temoignages, Contact
+
+### Profil et pastille « Devis sans engagement » (2026-10-06)
+
+Voir `docs/PROFIL_ET_PASTILLE.md`. Pastille flottante → pop-up (navigateur racine) qui mene au devis. Elle remplace « Consultation gratuite », que le site ne promet nulle part.
 
 ### Ecrans detailles
 

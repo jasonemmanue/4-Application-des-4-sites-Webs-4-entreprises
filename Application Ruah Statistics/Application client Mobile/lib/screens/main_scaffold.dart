@@ -16,9 +16,10 @@ class MainScaffold extends StatelessWidget {
         Icons.business_center, 'Services'),
     _NavItem(AppRoutes.projects, Icons.folder_special_outlined,
         Icons.folder_special, 'Realisations'),
-    _NavItem(AppRoutes.publications, Icons.menu_book_outlined,
-        Icons.menu_book, 'Publications'),
-    _NavItem(AppRoutes.more, Icons.grid_view_outlined, Icons.grid_view, 'Plus'),
+    _NavItem(AppRoutes.publications, Icons.menu_book_outlined, Icons.menu_book,
+        'Publications'),
+    _NavItem(AppRoutes.more, Icons.person_outline_rounded, Icons.person_rounded,
+        'Profil'),
   ];
 
   int _currentIndex(String location) {

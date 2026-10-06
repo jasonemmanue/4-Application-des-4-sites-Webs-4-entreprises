@@ -6,6 +6,7 @@ import '../../config/routes.dart';
 import '../../config/theme.dart';
 import '../../models/lead.dart';
 import '../../providers/providers.dart';
+import '../../services/client_profile.dart';
 
 class QuoteFlowScreen extends ConsumerStatefulWidget {
   const QuoteFlowScreen({super.key});
@@ -67,6 +68,11 @@ class _QuoteFlowScreenState extends ConsumerState<QuoteFlowScreen> {
     try {
       final Map<String, dynamic> resp =
           await ref.read(apiClientProvider).submitQuoteRequest(lead);
+      // Pas de compte : le nom de la dernière demande personnalise le
+      // Profil.
+      await ref
+          .read(clientProfileProvider.notifier)
+          .save(name: lead.name, company: lead.company);
       if (!mounted) return;
       await ref
           .read(whatsAppServiceProvider)
@@ -168,8 +174,7 @@ class _QuoteFlowScreenState extends ConsumerState<QuoteFlowScreen> {
             const SizedBox(height: AppSpacing.sm),
             TextFormField(
               controller: _timeline,
-              decoration:
-                  const InputDecoration(labelText: 'Delais souhaites'),
+              decoration: const InputDecoration(labelText: 'Delais souhaites'),
             ),
             const SizedBox(height: AppSpacing.md),
             Text('Budget indicatif',
@@ -294,8 +299,7 @@ class _QuoteFlowScreenState extends ConsumerState<QuoteFlowScreen> {
             if (_step > 0) const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: ElevatedButton(
-                onPressed:
-                    _submitting ? null : (isLast ? _submit : _next),
+                onPressed: _submitting ? null : (isLast ? _submit : _next),
                 child: _submitting
                     ? const SizedBox(
                         width: 18,
