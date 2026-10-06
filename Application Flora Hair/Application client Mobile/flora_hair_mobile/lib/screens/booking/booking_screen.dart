@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../services/client_profile.dart';
 import '../../config/theme.dart';
 import '../../models/booking.dart';
 import '../../models/payment.dart';
@@ -55,7 +56,9 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
 
   Future<void> _loadSlots() async {
     final draft = ref.read(bookingDraftProvider);
-    if (draft.service == null || draft.teamMember == null || draft.date == null) {
+    if (draft.service == null ||
+        draft.teamMember == null ||
+        draft.date == null) {
       return;
     }
     setState(() => _loadingSlots = true);
@@ -112,12 +115,13 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
         timeSlot: draft.startTime!,
         customerName: draft.customerName,
         customerPhone: draft.customerPhone,
-        customerEmail:
-            draft.customerEmail.isEmpty ? null : draft.customerEmail,
+        customerEmail: draft.customerEmail.isEmpty ? null : draft.customerEmail,
         notes: draft.notes.isEmpty ? null : draft.notes,
       );
-      final created =
-          await ref.read(apiClientProvider).createBooking(booking);
+      final created = await ref.read(apiClientProvider).createBooking(booking);
+      // Pas de compte : le nom du dernier rendez-vous personnalise le
+      // Profil.
+      await ref.read(clientNameProvider.notifier).save(draft.customerName);
       final bookingId = created.id ?? created.reference ?? '';
       final init = await ref.read(paymentServiceProvider).initPayment(
             bookingId: bookingId,
@@ -169,8 +173,9 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                   if (step > 0)
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () =>
-                            ref.read(bookingStepProvider.notifier).state = step - 1,
+                        onPressed: () => ref
+                            .read(bookingStepProvider.notifier)
+                            .state = step - 1,
                         child: const Text('Retour'),
                       ),
                     ),
@@ -231,20 +236,22 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     }
   }
 
-  void _snack(String msg) => ScaffoldMessenger.of(context)
-      .showSnackBar(SnackBar(content: Text(msg)));
+  void _snack(String msg) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
   Widget _buildStep(int step, BookingDraft draft) {
     switch (step) {
       case 0:
         return _StepService(
           selectedId: draft.service?.id,
-          onSelect: (s) => ref.read(bookingDraftProvider.notifier).setService(s),
+          onSelect: (s) =>
+              ref.read(bookingDraftProvider.notifier).setService(s),
         );
       case 1:
         return _StepTeam(
           selectedId: draft.teamMember?.id,
-          onSelect: (t) => ref.read(bookingDraftProvider.notifier).setTeamMember(t),
+          onSelect: (t) =>
+              ref.read(bookingDraftProvider.notifier).setTeamMember(t),
         );
       case 2:
         return _StepDate(
@@ -272,8 +279,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                 notes: _notesCtrl,
               ),
               const SizedBox(height: 20),
-              Text('Depot 50 %',
-                  style: Theme.of(context).textTheme.titleLarge),
+              Text('Depot 50 %', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 4),
               Text(
                 'A regler : ${draft.service?.depositAmount ?? 0} FCFA (sur '

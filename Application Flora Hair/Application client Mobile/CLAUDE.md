@@ -129,7 +129,11 @@ flora_hair_mobile/
 2. **Services** — Catalogue filtrable par categorie avec tableau de prix
 3. **Reservation** — Formulaire multi-etapes avec calendrier et paiement
 4. **Galerie** — Grille masonry + filtres tags + avant/apres interactif
-5. **Plus** — Equipe, Articles, Videos, Avis, Devis photo, Formations, Contact
+5. **Profil** (ex-« Plus ») — carte d'identite (nom du dernier rendez-vous, « Visiteuse » sinon), cartes photo Prendre rendez-vous / Nos realisations, carte large Devis sur photo, puis Equipe, Articles, Videos, Avis, Formations, Contact
+
+### Profil et pastille « acompte 50 % » (2026-10-06)
+
+Voir `docs/PROFIL_ET_PASTILLE.md`. Pastille flottante « Reservez avec 50 % d'acompte » sur l'accueil → pop-up (navigateur racine) « Payez 50 % en ligne pour confirmer votre rendez-vous, le reste se regle au salon ».
 
 ### Flux de reservation (4 etapes)
 

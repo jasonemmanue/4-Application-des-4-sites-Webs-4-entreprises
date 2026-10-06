@@ -20,7 +20,8 @@ class RootShell extends StatelessWidget {
       Icons.photo_library_rounded,
       'Galerie',
     ),
-    _TabItem('/more', Icons.grid_view_outlined, Icons.grid_view_rounded, 'Plus'),
+    _TabItem(
+        '/more', Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
   ];
 
   int _indexFromLocation(String location) {

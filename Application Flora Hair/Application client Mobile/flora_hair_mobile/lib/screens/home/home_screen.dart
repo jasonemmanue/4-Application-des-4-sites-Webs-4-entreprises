@@ -7,6 +7,7 @@ import '../../models/service.dart';
 import '../../services/providers.dart';
 import '../../widgets/catalog_card.dart';
 import '../../widgets/category_pills.dart';
+import '../../widgets/deposit_notice.dart';
 import '../../widgets/search_bar_pill.dart';
 import '../../widgets/section_header_row.dart';
 
@@ -42,188 +43,209 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final gallery = ref.watch(galleryProvider);
     final articles = ref.watch(articlesProvider);
 
-    return SafeArea(
-      bottom: false,
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: <Widget>[
-          // Barre de recherche pill : ouvre la modale d'autocomplétion.
-          const SearchBarPill(),
+    return Stack(
+      children: <Widget>[
+        SafeArea(
+          bottom: false,
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: <Widget>[
+              // Barre de recherche pill : ouvre la modale d'autocomplétion.
+              const SearchBarPill(),
 
-          // Rangée de pastilles catégorie
-          CategoryPills(
-            items: _pills,
-            selectedIndex: _pill,
-            onChanged: (i) {
-              setState(() => _pill = i);
-              // Routage cohérent avec la sélection.
-              switch (i) {
-                case 3:
-                  context.go('/more'); // Formations vivent dans "Plus"
-                  break;
-                case 1:
-                case 2:
-                  context.go('/services');
-                  break;
-                default:
-                  break;
-              }
-            },
-          ),
-
-          // ── Prestations phares ─────────────────────────────
-          SectionHeaderRow(
-            title: 'Nos prestations phares',
-            onSeeAll: () => context.go('/services'),
-          ),
-          services.when(
-            data: (list) => _horizontalCarousel(
-              list.take(6).toList(),
-              (s) => CatalogCard(
-                title: s.name,
-                imageUrl: s.imageUrl,
-                metaLine: s.formattedPrice(),
-                ratingLine: _serviceDuration(s),
-                badge: (s.priceMax != null || s.priceFrom) ? 'Sur mesure' : null,
-                onTap: () => context.go('/services/${s.slug}'),
+              // Rangée de pastilles catégorie
+              CategoryPills(
+                items: _pills,
+                selectedIndex: _pill,
+                onChanged: (i) {
+                  setState(() => _pill = i);
+                  // Routage cohérent avec la sélection.
+                  switch (i) {
+                    case 3:
+                      context.go('/more'); // Formations vivent dans "Plus"
+                      break;
+                    case 1:
+                    case 2:
+                      context.go('/services');
+                      break;
+                    default:
+                      break;
+                  }
+                },
               ),
-            ),
-            loading: () => const _RowLoader(),
-            error: (e, _) => _errorTile('Impossible de charger les prestations'),
-          ),
 
-          // ── Coiffeuses ─────────────────────────────────────
-          SectionHeaderRow(
-            title: 'Rencontrez notre équipe',
-            subtitle: 'Choisissez votre coiffeuse pour votre prochain rendez-vous.',
-            onSeeAll: () => context.go('/team'),
-          ),
-          team.when(
-            data: (list) => _horizontalCarousel(
-              list,
-              (m) => CatalogCard(
-                title: m.name,
-                imageUrl: m.photoUrl,
-                metaLine: (m.specialties.isNotEmpty ? m.specialties.first : 'Coiffeuse'),
-                ratingLine: null,
-                imageAspectRatio: 3 / 4,
-                width: 180,
-                onTap: () => context.go('/booking'),
+              // ── Prestations phares ─────────────────────────────
+              SectionHeaderRow(
+                title: 'Nos prestations phares',
+                onSeeAll: () => context.go('/services'),
               ),
-              itemHeight: 320,
-            ),
-            loading: () => const _RowLoader(),
-            error: (e, _) => _errorTile("Impossible de charger l'équipe"),
-          ),
-
-          // ── Galerie ─────────────────────────────────────────
-          SectionHeaderRow(
-            title: 'Réalisations récentes',
-            onSeeAll: () => context.go('/gallery'),
-          ),
-          gallery.when(
-            data: (list) {
-              final display = list.take(4).toList();
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: display.length,
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 0.78,
+              services.when(
+                data: (list) => _horizontalCarousel(
+                  list.take(6).toList(),
+                  (s) => CatalogCard(
+                    title: s.name,
+                    imageUrl: s.imageUrl,
+                    metaLine: s.formattedPrice(),
+                    ratingLine: _serviceDuration(s),
+                    badge: (s.priceMax != null || s.priceFrom)
+                        ? 'Sur mesure'
+                        : null,
+                    onTap: () => context.go('/services/${s.slug}'),
                   ),
-                  itemBuilder: (context, i) {
-                    final title = display[i].title;
-                    return CatalogCard(
-                      title: (title == null || title.isEmpty)
-                          ? 'Réalisation'
-                          : title,
-                      imageUrl: display[i].imageUrl,
-                      metaLine: display[i].tags.isNotEmpty
-                          ? display[i].tags.first
-                          : '',
-                      onTap: () => context.go('/gallery'),
-                    );
-                  },
                 ),
-              );
-            },
-            loading: () => const _RowLoader(),
-            error: (e, _) => const SizedBox.shrink(),
-          ),
+                loading: () => const _RowLoader(),
+                error: (e, _) =>
+                    _errorTile('Impossible de charger les prestations'),
+              ),
 
-          // ── Articles ────────────────────────────────────────
-          SectionHeaderRow(
-            title: 'Conseils beauté',
-            subtitle: 'Nos derniers articles pour prendre soin de vos cheveux.',
-            onSeeAll: () => context.go('/articles'),
-          ),
-          articles.when(
-            data: (list) => _horizontalCarousel(
-              list.take(6).toList(),
-              (a) => CatalogCard(
-                title: a.title,
-                imageUrl: a.coverUrl,
-                metaLine: a.excerpt,
-                imageAspectRatio: 4 / 3,
-                width: 260,
-                onTap: () => context.go('/articles/${a.slug}'),
+              // ── Coiffeuses ─────────────────────────────────────
+              SectionHeaderRow(
+                title: 'Rencontrez notre équipe',
+                subtitle:
+                    'Choisissez votre coiffeuse pour votre prochain rendez-vous.',
+                onSeeAll: () => context.go('/team'),
               ),
-              itemHeight: 280,
-            ),
-            loading: () => const _RowLoader(),
-            error: (e, _) => const SizedBox.shrink(),
-          ),
+              team.when(
+                data: (list) => _horizontalCarousel(
+                  list,
+                  (m) => CatalogCard(
+                    title: m.name,
+                    imageUrl: m.photoUrl,
+                    metaLine: (m.specialties.isNotEmpty
+                        ? m.specialties.first
+                        : 'Coiffeuse'),
+                    ratingLine: null,
+                    imageAspectRatio: 3 / 4,
+                    width: 180,
+                    onTap: () => context.go('/booking'),
+                  ),
+                  itemHeight: 320,
+                ),
+                loading: () => const _RowLoader(),
+                error: (e, _) => _errorTile("Impossible de charger l'équipe"),
+              ),
 
-          // Pied de page — bandeau CTA plein
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 32, 16, 24),
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-              decoration: BoxDecoration(
-                gradient: FloraColors.goldGradient,
-                borderRadius: BorderRadius.circular(FloraTheme.cardRadius),
+              // ── Galerie ─────────────────────────────────────────
+              SectionHeaderRow(
+                title: 'Réalisations récentes',
+                onSeeAll: () => context.go('/gallery'),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const Text(
-                    'Prête à briller ?',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
+              gallery.when(
+                data: (list) {
+                  final display = list.take(4).toList();
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: display.length,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 16,
+                        childAspectRatio: 0.78,
+                      ),
+                      itemBuilder: (context, i) {
+                        final title = display[i].title;
+                        return CatalogCard(
+                          title: (title == null || title.isEmpty)
+                              ? 'Réalisation'
+                              : title,
+                          imageUrl: display[i].imageUrl,
+                          metaLine: display[i].tags.isNotEmpty
+                              ? display[i].tags.first
+                              : '',
+                          onTap: () => context.go('/gallery'),
+                        );
+                      },
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Réservez votre prochain rendez-vous en quelques minutes.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white.withValues(alpha: 0.95),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: FloraColors.textPrimary,
-                    ),
-                    onPressed: () => context.go('/booking'),
-                    child: const Text('Prendre rendez-vous'),
-                  ),
-                ],
+                  );
+                },
+                loading: () => const _RowLoader(),
+                error: (e, _) => const SizedBox.shrink(),
               ),
-            ),
+
+              // ── Articles ────────────────────────────────────────
+              SectionHeaderRow(
+                title: 'Conseils beauté',
+                subtitle:
+                    'Nos derniers articles pour prendre soin de vos cheveux.',
+                onSeeAll: () => context.go('/articles'),
+              ),
+              articles.when(
+                data: (list) => _horizontalCarousel(
+                  list.take(6).toList(),
+                  (a) => CatalogCard(
+                    title: a.title,
+                    imageUrl: a.coverUrl,
+                    metaLine: a.excerpt,
+                    imageAspectRatio: 4 / 3,
+                    width: 260,
+                    onTap: () => context.go('/articles/${a.slug}'),
+                  ),
+                  itemHeight: 280,
+                ),
+                loading: () => const _RowLoader(),
+                error: (e, _) => const SizedBox.shrink(),
+              ),
+
+              // Pied de page — bandeau CTA plein
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 32, 16, 24),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+                  decoration: BoxDecoration(
+                    gradient: FloraColors.goldGradient,
+                    borderRadius: BorderRadius.circular(FloraTheme.cardRadius),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const Text(
+                        'Prête à briller ?',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Réservez votre prochain rendez-vous en quelques minutes.',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white.withValues(alpha: 0.95),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: FloraColors.textPrimary,
+                        ),
+                        onPressed: () => context.go('/booking'),
+                        child: const Text('Prendre rendez-vous'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Dégagement : la pastille flottante ne doit pas masquer le bas.
+              const SizedBox(height: 96),
+            ],
           ),
-          const SizedBox(height: 32),
-        ],
-      ),
+        ),
+        // Pastille flottante — comme « Les prix comprennent tous les frais »
+        // d'Airbnb. Un tap ouvre le pop-up explicatif.
+        const Positioned(
+          left: 16,
+          right: 16,
+          bottom: 16,
+          child: Center(child: DepositNoticePill()),
+        ),
+      ],
     );
   }
 
