@@ -1,0 +1,60 @@
+name: chic_residence_backoffice
+description: "Chic Residence - Backoffice mobile administrateur (admin + suivi terrain)."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.6.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # State / nav / http
+  flutter_riverpod: ^2.5.1
+  go_router: ^14.2.7
+  dio: ^5.7.0
+
+  # UI / Media
+  cached_network_image: ^3.4.1
+  google_fonts: ^6.2.1
+  shimmer: ^3.0.0
+  fl_chart: ^0.68.0
+  table_calendar: ^3.1.2
+
+  # Secure storage
+  flutter_secure_storage: ^9.2.2
+
+  # Firebase
+  firebase_core: ^3.6.0
+  firebase_messaging: ^15.1.3
+
+  # Files
+  share_plus: ^10.0.2
+  path_provider: ^2.1.4
+  image_picker: ^1.1.2
+
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/branding/
+
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: true
+  remove_alpha_ios: true
+  image_path: "assets/branding/logo-medallion.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#FAF3E8"
+  adaptive_icon_foreground: "assets/branding/logo-icon.png"
+  adaptive_icon_foreground_inset: 16
+

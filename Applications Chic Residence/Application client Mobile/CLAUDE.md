@@ -222,13 +222,21 @@ chic_residence_mobile/
 - Persistance via session anonyme (UUID localStorage + API)
 - Sans compte — le favori est lie a l'appareil
 
-### Ecran Profil
+### Ecran Profil (refonte 2026-10-06 — voir `../docs/PROFIL_ET_PASTILLE.md`)
 
-- Se connecter / S'inscrire (futur)
-- Parametres de l'application
-- Aide / FAQ
-- Mentions legales, CGV, Confidentialite
-- Version de l'application
+- Cloche + grand titre « Profil »
+- Carte d'identite : avatar vert pale + nom de la derniere reservation
+  (« Visiteur » sans reservation — il n'y a pas de compte)
+- Deux cartes photo : Mes reservations, Mes favoris
+- Carte large : Proposer votre logement (WhatsApp)
+- Parametres, aide, apparence clair / auto / sombre, mentions legales, version
+
+### Pastille « Aucun frais cache » (accueil)
+
+Pastille flottante en bas de l'Explorer ; un tap ouvre un pop-up (bottom sheet
+sur le navigateur racine) avec bouton « J'ai compris ». Masquee pour de bon
+une fois lue. **Ne pas ecrire « tous frais inclus »** : le prix par nuit des
+cartes est hors frais de service (5 %).
 
 ## Endpoints API a consommer
 
