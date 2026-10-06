@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../services/member_profile.dart';
 import '../../config/api_config.dart';
 import '../../config/theme.dart';
 import '../../models/payment.dart';
@@ -15,9 +16,8 @@ import '../../widgets/payment_method_picker.dart';
 import '../payment/payment_wait_screen.dart';
 
 class SubscriptionOrderScreen extends ConsumerStatefulWidget {
-  /// Le slug est ici l'`id` de la formule (les subscriptions n'ont plus de slug).
-  final String slug;
-  const SubscriptionOrderScreen({super.key, required this.slug});
+  final String subscriptionId;
+  const SubscriptionOrderScreen({super.key, required this.subscriptionId});
 
   @override
   ConsumerState<SubscriptionOrderScreen> createState() =>
@@ -48,6 +48,9 @@ class _SubscriptionOrderScreenState
         userName: _name.text.trim(),
         userWhatsapp: _whatsapp.text.trim(),
       );
+      // Pas de compte : le nom de la dernière inscription personnalise le
+      // Profil.
+      await ref.read(memberNameProvider.notifier).save(_name.text);
 
       final normalized =
           ref.read(paymentServiceProvider).normalizePhone(_payerPhone.text);
@@ -59,9 +62,7 @@ class _SubscriptionOrderScreenState
 
       if (!mounted) return;
       if (_operator == PaymentOperator.wave && init.paymentUrl.isNotEmpty) {
-        await ref
-            .read(paymentServiceProvider)
-            .openCheckoutUrl(init.paymentUrl);
+        await ref.read(paymentServiceProvider).openCheckoutUrl(init.paymentUrl);
       }
       final res = await Navigator.of(context).push<PaymentStatus?>(
         MaterialPageRoute(
@@ -103,7 +104,7 @@ class _SubscriptionOrderScreenState
         ),
         data: (list) {
           final sub = list.firstWhere(
-            (s) => s.id == widget.slug,
+            (s) => s.id == widget.subscriptionId,
             orElse: () => list.first,
           );
           final deposit = ref
@@ -148,7 +149,8 @@ class _SubscriptionOrderScreenState
                       controller: _name,
                       validator: (v) =>
                           (v == null || v.trim().isEmpty) ? 'Requis' : null,
-                      decoration: const InputDecoration(labelText: 'Nom complet'),
+                      decoration:
+                          const InputDecoration(labelText: 'Nom complet'),
                     ),
                     const SizedBox(height: 10),
                     TextFormField(
@@ -161,8 +163,7 @@ class _SubscriptionOrderScreenState
                         return null;
                       },
                       decoration: const InputDecoration(
-                          labelText: 'Numero WhatsApp',
-                          prefixText: '+225 '),
+                          labelText: 'Numero WhatsApp', prefixText: '+225 '),
                     ),
                   ],
                 ),
@@ -178,7 +179,8 @@ class _SubscriptionOrderScreenState
                 selected: _operator,
                 onChanged: (op) => setState(() {
                   _operator = op;
-                  if (_payerPhone.text.isEmpty) _payerPhone.text = _whatsapp.text;
+                  if (_payerPhone.text.isEmpty)
+                    _payerPhone.text = _whatsapp.text;
                 }),
               ),
               if (_operator != null) ...[

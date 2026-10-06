@@ -1,3 +1,5 @@
+import '../config/api_config.dart';
+
 class Equipment {
   final String id;
   final String name;
@@ -22,7 +24,7 @@ class Equipment {
         name: json['name'] as String,
         description: json['description'] as String?,
         zone: json['zone'] as String? ?? 'Divers',
-        imageUrl: json['image_url'] as String?,
+        imageUrl: ApiConfig.resolveMediaUrl(json['image_url'] as String?),
         quantity: (json['quantity'] as num?)?.toInt() ?? 1,
         isActive: json['is_active'] as bool? ?? true,
       );

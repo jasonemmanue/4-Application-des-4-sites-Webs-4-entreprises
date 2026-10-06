@@ -1,3 +1,5 @@
+import '../config/api_config.dart';
+
 class Transformation {
   final String id;
   final String memberName;
@@ -22,8 +24,8 @@ class Transformation {
   factory Transformation.fromJson(Map<String, dynamic> json) => Transformation(
         id: json['id'].toString(),
         memberName: json['member_name'] as String? ?? '',
-        beforeImageUrl: json['before_image_url'] as String?,
-        afterImageUrl: json['after_image_url'] as String?,
+        beforeImageUrl: ApiConfig.resolveMediaUrl(json['before_image_url'] as String?),
+        afterImageUrl: ApiConfig.resolveMediaUrl(json['after_image_url'] as String?),
         testimonial: json['testimonial'] as String?,
         durationText: json['duration_text'] as String?,
         isFeatured: json['is_featured'] as bool? ?? false,

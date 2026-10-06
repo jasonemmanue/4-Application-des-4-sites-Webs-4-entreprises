@@ -1,3 +1,5 @@
+import '../config/api_config.dart';
+
 class Activity {
   final String id;
   final String slug;
@@ -34,7 +36,7 @@ class Activity {
         level: json['level'] as String? ?? '',
         durationMinutes: (json['duration_minutes'] as num?)?.toInt() ?? 60,
         maxCapacity: (json['max_capacity'] as num?)?.toInt() ?? 0,
-        imageUrl: json['image_url'] as String?,
+        imageUrl: ApiConfig.resolveMediaUrl(json['image_url'] as String?),
         isActive: json['is_active'] as bool? ?? true,
         order: (json['order'] as num?)?.toInt() ?? 0,
       );

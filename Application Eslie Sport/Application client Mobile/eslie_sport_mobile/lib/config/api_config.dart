@@ -46,6 +46,30 @@ class ApiConfig {
   static String get apiBase => '$baseUrl$apiVersion';
   static String get uploadsBase => '$baseUrl/uploads';
 
+  /// URL du site public Next.js — sert les fichiers statiques du dossier
+  /// `frontend/public/` (les `/images/...` figes en base). Ces images ne
+  /// sont pas hebergees par l'API, il faut donc pointer vers le frontend.
+  static const String siteBase = 'https://www.esliesport.com';
+
+  /// Transforme une URL de media en URL absolue exploitable par le mobile.
+  ///
+  ///   * URL vide ou null  -> null
+  ///   * http:// / https:// -> renvoyee telle quelle
+  ///   * `/uploads/...`     -> prefixee par `baseUrl` (API Railway)
+  ///   * `/images/...`      -> prefixee par `siteBase` (site public Next.js)
+  ///   * autre chemin relatif -> prefixee par `siteBase` (fallback safe)
+  static String? resolveMediaUrl(String? raw) {
+    if (raw == null) return null;
+    final path = raw.trim();
+    if (path.isEmpty) return null;
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    if (path.startsWith('/uploads/')) return '$baseUrl$path';
+    if (path.startsWith('/')) return '$siteBase$path';
+    return '$siteBase/$path';
+  }
+
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 20);
 

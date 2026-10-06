@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../services/member_profile.dart';
 import '../../config/api_config.dart';
 import '../../config/theme.dart';
 import '../../models/enrollment.dart';
@@ -41,8 +42,7 @@ class _EnrollmentScreenState extends ConsumerState<EnrollmentScreen> {
   ScheduleSlot? _slot;
 
   int _sessionPrice = 3000;
-  int get _deposit =>
-      (_sessionPrice * ApiConfig.depositPercent / 100).round();
+  int get _deposit => (_sessionPrice * ApiConfig.depositPercent / 100).round();
 
   @override
   void initState() {
@@ -99,6 +99,9 @@ class _EnrollmentScreenState extends ConsumerState<EnrollmentScreen> {
         feedback: _feedback.text.trim().isEmpty ? null : _feedback.text.trim(),
       );
       final enrollment = await api.createEnrollment(request);
+      // Pas de compte : le nom de la dernière inscription personnalise le
+      // Profil.
+      await ref.read(memberNameProvider.notifier).save(_name.text);
       final init = await ref.read(paymentServiceProvider).initiate(
             enrollmentId: enrollment.id,
             operator: _operator!,
@@ -107,9 +110,7 @@ class _EnrollmentScreenState extends ConsumerState<EnrollmentScreen> {
 
       if (!mounted) return;
       if (_operator == PaymentOperator.wave && init.paymentUrl.isNotEmpty) {
-        await ref
-            .read(paymentServiceProvider)
-            .openCheckoutUrl(init.paymentUrl);
+        await ref.read(paymentServiceProvider).openCheckoutUrl(init.paymentUrl);
       }
 
       final result = await Navigator.of(context).push<PaymentStatus?>(
@@ -143,7 +144,8 @@ class _EnrollmentScreenState extends ConsumerState<EnrollmentScreen> {
   }
 
   void _snack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   bool _validateStep1() => _formStep1.currentState?.validate() ?? false;
@@ -215,8 +217,7 @@ class _EnrollmentScreenState extends ConsumerState<EnrollmentScreen> {
                   const SizedBox(height: 6),
                   Text(labels[i],
                       style: TextStyle(
-                        color:
-                            active ? AppColors.primary : AppColors.darkMuted,
+                        color: active ? AppColors.primary : AppColors.darkMuted,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       )),
@@ -334,7 +335,8 @@ class _EnrollmentScreenState extends ConsumerState<EnrollmentScreen> {
                 Row(
                   children: [
                     const Text('Prix de la seance',
-                        style: TextStyle(color: AppColors.darkMuted, fontSize: 13)),
+                        style: TextStyle(
+                            color: AppColors.darkMuted, fontSize: 13)),
                     const Spacer(),
                     Text(formatFcfa(_sessionPrice),
                         style: const TextStyle(
@@ -396,7 +398,8 @@ class _EnrollmentScreenState extends ConsumerState<EnrollmentScreen> {
                 Expanded(
                   child: RichText(
                     text: TextSpan(
-                      style: const TextStyle(color: AppColors.dark, fontSize: 13),
+                      style:
+                          const TextStyle(color: AppColors.dark, fontSize: 13),
                       children: [
                         const TextSpan(
                             text: 'Depot 50% requis : ',
@@ -444,7 +447,8 @@ class _EnrollmentScreenState extends ConsumerState<EnrollmentScreen> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: _submitting ? null : () => setState(() => _step = 1),
+                  onPressed:
+                      _submitting ? null : () => setState(() => _step = 1),
                   child: const Text('Retour'),
                 ),
               ),
@@ -481,7 +485,8 @@ class _EnrollmentScreenState extends ConsumerState<EnrollmentScreen> {
           SizedBox(
             width: 90,
             child: Text(label,
-                style: const TextStyle(color: AppColors.darkMuted, fontSize: 13)),
+                style:
+                    const TextStyle(color: AppColors.darkMuted, fontSize: 13)),
           ),
           Expanded(
             child: Text(value,

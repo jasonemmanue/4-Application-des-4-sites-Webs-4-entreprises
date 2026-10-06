@@ -1,3 +1,5 @@
+import '../config/api_config.dart';
+
 class Article {
   final String id;
   final String title;
@@ -29,7 +31,7 @@ class Article {
       slug: json['slug'] as String,
       content: json['content'] as String? ?? '',
       excerpt: json['excerpt'] as String?,
-      coverImageUrl: json['cover_image_url'] as String?,
+      coverImageUrl: ApiConfig.resolveMediaUrl(json['cover_image_url'] as String?),
       status: json['status'] as String? ?? 'published',
       publishedAt: json['published_at'] != null
           ? DateTime.tryParse(json['published_at'] as String)

@@ -126,7 +126,11 @@ eslie_sport_mobile/
 2. **Activites** — Catalogue filtrable (categorie: force/cardio/souplesse/arts martiaux/danse, niveau)
 3. **Planning** — Grille horaire hebdomadaire interactive avec badges de capacite
 4. **Abonnements** — Comparaison des formules avec prix en FCFA
-5. **Plus** — Coachs, Equipements, Articles, Videos, Transformations, Avis, Contact, IMC
+5. **Profil** (ex-« Compte ») — carte d'identite (nom de la derniere inscription, « Visiteur » sinon), cartes photo Mes formules / Planning des cours, carte large Seance decouverte (WhatsApp), puis Coachs, Equipements, Transformations, Articles, Videos, Avis, IMC, Contact
+
+### Profil et pastille « acompte 50 % » (2026-10-06)
+
+Voir `docs/PROFIL_ET_PASTILLE.md`. Pastille flottante « Reservez avec 50 % d'acompte » sur l'accueil → pop-up (navigateur racine) « Payez 50 % maintenant, le reste se regle a la salle ». Ne jamais ecrire « depot inclus dans le prix » : c'etait faux.
 
 ### Ecrans detailles
 

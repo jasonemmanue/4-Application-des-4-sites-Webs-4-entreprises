@@ -1,3 +1,5 @@
+import '../config/api_config.dart';
+
 class Coach {
   final String id;
   final String name;
@@ -22,7 +24,7 @@ class Coach {
   factory Coach.fromJson(Map<String, dynamic> json) => Coach(
         id: json['id'].toString(),
         name: json['name'] as String,
-        photoUrl: json['photo_url'] as String?,
+        photoUrl: ApiConfig.resolveMediaUrl(json['photo_url'] as String?),
         certifications:
             (json['certifications'] as List?)?.map((e) => e.toString()).toList() ??
                 const [],

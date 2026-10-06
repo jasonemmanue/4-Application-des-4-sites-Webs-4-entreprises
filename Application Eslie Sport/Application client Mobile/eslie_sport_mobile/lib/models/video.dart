@@ -1,3 +1,5 @@
+import '../config/api_config.dart';
+
 class Video {
   final String id;
   final String title;
@@ -23,8 +25,8 @@ class Video {
         id: json['id'].toString(),
         title: json['title'] as String,
         description: json['description'] as String?,
-        videoUrl: json['video_url'] as String? ?? '',
-        thumbnailUrl: json['thumbnail_url'] as String?,
+        videoUrl: ApiConfig.resolveMediaUrl(json['video_url'] as String?) ?? '',
+        thumbnailUrl: ApiConfig.resolveMediaUrl(json['thumbnail_url'] as String?),
         category: json['category'] as String? ?? '',
         isPublished: json['is_published'] as bool? ?? true,
         order: (json['order'] as num?)?.toInt() ?? 0,

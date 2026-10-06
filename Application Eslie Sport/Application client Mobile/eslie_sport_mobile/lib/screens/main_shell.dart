@@ -3,32 +3,44 @@ import 'package:go_router/go_router.dart';
 
 import '../config/theme.dart';
 
+/// Bottom navigation Airbnb-like : icone au dessus d'un petit libelle,
+/// couleur d'accent sur l'onglet actif (rouge Airbnb), 5 destinations
+/// couvrant l'essentiel de l'app.
 class MainShell extends StatelessWidget {
   final Widget child;
   const MainShell({super.key, required this.child});
 
   static const _tabs = <_TabItem>[
-    _TabItem(path: '/', icon: Icons.home_outlined, activeIcon: Icons.home, label: 'Accueil'),
     _TabItem(
-        path: '/activities',
-        icon: Icons.fitness_center_outlined,
-        activeIcon: Icons.fitness_center,
-        label: 'Activites'),
+      path: '/',
+      icon: Icons.search,
+      activeIcon: Icons.search,
+      label: 'Explorer',
+    ),
     _TabItem(
-        path: '/schedule',
-        icon: Icons.calendar_month_outlined,
-        activeIcon: Icons.calendar_month,
-        label: 'Planning'),
+      path: '/schedule',
+      icon: Icons.calendar_today_outlined,
+      activeIcon: Icons.calendar_today,
+      label: 'Planning',
+    ),
     _TabItem(
-        path: '/subscriptions',
-        icon: Icons.card_membership_outlined,
-        activeIcon: Icons.card_membership,
-        label: 'Formules'),
+      path: '/subscriptions',
+      icon: Icons.workspace_premium_outlined,
+      activeIcon: Icons.workspace_premium,
+      label: 'Formules',
+    ),
     _TabItem(
-        path: '/more',
-        icon: Icons.grid_view_outlined,
-        activeIcon: Icons.grid_view,
-        label: 'Plus'),
+      path: '/activities',
+      icon: Icons.fitness_center_outlined,
+      activeIcon: Icons.fitness_center,
+      label: 'Activites',
+    ),
+    _TabItem(
+      path: '/more',
+      icon: Icons.person_outline,
+      activeIcon: Icons.person,
+      label: 'Profil',
+    ),
   ];
 
   int _currentIndex(BuildContext context) {
@@ -49,8 +61,8 @@ class MainShell extends StatelessWidget {
       body: child,
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
-          color: AppColors.darkCard,
-          border: Border(top: BorderSide(color: AppColors.darkBorder)),
+          color: AppColors.bg,
+          border: Border(top: BorderSide(color: AppColors.border)),
         ),
         child: SafeArea(
           top: false,
@@ -60,8 +72,8 @@ class MainShell extends StatelessWidget {
             items: [
               for (var i = 0; i < _tabs.length; i++)
                 BottomNavigationBarItem(
-                  icon: Icon(_tabs[i].icon),
-                  activeIcon: Icon(_tabs[i].activeIcon),
+                  icon: Icon(_tabs[i].icon, size: 24),
+                  activeIcon: Icon(_tabs[i].activeIcon, size: 24),
                   label: _tabs[i].label,
                 ),
             ],

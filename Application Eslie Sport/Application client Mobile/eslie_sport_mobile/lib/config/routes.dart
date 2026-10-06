@@ -73,9 +73,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
-        path: '/subscriptions/order/:slug',
+        path: '/subscriptions/order/:id',
         name: 'subscription-order',
-        builder: (_, state) => SubscriptionOrderScreen(slug: state.pathParameters['slug']!),
+        builder: (_, state) => SubscriptionOrderScreen(subscriptionId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/payment/result',
