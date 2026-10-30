@@ -13,3 +13,9 @@
 # OkHttp / Retrofit (utilise par certains plugins Flutter)
 -dontwarn okhttp3.**
 -dontwarn okio.**
+
+# Google Play Core — Flutter référence les classes de « deferred components »
+# (SplitCompat / SplitInstall) sans que la lib Play Core soit une dépendance.
+# Sans ces règles, R8 échoue sur « Missing classes ». Non utilisées ici.
+-dontwarn com.google.android.play.core.**
+-keep class com.google.android.play.core.** { *; }
