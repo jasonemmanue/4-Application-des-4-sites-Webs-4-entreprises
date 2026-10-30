@@ -64,6 +64,8 @@ class _BookingTunnelState extends ConsumerState<BookingTunnel> {
       case 2:
         return price != null;
       case 3:
+        // La carte bancaire ne demande pas de numéro Mobile Money.
+        if (!channel.needsPhone) return true;
         final phone = _phoneCtrl.text.replaceAll(RegExp(r'\D'), '');
         if (channel == PaymentChannel.wave) return phone.length >= 8;
         return phone.startsWith(channel.prefix);
@@ -644,7 +646,7 @@ class _PaymentStep extends StatelessWidget {
                   color: AppColors.primary600,
                 )),
         const SizedBox(height: 20),
-        Text('Choisissez votre operateur',
+        Text('Choisissez votre moyen de paiement',
             style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 12),
         Row(
@@ -652,7 +654,7 @@ class _PaymentStep extends StatelessWidget {
             for (final c in PaymentChannel.values)
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
                   child: _ChannelCard(
                     channel: c,
                     selected: channel == c,
@@ -663,18 +665,43 @@ class _PaymentStep extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 20),
-        TextField(
-          controller: phoneCtrl,
-          onChanged: (_) => onChanged(),
-          keyboardType: TextInputType.phone,
-          decoration: InputDecoration(
-            labelText: 'Numero ${channel.label}',
-            hintText: channel.prefix.isEmpty
-                ? '+225 ...'
-                : '${channel.prefix}XXXXXXXX',
-            prefixIcon: const Icon(Icons.call_outlined),
+        // La carte bancaire se règle sur une page sécurisée : pas de numéro
+        // Mobile Money à saisir.
+        if (channel.needsPhone)
+          TextField(
+            controller: phoneCtrl,
+            onChanged: (_) => onChanged(),
+            keyboardType: TextInputType.phone,
+            decoration: InputDecoration(
+              labelText: 'Numero ${channel.label}',
+              hintText: channel.prefix.isEmpty
+                  ? '+225 ...'
+                  : '${channel.prefix}XXXXXXXX',
+              prefixIcon: const Icon(Icons.call_outlined),
+            ),
+          )
+        else
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: context.tokens.surfaceSunken,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: context.tokens.border),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.lock_outline, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Paiement par carte Visa / Mastercard sur une page '
+                    'sécurisée. Aucun numéro à saisir ici.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
         const SizedBox(height: 16),
         Container(
           padding: const EdgeInsets.all(14),
@@ -689,7 +716,8 @@ class _PaymentStep extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 8),
               const _BulletLine(
-                  text: 'Wave : ouverture d\'une page de paiement securisee'),
+                  text:
+                      'Wave / Carte bancaire : page de paiement securisee dans le navigateur'),
               const _BulletLine(
                   text: 'Orange / MTN : notification USSD sur votre telephone'),
               const _BulletLine(
@@ -734,6 +762,32 @@ class _ChannelCard extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
+  IconData get _icon {
+    switch (channel) {
+      case PaymentChannel.wave:
+        return Icons.waves_rounded;
+      case PaymentChannel.orangeMoney:
+        return Icons.circle;
+      case PaymentChannel.mtnMoney:
+        return Icons.stars_rounded;
+      case PaymentChannel.card:
+        return Icons.credit_card_rounded;
+    }
+  }
+
+  Color get _color {
+    switch (channel) {
+      case PaymentChannel.wave:
+        return const Color(0xFF1BC8F1);
+      case PaymentChannel.orangeMoney:
+        return const Color(0xFFFF6600);
+      case PaymentChannel.mtnMoney:
+        return const Color(0xFFFFCC00);
+      case PaymentChannel.card:
+        return AppColors.primary600;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return InkWell(
@@ -753,22 +807,12 @@ class _ChannelCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Icon(
-              channel == PaymentChannel.wave
-                  ? Icons.waves_rounded
-                  : channel == PaymentChannel.orange
-                      ? Icons.circle
-                      : Icons.stars_rounded,
-              size: 28,
-              color: channel == PaymentChannel.wave
-                  ? const Color(0xFF1BC8F1)
-                  : channel == PaymentChannel.orange
-                      ? const Color(0xFFFF6600)
-                      : const Color(0xFFFFCC00),
-            ),
+            Icon(_icon, size: 28, color: _color),
             const SizedBox(height: 6),
             Text(
-              channel.label.split(' ').first,
+              channel.shortLabel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 fontSize: 12,

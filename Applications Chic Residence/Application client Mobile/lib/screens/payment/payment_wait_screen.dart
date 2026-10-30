@@ -11,7 +11,10 @@ import '../../models/payment.dart';
 import '../../providers/providers.dart';
 import '../../services/whatsapp_service.dart';
 
-/// Ecran d'attente du paiement (Wave = navigateur externe, Orange/MTN = USSD).
+/// Ecran d'attente du paiement. Deux familles de canaux :
+/// - **page web** (Wave, carte bancaire) : on ouvre `checkout_url` dans le
+///   navigateur externe, puis on attend le retour.
+/// - **USSD** (Orange, MTN) : notification poussée sur le téléphone.
 class PaymentWaitScreen extends ConsumerStatefulWidget {
   const PaymentWaitScreen({
     super.key,
@@ -50,7 +53,8 @@ class _PaymentWaitScreenState extends ConsumerState<PaymentWaitScreen> {
   }
 
   Future<void> _launchIfNeeded() async {
-    if (widget.channel == PaymentChannel.wave && widget.checkoutUrl != null) {
+    // Canaux « page web » (Wave, carte) : ouvrir la page de paiement.
+    if (!widget.channel.usesPush && widget.checkoutUrl != null) {
       final uri = Uri.tryParse(widget.checkoutUrl!);
       if (uri != null) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -127,15 +131,16 @@ class _PaymentWaitScreenState extends ConsumerState<PaymentWaitScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            if (widget.channel != PaymentChannel.wave)
+            if (widget.channel.usesPush)
               const _InstructionBanner(
                 text:
                     'Regardez votre telephone : une notification USSD est arrivee. Composez votre code secret pour confirmer.',
               ),
-            if (widget.channel == PaymentChannel.wave)
-              const _InstructionBanner(
-                text:
-                    'Wave s\'est ouvert dans votre navigateur. Finalisez le paiement puis revenez ici.',
+            if (!widget.channel.usesPush)
+              _InstructionBanner(
+                text: widget.channel == PaymentChannel.card
+                    ? 'La page de paiement par carte s\'est ouverte dans votre navigateur. Finalisez le paiement puis revenez ici.'
+                    : 'Wave s\'est ouvert dans votre navigateur. Finalisez le paiement puis revenez ici.',
               ),
             const Spacer(),
             if (_status == PaymentStatus.failed ||
