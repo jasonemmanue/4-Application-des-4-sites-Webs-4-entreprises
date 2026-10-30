@@ -27,16 +27,23 @@ class ApiClient {
         handler.next(options);
       },
       onError: (e, handler) {
+        final code = e.response?.statusCode;
+        if (code == 401) {
+          onSessionExpired?.call();
+        }
         final msg = _extract(e);
         handler.reject(DioException(
           requestOptions: e.requestOptions,
-          error: ApiException(msg, statusCode: e.response?.statusCode),
+          error: ApiException(msg, statusCode: code),
           response: e.response,
           type: e.type,
         ));
       },
     ));
   }
+
+  /// Callback appele quand le serveur repond 401 (session expiree/revoquee).
+  void Function()? onSessionExpired;
 
   final Dio dio;
   final _storage = const FlutterSecureStorage();
@@ -50,10 +57,31 @@ class ApiClient {
   Future<String?> readToken() => _storage.read(key: ApiConfig.tokenKey);
 
   static String _extract(DioException e) {
+    final code = e.response?.statusCode;
     final data = e.response?.data;
-    if (data is Map && data['detail'] != null) return data['detail'].toString();
-    if (data is Map && data['message'] != null) return data['message'].toString();
+
+    if (data is Map) {
+      final raw = (data['detail'] ?? data['message'])?.toString();
+      if (raw != null && raw.length < 200 && !_looksInternal(raw)) return raw;
+    }
+
+    if (code == 429) return 'Trop de tentatives. Reessayez dans quelques instants.';
+    if (code == 401) return 'Session expiree. Reconnectez-vous.';
+    if (code == 403) return 'Acces refuse.';
+    if (code != null && code >= 500) return 'Erreur serveur. Reessayez plus tard.';
+
     if (e.type == DioExceptionType.connectionError) return 'Serveur injoignable.';
-    return e.message ?? 'Erreur inconnue';
+    return 'Une erreur est survenue.';
+  }
+
+  static bool _looksInternal(String msg) {
+    final lower = msg.toLowerCase();
+    return lower.contains('traceback') ||
+        lower.contains('stacktrace') ||
+        lower.contains('internal server') ||
+        lower.contains('sqlalchemy') ||
+        lower.contains('postgres') ||
+        lower.contains('redis') ||
+        lower.contains('file "');
   }
 }

@@ -17,6 +17,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _pin = TextEditingController();
   bool _loading = false;
   String? _error;
+  int _failCount = 0;
+  DateTime? _lockedUntil;
 
   @override
   void dispose() {
@@ -25,23 +27,47 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
+  bool get _isLocked =>
+      _lockedUntil != null && DateTime.now().isBefore(_lockedUntil!);
+
   Future<void> _submit() async {
-    if (_phone.text.trim().length < 8 || _pin.text.length < 4) {
-      setState(() => _error = 'Numero et code PIN requis.');
+    if (_isLocked) {
+      final secs = _lockedUntil!.difference(DateTime.now()).inSeconds;
+      setState(() => _error = 'Trop de tentatives. Reessayez dans $secs s.');
       return;
     }
+
+    final phone = _phone.text.trim();
+    final pin = _pin.text.trim();
+
+    if (phone.length < 8 || !RegExp(r'^[\d+\s]+$').hasMatch(phone)) {
+      setState(() => _error = 'Numero de telephone invalide.');
+      return;
+    }
+    if (pin.length < 4 || pin.length > 6 || !RegExp(r'^\d+$').hasMatch(pin)) {
+      setState(() => _error = 'Code PIN invalide (4 a 6 chiffres).');
+      return;
+    }
+
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final auth = ref.read(authServiceProvider);
-      final user =
-          await auth.login(phone: _phone.text.trim(), pin: _pin.text.trim());
+      final user = await auth.login(phone: phone, pin: pin);
+      _failCount = 0;
       ref.read(currentUserProvider.notifier).state = user;
       if (mounted) context.go('/');
     } catch (e) {
-      setState(() => _error = e.toString());
+      _failCount++;
+      if (_failCount >= 5) {
+        _lockedUntil = DateTime.now().add(const Duration(seconds: 120));
+        setState(() =>
+            _error = 'Trop de tentatives. Reessayez dans 120 secondes.');
+      } else {
+        setState(() => _error = 'Identifiant ou code PIN incorrect.');
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }

@@ -77,15 +77,18 @@ class _DetailBody extends ConsumerWidget {
                   final url = residence.photos.isEmpty
                       ? residence.mainPhoto
                       : residence.photos[i];
-                  return CachedNetworkImage(
-                    imageUrl: ApiConfig.resolveImage(url),
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) =>
-                        Container(color: context.tokens.imagePlaceholder),
-                    errorWidget: (_, __, ___) => Container(
-                      color: context.tokens.imagePlaceholder,
-                      child: Icon(Icons.image_outlined,
-                          size: 40, color: context.tokens.textSecondary),
+                  return Semantics(
+                    label: 'Photo ${i + 1} de ${residence.name}',
+                    child: CachedNetworkImage(
+                      imageUrl: ApiConfig.resolveImage(url),
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) =>
+                          Container(color: context.tokens.imagePlaceholder),
+                      errorWidget: (_, __, ___) => Container(
+                        color: context.tokens.imagePlaceholder,
+                        child: Icon(Icons.image_outlined,
+                            size: 40, color: context.tokens.textSecondary),
+                      ),
                     ),
                   );
                 },

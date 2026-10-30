@@ -21,8 +21,7 @@ class PushNotificationService {
         debugPrint('FCM token: $token');
       }
       return token;
-    } catch (e) {
-      debugPrint('FCM init failed: $e');
+    } catch (_) {
       return null;
     }
   }

@@ -62,15 +62,16 @@ android {
 
     buildTypes {
         release {
-            // Si key.properties existe → signature release.
-            // Sinon → fallback debug pour que `flutter run --release` marche
-            // encore, y compris quand un dev clone le repo sans keystore.
             signingConfig = if (keystorePropertiesFile.exists())
                 signingConfigs.getByName("release")
             else
                 signingConfigs.getByName("debug")
-            isMinifyEnabled = false
-            isShrinkResources = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }

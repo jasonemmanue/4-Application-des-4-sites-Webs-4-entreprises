@@ -1,15 +1,14 @@
+import 'lien_api.dart';
+
 /// Configuration API pour l'app Gestionnaire (terrain).
 class ApiConfig {
   ApiConfig._();
 
-  /// Cibles :
-  ///  - Production Railway (défaut) : https://api-production-4e71.up.railway.app
-  ///  - Docker local (émulateur Android) : http://10.0.2.2:8002
-  /// Exemple : flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8002
-  static const String baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'https://api-production-4e71.up.railway.app',
-  );
+  /// Base URL — surchargeable via --dart-define pour le dev local.
+  /// En production le lien est decode depuis [LienApi] (XOR, pas en clair).
+  static final String baseUrl = const String.fromEnvironment('API_BASE_URL').isEmpty
+      ? LienApi.apiUrl
+      : const String.fromEnvironment('API_BASE_URL');
 
   static const String apiPrefix = '/api/v1';
   static String get apiBase => '$baseUrl$apiPrefix';

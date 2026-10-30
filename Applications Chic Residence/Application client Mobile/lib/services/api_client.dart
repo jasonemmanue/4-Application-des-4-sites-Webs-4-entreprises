@@ -39,9 +39,22 @@ class ApiClient {
   }
 
   static String _extractMessage(DioException e) {
+    final code = e.response?.statusCode;
     final data = e.response?.data;
-    if (data is Map && data['detail'] != null) return data['detail'].toString();
-    if (data is Map && data['message'] != null) return data['message'].toString();
+
+    // Messages metier du serveur (detail/message) : on les affiche
+    // seulement s'ils ne contiennent pas de trace technique.
+    if (data is Map) {
+      final raw = (data['detail'] ?? data['message'])?.toString();
+      if (raw != null && raw.length < 200 && !_looksInternal(raw)) return raw;
+    }
+
+    if (code == 429) return 'Trop de tentatives. Reessayez dans quelques instants.';
+    if (code == 401) return 'Session expiree. Reconnectez-vous.';
+    if (code == 403) return 'Acces refuse.';
+    if (code == 404) return 'Ressource introuvable.';
+    if (code != null && code >= 500) return 'Erreur serveur. Reessayez plus tard.';
+
     if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout) {
       return 'Delai depasse. Verifiez votre connexion.';
@@ -49,7 +62,18 @@ class ApiClient {
     if (e.type == DioExceptionType.connectionError) {
       return 'Impossible de joindre le serveur.';
     }
-    return e.message ?? 'Une erreur est survenue.';
+    return 'Une erreur est survenue.';
+  }
+
+  static bool _looksInternal(String msg) {
+    final lower = msg.toLowerCase();
+    return lower.contains('traceback') ||
+        lower.contains('stacktrace') ||
+        lower.contains('internal server') ||
+        lower.contains('sqlalchemy') ||
+        lower.contains('postgres') ||
+        lower.contains('redis') ||
+        lower.contains('file "');
   }
 
   void updateSessionId(String sessionId) {

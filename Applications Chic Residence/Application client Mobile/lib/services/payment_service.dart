@@ -1,3 +1,6 @@
+import 'package:dio/dio.dart';
+import 'package:uuid/uuid.dart';
+
 import '../config/api_config.dart';
 import '../models/payment.dart';
 import 'api_client.dart';
@@ -10,18 +13,32 @@ import 'api_client.dart';
 class PaymentService {
   PaymentService(this._api);
   final ApiClient _api;
+  static const _uuid = Uuid();
+
+  bool _initInProgress = false;
 
   Future<PaymentInit> init({
     required String bookingId,
     required PaymentChannel channel,
     required String phone,
   }) async {
-    final res = await _api.dio.post('/payments/init', data: {
-      'booking_id': bookingId,
-      'channel': channel.apiValue,
-      'customer_phone': phone,
-    });
-    return PaymentInit.fromJson((res.data as Map).cast<String, dynamic>());
+    if (_initInProgress) {
+      throw ApiException('Paiement deja en cours. Patientez.');
+    }
+    _initInProgress = true;
+    try {
+      final idempotencyKey = _uuid.v4();
+      final res = await _api.dio.post('/payments/init',
+          data: {
+            'booking_id': bookingId,
+            'channel': channel.apiValue,
+            'customer_phone': phone,
+          },
+          options: Options(headers: {'X-Cle-Demande': idempotencyKey}));
+      return PaymentInit.fromJson((res.data as Map).cast<String, dynamic>());
+    } finally {
+      _initInProgress = false;
+    }
   }
 
   Future<PaymentStatus> status(String reference) async {
@@ -32,10 +49,13 @@ class PaymentService {
 
   Future<PaymentInit> retry(String reference,
       {required PaymentChannel newChannel, required String newPhone}) async {
-    final res = await _api.dio.post('/payments/$reference/retry', data: {
-      'channel': newChannel.apiValue,
-      'customer_phone': newPhone,
-    });
+    final idempotencyKey = _uuid.v4();
+    final res = await _api.dio.post('/payments/$reference/retry',
+        data: {
+          'channel': newChannel.apiValue,
+          'customer_phone': newPhone,
+        },
+        options: Options(headers: {'X-Cle-Demande': idempotencyKey}));
     return PaymentInit.fromJson((res.data as Map).cast<String, dynamic>());
   }
 

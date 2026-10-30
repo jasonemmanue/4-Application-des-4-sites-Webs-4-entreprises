@@ -1,23 +1,16 @@
+import 'lien_api.dart';
+
 /// Configuration des endpoints API de CHIC RESIDENCE.
 ///
 /// Le backend est le meme FastAPI que celui du site web Next.js.
-/// Ajuster [baseUrl] selon l'environnement (local, staging, production).
 class ApiConfig {
   ApiConfig._();
 
-  /// Base URL — a surcharger via --dart-define=API_BASE_URL=...
-  ///
-  /// Cibles courantes :
-  ///  - Production Railway (défaut) : https://api-production-4e71.up.railway.app
-  ///  - Docker local (émulateur Android) : http://10.0.2.2:8002
-  ///  - Docker local (device physique) : http://<ip-LAN>:8002
-  ///
-  /// Exemple :
-  ///   flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8002
-  static const String baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'https://api-production-4e71.up.railway.app',
-  );
+  /// Base URL — surchargeable via --dart-define=API_BASE_URL=http://10.0.2.2:8002
+  /// En production le lien est decode depuis [LienApi] (XOR, pas en clair).
+  static final String baseUrl = const String.fromEnvironment('API_BASE_URL').isEmpty
+      ? LienApi.apiUrl
+      : const String.fromEnvironment('API_BASE_URL');
 
   /// Prefixe versionne
   static const String apiPrefix = '/api/v1';
@@ -25,17 +18,10 @@ class ApiConfig {
   /// URL complete
   static String get apiBase => '$baseUrl$apiPrefix';
 
-  /// Base URL du site web qui sert les images statiques (`/images/...`,
-  /// `/uploads/...`). Les résidences renvoient des URLs relatives — elles
-  /// sont résolues via [resolveImage] avant d'être passées à
-  /// CachedNetworkImage.
-  ///
-  /// - Production : `https://www.chicresidencemeublee.com`
-  /// - Dev local  : passer `--dart-define=SITE_BASE_URL=http://10.0.2.2:3007`
-  static const String siteBaseUrl = String.fromEnvironment(
-    'SITE_BASE_URL',
-    defaultValue: 'https://www.chicresidencemeublee.com',
-  );
+  /// Base URL du site web (images statiques). Decode depuis [LienApi].
+  static final String siteBaseUrl = const String.fromEnvironment('SITE_BASE_URL').isEmpty
+      ? LienApi.siteUrl
+      : const String.fromEnvironment('SITE_BASE_URL');
 
   /// Convertit une URL d'image renvoyée par l'API en URL absolue chargeable.
   ///

@@ -49,15 +49,18 @@ class ResidenceCard extends ConsumerWidget {
                 child: Stack(
                   children: [
                     Positioned.fill(
-                      child: CachedNetworkImage(
-                        imageUrl: ApiConfig.resolveImage(residence.mainPhoto),
-                        fit: BoxFit.cover,
-                        placeholder: (_, __) =>
-                            Container(color: t.imagePlaceholder),
-                        errorWidget: (_, __, ___) => Container(
-                          color: t.imagePlaceholder,
-                          child: Icon(Icons.image_outlined,
-                              size: 40, color: t.textSecondary),
+                      child: Semantics(
+                        label: 'Photo de ${residence.name}',
+                        child: CachedNetworkImage(
+                          imageUrl: ApiConfig.resolveImage(residence.mainPhoto),
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) =>
+                              Container(color: t.imagePlaceholder),
+                          errorWidget: (_, __, ___) => Container(
+                            color: t.imagePlaceholder,
+                            child: Icon(Icons.image_outlined,
+                                size: 40, color: t.textSecondary),
+                          ),
                         ),
                       ),
                     ),

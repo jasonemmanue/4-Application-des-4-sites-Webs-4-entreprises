@@ -17,6 +17,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _password = TextEditingController();
   bool _loading = false;
   String? _error;
+  int _failCount = 0;
+  DateTime? _lockedUntil;
 
   @override
   void dispose() {
@@ -25,7 +27,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
+  bool get _isLocked =>
+      _lockedUntil != null && DateTime.now().isBefore(_lockedUntil!);
+
   Future<void> _submit() async {
+    if (_isLocked) {
+      final secs = _lockedUntil!.difference(DateTime.now()).inSeconds;
+      setState(() => _error = 'Trop de tentatives. Reessayez dans $secs s.');
+      return;
+    }
+
+    final email = _email.text.trim();
+    final password = _password.text;
+
+    if (email.isEmpty || !email.contains('@')) {
+      setState(() => _error = 'Adresse email invalide.');
+      return;
+    }
+    if (password.isEmpty) {
+      setState(() => _error = 'Mot de passe requis.');
+      return;
+    }
+
     setState(() {
       _loading = true;
       _error = null;
@@ -33,11 +56,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       final admin = await ref
           .read(authServiceProvider)
-          .login(_email.text.trim(), _password.text);
+          .login(email, password);
+      _failCount = 0;
       ref.read(currentAdminProvider.notifier).state = admin;
       if (mounted) context.go('/');
     } catch (e) {
-      setState(() => _error = e.toString());
+      _failCount++;
+      if (_failCount >= 5) {
+        _lockedUntil = DateTime.now().add(const Duration(seconds: 120));
+        setState(() =>
+            _error = 'Trop de tentatives. Reessayez dans 120 secondes.');
+      } else {
+        setState(() => _error = 'Identifiant ou mot de passe incorrect.');
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
