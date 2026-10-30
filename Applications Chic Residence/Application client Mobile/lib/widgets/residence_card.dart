@@ -21,18 +21,23 @@ class ResidenceCard extends ConsumerWidget {
     required this.residence,
     this.onTap,
     this.horizontal = false,
+    this.width,
   });
 
   final Residence residence;
   final VoidCallback? onTap;
   final bool horizontal;
 
+  /// Largeur imposée. Par défaut : 260 px en mode carrousel, pleine largeur
+  /// sinon. Permet des cadres plus compacts (carrousel style Airbnb, grille).
+  final double? width;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = context.tokens;
     final favorites = ref.watch(favoritesProvider);
     final isFav = favorites.contains(residence.id);
-    final width = horizontal ? 260.0 : double.infinity;
+    final width = this.width ?? (horizontal ? 260.0 : double.infinity);
 
     return SizedBox(
       width: width,

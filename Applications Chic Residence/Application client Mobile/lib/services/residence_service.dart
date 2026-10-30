@@ -139,4 +139,16 @@ class ResidenceService {
         .map((e) => Review.fromJson((e as Map).cast<String, dynamic>()))
         .toList();
   }
+
+  /// Avis récents (toutes résidences) — alimente le carrousel « Avis de nos
+  /// voyageurs » de l'accueil, comme le fait la page d'accueil du site web.
+  Future<List<Review>> topReviews({int limit = 12}) async {
+    final res =
+        await _api.dio.get('/reviews', queryParameters: {'limit': limit});
+    final data = res.data;
+    final items = (data is Map ? data['items'] : data) as List? ?? [];
+    return items
+        .map((e) => Review.fromJson((e as Map).cast<String, dynamic>()))
+        .toList();
+  }
 }

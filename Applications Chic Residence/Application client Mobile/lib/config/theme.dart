@@ -359,6 +359,47 @@ class AppGradients {
   );
 }
 
+/// Ombres portées douces et **chaudes** — les cartes « flottent » au-dessus du
+/// fond, dans les tons rouge/sable de la marque plutôt qu'un noir plat.
+///
+/// Deux ombres superposées (une large et diffuse pour le halo, une courte et
+/// dense sous la carte) : c'est ce doublement qui donne un relief net sans
+/// paraître ni plat ni sale.
+class AppShadows {
+  AppShadows._();
+
+  /// Pour les petits cadres (tuiles de chiffres, atouts, avis). En mode clair,
+  /// le halo prend une pointe de rouge marque ; en sombre, un noir profond.
+  static List<BoxShadow> soft(AppTokens t) => t.isDark
+      ? const [
+          BoxShadow(
+            color: Color(0x59000000),
+            blurRadius: 24,
+            spreadRadius: -12,
+            offset: Offset(0, 12),
+          ),
+          BoxShadow(
+            color: Color(0x33000000),
+            blurRadius: 5,
+            offset: Offset(0, 2),
+          ),
+        ]
+      : const [
+          BoxShadow(
+            // primary700 à ~11 % : halo chaud qui détache la carte du blanc.
+            color: Color(0x1CB91C1C),
+            blurRadius: 28,
+            spreadRadius: -12,
+            offset: Offset(0, 14),
+          ),
+          BoxShadow(
+            color: Color(0x12000000),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ];
+}
+
 class AppTheme {
   AppTheme._();
 

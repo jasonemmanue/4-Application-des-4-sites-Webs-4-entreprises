@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/other_models.dart';
 import '../models/residence.dart';
 import '../services/api_client.dart';
 import '../services/booking_service.dart';
@@ -57,6 +58,12 @@ final residencesProvider =
 final residenceDetailProvider =
     FutureProvider.family<Residence, String>((ref, idOrSlug) async {
   return ref.watch(residenceServiceProvider).detail(idOrSlug);
+});
+
+/// Avis récents (toutes résidences) pour le carrousel de l'accueil.
+final topReviewsProvider =
+    FutureProvider.autoDispose<List<Review>>((ref) async {
+  return ref.watch(residenceServiceProvider).topReviews(limit: 12);
 });
 
 /// Favoris : set d'IDs (UUID string).
