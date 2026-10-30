@@ -1,5 +1,6 @@
 package com.chicresidence.chic_residence_gestionnaire
 
+import android.content.pm.ApplicationInfo
 import android.os.Bundle
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
@@ -33,7 +34,13 @@ class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (!BuildConfig.DEBUG) {
+        // En release (APK non débogable), empêche les captures d'écran et le
+        // contenu dans le sélecteur d'apps. On lit le flag « debuggable » de
+        // l'ApplicationInfo plutôt que BuildConfig.DEBUG : BuildConfig n'est
+        // plus généré par défaut avec AGP 8+ (buildFeatures.buildConfig).
+        val isDebuggable =
+            (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        if (!isDebuggable) {
             window.setFlags(
                 WindowManager.LayoutParams.FLAG_SECURE,
                 WindowManager.LayoutParams.FLAG_SECURE
