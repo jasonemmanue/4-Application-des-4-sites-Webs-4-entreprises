@@ -28,11 +28,11 @@ class PagedResult<T> {
 }
 
 class ApiException implements Exception {
-  final String message;
+  final String userMessage;
   final int? statusCode;
-  const ApiException(this.message, {this.statusCode});
+  const ApiException(this.userMessage, {this.statusCode});
   @override
-  String toString() => 'ApiException($statusCode): $message';
+  String toString() => userMessage;
 }
 
 class ApiClient {
@@ -246,16 +246,32 @@ class ApiClient {
     if (e.type == DioExceptionType.connectionError) {
       return 'Impossible de contacter le serveur.';
     }
+    final status = e.response?.statusCode;
+    if (status == 429) return 'Trop de requetes. Reessayez dans quelques instants.';
+    if (status == 422) return 'Donnees invalides. Verifiez votre saisie.';
+    if (status != null && status >= 500) return 'Erreur du serveur. Reessayez plus tard.';
     final data = e.response?.data;
-    if (data is Map && data['detail'] is String) return data['detail'] as String;
-    if (data is Map && data['detail'] is List) {
-      final errs = (data['detail'] as List)
-          .map((e) => e is Map ? (e['msg'] ?? '').toString() : e.toString())
-          .where((s) => s.isNotEmpty)
-          .join(' ; ');
-      if (errs.isNotEmpty) return errs;
+    if (data is Map) {
+      final detail = data['detail'];
+      if (detail is String && detail.length < 200 && !_looksLikeTechnicalError(detail)) {
+        return detail;
+      }
+      final message = data['message'];
+      if (message is String && message.length < 200 && !_looksLikeTechnicalError(message)) {
+        return message;
+      }
     }
-    if (data is Map && data['message'] is String) return data['message'] as String;
-    return e.message ?? 'Erreur inconnue';
+    return 'Une erreur est survenue. Reessayez.';
+  }
+
+  bool _looksLikeTechnicalError(String s) {
+    final lower = s.toLowerCase();
+    return lower.contains('traceback') ||
+        lower.contains('exception') ||
+        lower.contains('stack') ||
+        lower.contains('sql') ||
+        lower.contains('internal server') ||
+        lower.contains('file "') ||
+        lower.contains('line ') && lower.contains(', in ');
   }
 }

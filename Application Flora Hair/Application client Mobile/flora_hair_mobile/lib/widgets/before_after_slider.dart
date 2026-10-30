@@ -50,12 +50,20 @@ class _BeforeAfterSliderState extends State<BeforeAfterSlider> {
         child: Stack(
           fit: StackFit.expand,
           children: <Widget>[
-            CachedNetworkImage(imageUrl: mediaUrl(widget.afterUrl), fit: BoxFit.cover),
+            Semantics(
+              label: 'Apres coiffure',
+              image: true,
+              child: CachedNetworkImage(imageUrl: mediaUrl(widget.afterUrl), fit: BoxFit.cover),
+            ),
             ClipRect(
               clipper: _LeftClipper(position: _position),
-              child: CachedNetworkImage(
-                imageUrl: mediaUrl(widget.beforeUrl),
-                fit: BoxFit.cover,
+              child: Semantics(
+                label: 'Avant coiffure',
+                image: true,
+                child: CachedNetworkImage(
+                  imageUrl: mediaUrl(widget.beforeUrl),
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
             Positioned(

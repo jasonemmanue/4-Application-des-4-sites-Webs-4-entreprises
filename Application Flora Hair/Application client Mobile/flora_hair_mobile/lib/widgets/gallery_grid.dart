@@ -39,11 +39,15 @@ class GalleryGrid extends StatelessWidget {
                       beforeUrl: item.beforeUrl!,
                       afterUrl: item.afterUrl!,
                     )
-                  : CachedNetworkImage(
-                      imageUrl: mediaUrl(item.imageUrl),
-                      fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) =>
-                          Container(color: FloraColors.darkLight),
+                  : Semantics(
+                      label: item.title ?? 'Photo galerie',
+                      image: true,
+                      child: CachedNetworkImage(
+                        imageUrl: mediaUrl(item.imageUrl),
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) =>
+                            Container(color: FloraColors.darkLight),
+                      ),
                     ),
             ),
           ),
@@ -82,7 +86,11 @@ class _LightboxModal extends StatelessWidget {
                         beforeUrl: item.beforeUrl!,
                         afterUrl: item.afterUrl!,
                       )
-                    : CachedNetworkImage(imageUrl: mediaUrl(item.imageUrl)),
+                    : Semantics(
+                        label: item.title ?? 'Photo galerie',
+                        image: true,
+                        child: CachedNetworkImage(imageUrl: mediaUrl(item.imageUrl)),
+                      ),
               ),
             ),
           ),

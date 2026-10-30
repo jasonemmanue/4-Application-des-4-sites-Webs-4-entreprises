@@ -163,6 +163,7 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
           const SizedBox(height: 16),
           TextField(
             controller: _name,
+            maxLength: 60,
             decoration: const InputDecoration(labelText: 'Votre nom'),
           ),
           const SizedBox(height: 12),
@@ -188,6 +189,7 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
             controller: _comment,
             minLines: 3,
             maxLines: 5,
+            maxLength: 1000,
             decoration:
                 const InputDecoration(labelText: 'Votre experience (optionnel)'),
           ),

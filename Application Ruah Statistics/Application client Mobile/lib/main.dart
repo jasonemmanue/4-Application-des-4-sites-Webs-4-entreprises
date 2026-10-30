@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +11,12 @@ import 'app.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // --- Securite : couper TOUS les logs en release (y compris les isolats) ---
+  if (kReleaseMode) {
+    debugPrint = (String? message, {int? wrapWidth}) {};
+  }
+
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -20,5 +29,11 @@ Future<void> main() async {
     // Firebase renvoie une erreur, l'app doit continuer de tourner. Les push
     // notifications sont un bonus, pas un pré-requis pour consulter le site.
   }
+
+  // --- Securite : empêcher les captures d'ecran en release (Android) ---
+  if (kReleaseMode && Platform.isAndroid) {
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  }
+
   runApp(const ProviderScope(child: RuahStatisticsApp()));
 }

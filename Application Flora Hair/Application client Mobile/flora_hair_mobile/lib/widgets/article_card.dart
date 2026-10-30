@@ -33,13 +33,17 @@ class ArticleCard extends StatelessWidget {
             if (article.coverUrl != null && article.coverUrl!.isNotEmpty)
               AspectRatio(
                 aspectRatio: 16 / 9,
-                child: CachedNetworkImage(
-                  imageUrl: mediaUrl(article.coverUrl),
-                  fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) =>
-                      Container(color: scheme.surfaceContainerHighest),
-                  placeholder: (_, __) =>
-                      Container(color: scheme.surfaceContainerHighest),
+                child: Semantics(
+                  label: article.title,
+                  image: true,
+                  child: CachedNetworkImage(
+                    imageUrl: mediaUrl(article.coverUrl),
+                    fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) =>
+                        Container(color: scheme.surfaceContainerHighest),
+                    placeholder: (_, __) =>
+                        Container(color: scheme.surfaceContainerHighest),
+                  ),
                 ),
               ),
             Padding(

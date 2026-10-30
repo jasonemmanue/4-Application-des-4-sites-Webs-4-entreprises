@@ -30,16 +30,19 @@ class TestimonialCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             Row(
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: AppColors.charcoal700,
-                  backgroundImage: testimonial.photo != null
-                      ? CachedNetworkImageProvider(testimonial.photo!)
-                      : null,
-                  child: testimonial.photo == null
-                      ? const Icon(Icons.person,
-                          color: Colors.white70, size: 18)
-                      : null,
+                Semantics(
+                  label: 'Photo de ${testimonial.author}',
+                  child: CircleAvatar(
+                    radius: 20,
+                    backgroundColor: AppColors.charcoal700,
+                    backgroundImage: testimonial.photo != null
+                        ? CachedNetworkImageProvider(testimonial.photo!)
+                        : null,
+                    child: testimonial.photo == null
+                        ? const Icon(Icons.person,
+                            color: Colors.white70, size: 18)
+                        : null,
+                  ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(

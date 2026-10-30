@@ -640,11 +640,14 @@ class _AirbnbCardState extends State<_AirbnbCard> {
 
   Widget _cover() {
     if (widget.imageUrl != null && widget.imageUrl!.isNotEmpty) {
-      return CachedNetworkImage(
-        imageUrl: widget.imageUrl!,
-        fit: BoxFit.cover,
-        placeholder: (_, __) => _fallback(),
-        errorWidget: (_, __, ___) => _fallback(),
+      return Semantics(
+        label: widget.title,
+        child: CachedNetworkImage(
+          imageUrl: widget.imageUrl!,
+          fit: BoxFit.cover,
+          placeholder: (_, __) => _fallback(),
+          errorWidget: (_, __, ___) => _fallback(),
+        ),
       );
     }
     return _fallback();

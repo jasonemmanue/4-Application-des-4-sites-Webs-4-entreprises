@@ -1,3 +1,5 @@
+import 'lien_api.dart';
+
 /// Adresse de l'API — partagée avec le site web et l'administration Next.js.
 ///
 /// Un **seul** backend FastAPI (dépôt `salon-coiffure/`) sert :
@@ -5,11 +7,8 @@
 ///   • l'administration Next.js (port 3600 en Docker, 3001 en `npm run dev`)
 ///   • **cette application mobile** — pas d'API séparée
 ///
-/// La valeur par défaut cible l'**API de production** (`api.florahair.online`,
-/// hébergée sur Railway) : l'application, une fois compilée en release,
-/// arrive dans les mains d'une cliente qui n'a rien à configurer. Un
-/// appareil physique en clientèle n'atteint de toute façon jamais
-/// `localhost:8000`.
+/// La valeur par défaut cible l'**API de production** décodée depuis
+/// [LienApi] (XOR, pas en clair dans le binaire).
 ///
 /// Pour tester en développement contre la stack Docker locale, surcharger au
 /// build :
@@ -21,22 +20,16 @@
 /// # Émulateur Android → API Docker locale (10.0.2.2 = alias vers l'hôte)
 /// flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
 ///
-/// # Simulateur iOS → API Docker locale (localhost fonctionne)
-/// flutter run --dart-define=API_BASE_URL=http://localhost:8000
-///
 /// # Appareil physique + poste dev sur le même Wi-Fi (remplacer l'IP)
 /// flutter run --dart-define=API_BASE_URL=http://192.168.1.42:8000
-///
-/// # Release explicite production
-/// flutter build apk --release \
-///   --dart-define=API_BASE_URL=https://api.florahair.online
 /// ```
 class ApiConfig {
   /// Racine du backend, sans le préfixe `/api/v1`.
-  static const String baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'https://api.florahair.online',
-  );
+  /// En production le lien est decode depuis [LienApi] (XOR, pas en clair).
+  static final String baseUrl =
+      const String.fromEnvironment('API_BASE_URL').isEmpty
+          ? LienApi.apiUrl
+          : const String.fromEnvironment('API_BASE_URL');
 
   /// Origine du site public — sert **uniquement** à résoudre les visuels
   /// livrés avec le site (`/images/...`), qui sont servis par Next et non
@@ -44,10 +37,10 @@ class ApiConfig {
   /// restent servis par l'API et utilisent [baseUrl].
   ///
   /// Surchargeable au build : `--dart-define=SITE_BASE_URL=http://10.0.2.2:3601`.
-  static const String siteBaseUrl = String.fromEnvironment(
-    'SITE_BASE_URL',
-    defaultValue: 'https://www.florahair.online',
-  );
+  static final String siteBaseUrl =
+      const String.fromEnvironment('SITE_BASE_URL').isEmpty
+          ? LienApi.siteUrl
+          : const String.fromEnvironment('SITE_BASE_URL');
 
   static const String apiPrefix = '/api/v1';
 

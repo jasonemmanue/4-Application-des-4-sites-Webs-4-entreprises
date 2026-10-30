@@ -34,13 +34,17 @@ class ServiceCard extends StatelessWidget {
                 width: 96,
                 height: 96,
                 child: service.imageUrl != null && service.imageUrl!.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: mediaUrl(service.imageUrl),
-                        fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) =>
-                            Container(color: scheme.surfaceContainerHighest),
-                        placeholder: (_, __) =>
-                            Container(color: scheme.surfaceContainerHighest),
+                    ? Semantics(
+                        label: service.name,
+                        image: true,
+                        child: CachedNetworkImage(
+                          imageUrl: mediaUrl(service.imageUrl),
+                          fit: BoxFit.cover,
+                          errorWidget: (_, __, ___) =>
+                              Container(color: scheme.surfaceContainerHighest),
+                          placeholder: (_, __) =>
+                              Container(color: scheme.surfaceContainerHighest),
+                        ),
                       )
                     : Container(
                         color: scheme.surfaceContainerHighest,

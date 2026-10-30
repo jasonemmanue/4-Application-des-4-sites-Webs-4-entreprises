@@ -6,7 +6,9 @@ import '../../config/routes.dart';
 import '../../config/theme.dart';
 import '../../models/lead.dart';
 import '../../providers/providers.dart';
+import '../../services/api_client.dart' show ApiException;
 import '../../services/client_profile.dart';
+import '../../services/input_sanitizer.dart';
 
 class QuoteFlowScreen extends ConsumerStatefulWidget {
   const QuoteFlowScreen({super.key});
@@ -56,13 +58,17 @@ class _QuoteFlowScreenState extends ConsumerState<QuoteFlowScreen> {
   Future<void> _submit() async {
     setState(() => _submitting = true);
     final lead = QuoteLead(
-      name: _name.text.trim(),
+      name: InputSanitizer.sanitize(_name.text, maxLength: 100),
       whatsappNumber: _whatsapp.text.trim(),
-      message: _description.text.trim(),
-      company: _company.text.trim().isEmpty ? null : _company.text.trim(),
+      message: InputSanitizer.sanitize(_description.text, maxLength: 2000),
+      company: _company.text.trim().isEmpty
+          ? null
+          : InputSanitizer.sanitize(_company.text, maxLength: 100),
       missionType: _mission,
       budgetRange: _budget,
-      timeline: _timeline.text.trim().isEmpty ? null : _timeline.text.trim(),
+      timeline: _timeline.text.trim().isEmpty
+          ? null
+          : InputSanitizer.sanitize(_timeline.text, maxLength: 100),
     );
 
     try {
@@ -83,8 +89,11 @@ class _QuoteFlowScreenState extends ConsumerState<QuoteFlowScreen> {
       context.go(AppRoutes.quoteConfirmation, extra: reference);
     } catch (e) {
       if (!mounted) return;
+      final msg = e is ApiException
+          ? e.userMessage
+          : 'Une erreur est survenue. Reessayez.';
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(content: Text(msg)),
       );
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -165,16 +174,17 @@ class _QuoteFlowScreenState extends ConsumerState<QuoteFlowScreen> {
             TextFormField(
               controller: _description,
               maxLines: 5,
+              maxLength: 2000,
               decoration:
                   const InputDecoration(labelText: 'Description du besoin *'),
-              validator: (v) => (v == null || v.trim().length < 20)
-                  ? '20 caracteres minimum'
-                  : null,
+              validator: (v) => InputSanitizer.validateMessage(v, min: 20),
             ),
             const SizedBox(height: AppSpacing.sm),
             TextFormField(
               controller: _timeline,
+              maxLength: 100,
               decoration: const InputDecoration(labelText: 'Delais souhaites'),
+              validator: (v) => InputSanitizer.validateOptionalText(v, max: 100),
             ),
             const SizedBox(height: AppSpacing.md),
             Text('Budget indicatif',
@@ -210,28 +220,27 @@ class _QuoteFlowScreenState extends ConsumerState<QuoteFlowScreen> {
             const SizedBox(height: AppSpacing.md),
             TextFormField(
               controller: _name,
+              maxLength: 100,
               decoration: const InputDecoration(labelText: 'Nom complet *'),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Requis' : null,
+              validator: InputSanitizer.validateName,
             ),
             const SizedBox(height: AppSpacing.sm),
             TextFormField(
               controller: _whatsapp,
               keyboardType: TextInputType.phone,
+              maxLength: 20,
               decoration: const InputDecoration(
                 labelText: 'Numero WhatsApp *',
                 hintText: '+225 ...',
               ),
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Requis';
-                if (v.trim().length < 8) return 'Numero invalide';
-                return null;
-              },
+              validator: InputSanitizer.validatePhone,
             ),
             const SizedBox(height: AppSpacing.sm),
             TextFormField(
               controller: _company,
+              maxLength: 100,
               decoration: const InputDecoration(labelText: 'Entreprise'),
+              validator: (v) => InputSanitizer.validateOptionalText(v, max: 100),
             ),
           ],
         ),

@@ -20,13 +20,16 @@ class ServiceCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (service.coverImage != null)
-              AspectRatio(
-                aspectRatio: 16 / 9,
-                child: CachedNetworkImage(
-                  imageUrl: service.coverImage!,
-                  fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) => _fallback(context),
-                  placeholder: (_, __) => _fallback(context),
+              Semantics(
+                label: 'Illustration du service ${service.title}',
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: CachedNetworkImage(
+                    imageUrl: service.coverImage!,
+                    fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) => _fallback(context),
+                    placeholder: (_, __) => _fallback(context),
+                  ),
                 ),
               )
             else

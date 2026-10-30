@@ -21,21 +21,24 @@ class PartnerLogo extends StatelessWidget {
         border: Border.all(color: AppColors.charcoal700),
       ),
       alignment: Alignment.center,
-      child: partner.logo != null
-          ? CachedNetworkImage(
-              imageUrl: partner.logo!,
-              fit: BoxFit.contain,
-              errorWidget: (_, __, ___) => Text(
+      child: Semantics(
+        label: 'Logo du partenaire ${partner.name}',
+        child: partner.logo != null
+            ? CachedNetworkImage(
+                imageUrl: partner.logo!,
+                fit: BoxFit.contain,
+                errorWidget: (_, __, ___) => Text(
+                  partner.name,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+              )
+            : Text(
                 partner.name,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.labelSmall,
+                style: Theme.of(context).textTheme.labelMedium,
               ),
-            )
-          : Text(
-              partner.name,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.labelMedium,
-            ),
+      ),
     );
   }
 }

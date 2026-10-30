@@ -82,24 +82,46 @@ class ApiClient {
   }
 
   ApiException _wrap(DioException e) {
-    // L'API renvoie systématiquement { detail: "…" } sur 4xx/5xx (convention
-    // FastAPI). On l'extrait pour afficher un message utile à la cliente ;
-    // sinon, on retombe sur le message technique de Dio.
+    final status = e.response?.statusCode;
     final data = e.response?.data;
-    String message = e.message ?? 'Erreur réseau';
+
+    // Messages generiques par famille de code HTTP — on ne renvoie jamais
+    // de trace technique, de chemin serveur ou de detail Pydantic brut.
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout ||
+        e.type == DioExceptionType.sendTimeout) {
+      return ApiException('Le serveur met trop de temps a repondre.', status);
+    }
+    if (e.type == DioExceptionType.connectionError) {
+      return ApiException(
+          'Impossible de joindre le serveur. Verifiez votre connexion.', status);
+    }
+
+    String message = 'Une erreur est survenue.';
     if (data is Map<String, dynamic>) {
       final detail = data['detail'];
       if (detail is String && detail.isNotEmpty) {
-        message = detail;
-      } else if (detail is List && detail.isNotEmpty) {
-        // Erreur de validation Pydantic : liste d'objets { loc, msg, type }.
-        final first = detail.first;
-        if (first is Map && first['msg'] is String) {
-          message = first['msg'] as String;
-        }
+        message = _sanitize(detail);
       }
     }
-    return ApiException(message, e.response?.statusCode);
+
+    if (status != null && status >= 500) {
+      message = 'Le service est temporairement indisponible.';
+    }
+
+    return ApiException(message, status);
+  }
+
+  static String _sanitize(String raw) {
+    if (raw.contains('Traceback') ||
+        raw.contains('File "') ||
+        raw.contains('sqlalchemy') ||
+        raw.contains('psycopg') ||
+        raw.contains('Internal Server Error')) {
+      return 'Une erreur est survenue.';
+    }
+    if (raw.length > 200) return '${raw.substring(0, 200)}…';
+    return raw;
   }
 
   List<T> _asList<T>(Response<dynamic> res, T Function(Map<String, dynamic>) f) {

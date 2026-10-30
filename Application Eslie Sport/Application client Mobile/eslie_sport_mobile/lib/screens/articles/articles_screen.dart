@@ -53,11 +53,14 @@ class ArticlesScreen extends ConsumerWidget {
                             width: 110,
                             child: a.coverImageUrl != null &&
                                     a.coverImageUrl!.isNotEmpty
-                                ? CachedNetworkImage(
-                                    imageUrl: a.coverImageUrl!,
-                                    fit: BoxFit.cover,
-                                    errorWidget: (_, __, ___) => Container(
-                                        color: AppColors.darkLighter),
+                                ? Semantics(
+                                    label: 'Illustration de l\'article ${a.title}',
+                                    child: CachedNetworkImage(
+                                      imageUrl: a.coverImageUrl!,
+                                      fit: BoxFit.cover,
+                                      errorWidget: (_, __, ___) => Container(
+                                          color: AppColors.darkLighter),
+                                    ),
                                   )
                                 : Container(color: AppColors.darkLighter),
                           ),

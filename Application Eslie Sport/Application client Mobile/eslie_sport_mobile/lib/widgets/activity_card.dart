@@ -40,7 +40,9 @@ class ActivityCard extends StatelessWidget {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(AppRadius.lg),
-                  child: activity.imageUrl != null && activity.imageUrl!.isNotEmpty
+                  child: Semantics(
+                    label: 'Photo de l\'activite ${activity.name}',
+                    child: activity.imageUrl != null && activity.imageUrl!.isNotEmpty
                       ? CachedNetworkImage(
                           imageUrl: activity.imageUrl!,
                           fit: BoxFit.cover,
@@ -57,6 +59,7 @@ class ActivityCard extends StatelessWidget {
                           child: const Icon(Icons.fitness_center,
                               color: AppColors.textMuted, size: 40),
                         ),
+                  ),
                 ),
                 if (badgeLabel != null)
                   Positioned(

@@ -147,8 +147,12 @@ class _SubscriptionOrderScreenState
                   children: [
                     TextFormField(
                       controller: _name,
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Requis' : null,
+                      maxLength: 80,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return 'Requis';
+                        if (v.trim().length < 2) return 'Nom trop court';
+                        return null;
+                      },
                       decoration:
                           const InputDecoration(labelText: 'Nom complet'),
                     ),
@@ -156,9 +160,13 @@ class _SubscriptionOrderScreenState
                     TextFormField(
                       controller: _whatsapp,
                       keyboardType: TextInputType.phone,
+                      maxLength: 15,
                       validator: (v) {
                         if (v == null || v.trim().length < 8) {
                           return 'Min 8 chiffres';
+                        }
+                        if (!RegExp(r'^[0-9\s\-+]+$').hasMatch(v.trim())) {
+                          return 'Chiffres uniquement';
                         }
                         return null;
                       },
@@ -188,6 +196,7 @@ class _SubscriptionOrderScreenState
                 TextField(
                   controller: _payerPhone,
                   keyboardType: TextInputType.phone,
+                  maxLength: 15,
                   decoration: InputDecoration(
                     labelText: 'Numero ${_operator!.label}',
                     prefixText: '+225 ',

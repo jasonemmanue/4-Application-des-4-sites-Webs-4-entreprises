@@ -43,7 +43,9 @@ class ActivityDetailScreen extends ConsumerWidget {
                           fit: StackFit.expand,
                           children: [
                             CachedNetworkImage(
-                                imageUrl: a.imageUrl!, fit: BoxFit.cover),
+                                imageUrl: a.imageUrl!,
+                                fit: BoxFit.cover,
+                            ),
                             Container(
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(

@@ -137,28 +137,36 @@ class ApiClient {
   }
 
   String _extractMessage(dynamic data, int status) {
-    if (data is Map) {
-      final detail = data['detail'];
-      if (detail is String && detail.isNotEmpty) return detail;
-      if (detail is List && detail.isNotEmpty) {
-        final first = detail.first;
-        if (first is Map && first['msg'] is String) {
-          return first['msg'] as String;
-        }
-      }
-      final message = data['message'];
-      if (message is String && message.isNotEmpty) return message;
-    }
-    return switch (status) {
+    // Messages generiques : ne jamais exposer de trace technique au client.
+    final fallback = switch (status) {
       400 => 'Requete invalide.',
       401 => 'Authentification requise.',
       403 => 'Acces refuse.',
       404 => 'Ressource introuvable.',
-      409 => 'Conflit avec l\'etat actuel.',
-      422 => 'Donnees invalides.',
+      409 => 'Conflit avec l\'etat actuel. Reessayez.',
+      422 => 'Donnees invalides. Verifiez votre saisie.',
       429 => 'Trop de requetes, patientez un instant.',
-      _ => 'Erreur $status.',
+      _ => 'Une erreur est survenue.',
     };
+    if (data is Map) {
+      final detail = data['detail'];
+      // On n'affiche le detail du serveur que s'il est court et
+      // ne contient pas de traces techniques (stack, path, SQL…).
+      if (detail is String &&
+          detail.isNotEmpty &&
+          detail.length < 200 &&
+          !detail.contains('Traceback') &&
+          !detail.contains('Error:') &&
+          !detail.contains('/') &&
+          !detail.contains('SELECT ')) {
+        return detail;
+      }
+      final message = data['message'];
+      if (message is String && message.isNotEmpty && message.length < 200) {
+        return message;
+      }
+    }
+    return fallback;
   }
 
   List<T> _asList<T>(dynamic data, T Function(Map<String, dynamic>) build) {

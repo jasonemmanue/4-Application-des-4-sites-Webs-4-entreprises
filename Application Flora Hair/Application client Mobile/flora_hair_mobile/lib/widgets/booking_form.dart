@@ -31,7 +31,11 @@ class BookingCustomerForm extends StatelessWidget {
           TextFormField(
             controller: name,
             textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(labelText: 'Nom complet'),
+            maxLength: 80,
+            decoration: const InputDecoration(
+              labelText: 'Nom complet',
+              counterText: '',
+            ),
             validator: (v) =>
                 (v == null || v.trim().length < 2) ? 'Nom requis' : null,
           ),
@@ -40,7 +44,11 @@ class BookingCustomerForm extends StatelessWidget {
             controller: phone,
             keyboardType: TextInputType.phone,
             textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(labelText: 'Telephone'),
+            maxLength: 20,
+            decoration: const InputDecoration(
+              labelText: 'Telephone',
+              counterText: '',
+            ),
             validator: (v) {
               final digits = (v ?? '').replaceAll(RegExp(r'\D'), '');
               return digits.length < 8 ? 'Telephone invalide' : null;
@@ -51,15 +59,21 @@ class BookingCustomerForm extends StatelessWidget {
             controller: email,
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
-            decoration:
-                const InputDecoration(labelText: 'Email (facultatif)'),
+            maxLength: 120,
+            decoration: const InputDecoration(
+              labelText: 'Email (facultatif)',
+              counterText: '',
+            ),
           ),
           const SizedBox(height: 12),
           TextFormField(
             controller: notes,
             maxLines: 3,
-            decoration:
-                const InputDecoration(labelText: 'Notes / demandes speciales'),
+            maxLength: 500,
+            decoration: const InputDecoration(
+              labelText: 'Notes / demandes speciales',
+              counterText: '',
+            ),
           ),
           const SizedBox(height: 8),
           Container(

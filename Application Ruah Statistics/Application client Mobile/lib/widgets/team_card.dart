@@ -20,15 +20,18 @@ class TeamCard extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 32,
-                backgroundColor: AppColors.charcoal700,
-                backgroundImage: member.photo != null
-                    ? CachedNetworkImageProvider(member.photo!)
-                    : null,
-                child: member.photo == null
-                    ? const Icon(Icons.person, color: Colors.white70)
-                    : null,
+              Semantics(
+                label: 'Photo de ${member.name}',
+                child: CircleAvatar(
+                  radius: 32,
+                  backgroundColor: AppColors.charcoal700,
+                  backgroundImage: member.photo != null
+                      ? CachedNetworkImageProvider(member.photo!)
+                      : null,
+                  child: member.photo == null
+                      ? const Icon(Icons.person, color: Colors.white70)
+                      : null,
+                ),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(

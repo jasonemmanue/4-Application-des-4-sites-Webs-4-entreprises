@@ -21,13 +21,16 @@ class ArticleCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (article.coverImage != null)
-              AspectRatio(
-                aspectRatio: 16 / 9,
-                child: CachedNetworkImage(
-                  imageUrl: article.coverImage!,
-                  fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) => _fallback(),
-                  placeholder: (_, __) => _fallback(),
+              Semantics(
+                label: 'Illustration de l\'article ${article.title}',
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: CachedNetworkImage(
+                    imageUrl: article.coverImage!,
+                    fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) => _fallback(),
+                    placeholder: (_, __) => _fallback(),
+                  ),
                 ),
               ),
             Padding(

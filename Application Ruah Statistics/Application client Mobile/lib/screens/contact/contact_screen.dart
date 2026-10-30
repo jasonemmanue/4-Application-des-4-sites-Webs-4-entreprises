@@ -5,6 +5,8 @@ import '../../config/api_config.dart';
 import '../../config/theme.dart';
 import '../../models/contact_message.dart';
 import '../../providers/providers.dart';
+import '../../services/api_client.dart' show ApiException;
+import '../../services/input_sanitizer.dart';
 
 class ContactScreen extends ConsumerStatefulWidget {
   const ContactScreen({super.key});
@@ -34,11 +36,15 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _submitting = true);
     final message = ContactMessage(
-      name: _name.text.trim(),
+      name: InputSanitizer.sanitize(_name.text, maxLength: 100),
       whatsappNumber: _whatsapp.text.trim(),
-      message: _message.text.trim(),
-      subject: _subject.text.trim().isEmpty ? null : _subject.text.trim(),
-      company: _company.text.trim().isEmpty ? null : _company.text.trim(),
+      message: InputSanitizer.sanitize(_message.text, maxLength: 2000),
+      subject: _subject.text.trim().isEmpty
+          ? null
+          : InputSanitizer.sanitize(_subject.text, maxLength: 200),
+      company: _company.text.trim().isEmpty
+          ? null
+          : InputSanitizer.sanitize(_company.text, maxLength: 100),
     );
     try {
       await ref.read(apiClientProvider).submitContactMessage(message);
@@ -51,8 +57,11 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
       );
     } catch (e) {
       if (!mounted) return;
+      final msg = e is ApiException
+          ? e.userMessage
+          : 'Une erreur est survenue. Reessayez.';
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(content: Text(msg)),
       );
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -134,42 +143,43 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                 children: [
                   TextFormField(
                     controller: _name,
+                    maxLength: 100,
                     decoration: const InputDecoration(labelText: 'Nom complet *'),
-                    validator: _required,
+                    validator: InputSanitizer.validateName,
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   TextFormField(
                     controller: _whatsapp,
                     keyboardType: TextInputType.phone,
+                    maxLength: 20,
                     decoration: const InputDecoration(
                       labelText: 'Numero WhatsApp *',
                       hintText: '+225 ...',
                     ),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) return 'Requis';
-                      if (v.trim().length < 8) return 'Numero invalide';
-                      return null;
-                    },
+                    validator: InputSanitizer.validatePhone,
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   TextFormField(
                     controller: _company,
+                    maxLength: 100,
                     decoration:
                         const InputDecoration(labelText: 'Entreprise'),
+                    validator: (v) => InputSanitizer.validateOptionalText(v, max: 100),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   TextFormField(
                     controller: _subject,
+                    maxLength: 200,
                     decoration: const InputDecoration(labelText: 'Objet'),
+                    validator: (v) => InputSanitizer.validateOptionalText(v, max: 200),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   TextFormField(
                     controller: _message,
                     maxLines: 5,
+                    maxLength: 2000,
                     decoration: const InputDecoration(labelText: 'Message *'),
-                    validator: (v) => (v == null || v.trim().length < 10)
-                        ? '10 caracteres minimum'
-                        : null,
+                    validator: InputSanitizer.validateMessage,
                   ),
                   const SizedBox(height: AppSpacing.md),
                   SizedBox(

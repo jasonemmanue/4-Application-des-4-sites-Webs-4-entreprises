@@ -474,6 +474,7 @@ class _TransformationTile extends StatelessWidget {
           if (url != null && url.isNotEmpty)
             Image.network(url,
                 fit: BoxFit.cover,
+                semanticLabel: 'Transformation $label',
                 errorBuilder: (_, __, ___) => Container(
                     color: AppColors.surfaceSubtle,
                     alignment: Alignment.center,

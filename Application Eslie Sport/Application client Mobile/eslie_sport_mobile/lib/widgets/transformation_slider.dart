@@ -91,13 +91,16 @@ class _TransformationSliderState extends State<TransformationSlider> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        url != null && url.isNotEmpty
+        Semantics(
+          label: 'Transformation $label',
+          child: url != null && url.isNotEmpty
             ? CachedNetworkImage(
                 imageUrl: url,
                 fit: BoxFit.cover,
                 errorWidget: (_, __, ___) => Container(color: AppColors.darkLighter),
               )
             : Container(color: AppColors.darkLighter),
+        ),
         Positioned(
           top: 8,
           left: 8,

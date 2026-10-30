@@ -53,6 +53,15 @@ android {
                 signingConfigs.getByName("release")
             else
                 signingConfigs.getByName("debug")
+
+            // Minification et shrinking R8 (ProGuard) — reduit la taille
+            // de l'APK et rend la retro-ingenierie plus difficile.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }

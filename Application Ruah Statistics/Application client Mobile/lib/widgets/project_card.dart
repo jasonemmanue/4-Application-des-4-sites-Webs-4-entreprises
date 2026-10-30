@@ -19,16 +19,19 @@ class ProjectCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AspectRatio(
-              aspectRatio: 16 / 9,
-              child: project.coverImage != null
-                  ? CachedNetworkImage(
-                      imageUrl: project.coverImage!,
-                      fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => _fallback(context),
-                      placeholder: (_, __) => _fallback(context),
-                    )
-                  : _fallback(context),
+            Semantics(
+              label: 'Illustration du projet ${project.title}',
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: project.coverImage != null
+                    ? CachedNetworkImage(
+                        imageUrl: project.coverImage!,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => _fallback(context),
+                        placeholder: (_, __) => _fallback(context),
+                      )
+                    : _fallback(context),
+              ),
             ),
             Padding(
               padding: const EdgeInsets.all(AppSpacing.md),

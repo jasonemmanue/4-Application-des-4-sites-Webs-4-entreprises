@@ -51,13 +51,17 @@ class CatalogCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(FloraTheme.cardRadius),
                       child: (imageUrl == null || imageUrl!.isEmpty)
                           ? Container(color: FloraColors.surfaceMuted)
-                          : CachedNetworkImage(
-                              imageUrl: mediaUrl(imageUrl),
-                              fit: BoxFit.cover,
-                              errorWidget: (_, __, ___) =>
-                                  Container(color: FloraColors.surfaceMuted),
-                              placeholder: (_, __) =>
-                                  Container(color: FloraColors.surfaceMuted),
+                          : Semantics(
+                              label: title,
+                              image: true,
+                              child: CachedNetworkImage(
+                                imageUrl: mediaUrl(imageUrl),
+                                fit: BoxFit.cover,
+                                errorWidget: (_, __, ___) =>
+                                    Container(color: FloraColors.surfaceMuted),
+                                placeholder: (_, __) =>
+                                    Container(color: FloraColors.surfaceMuted),
+                              ),
                             ),
                     ),
                   ),

@@ -384,16 +384,19 @@ class _WideCard extends StatelessWidget {
         padding: const EdgeInsets.all(18),
         child: Row(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.asset(
-                image,
-                width: 92,
-                height: 92,
-                fit: BoxFit.cover,
-                // Décodage à la taille affichée : la photo fait 1920 px.
-                cacheWidth:
-                    (92 * MediaQuery.devicePixelRatioOf(context)).round(),
+            Semantics(
+              label: title,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.asset(
+                  image,
+                  width: 92,
+                  height: 92,
+                  fit: BoxFit.cover,
+                  semanticLabel: title,
+                  cacheWidth:
+                      (92 * MediaQuery.devicePixelRatioOf(context)).round(),
+                ),
               ),
             ),
             const SizedBox(width: 18),

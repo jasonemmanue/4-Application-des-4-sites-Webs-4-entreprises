@@ -73,19 +73,22 @@ class EquipmentScreen extends ConsumerWidget {
                                           top: Radius.circular(AppRadius.md)),
                                       child: e.imageUrl != null &&
                                               e.imageUrl!.isNotEmpty
-                                          ? CachedNetworkImage(
-                                              imageUrl: e.imageUrl!,
-                                              fit: BoxFit.cover,
-                                              width: double.infinity,
-                                              errorWidget: (_, __, ___) =>
-                                                  Container(
-                                                color: AppColors.darkLighter,
-                                                child: const Icon(
-                                                    Icons.fitness_center,
-                                                    color:
-                                                        AppColors.darkMuted),
-                                              ),
-                                            )
+                                          ? Semantics(
+                                              label: 'Photo de l\'equipement ${e.name}',
+                                              child: CachedNetworkImage(
+                                                imageUrl: e.imageUrl!,
+                                                fit: BoxFit.cover,
+                                                width: double.infinity,
+                                                errorWidget: (_, __, ___) =>
+                                                    Container(
+                                                  color: AppColors.darkLighter,
+                                                  child: const Icon(
+                                                      Icons.fitness_center,
+                                                      color:
+                                                          AppColors.darkMuted),
+                                                ),
+                                            ),
+                                          )
                                           : Container(
                                               color: AppColors.darkLighter,
                                               child: const Icon(

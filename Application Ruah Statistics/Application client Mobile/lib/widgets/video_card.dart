@@ -24,20 +24,22 @@ class VideoCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AspectRatio(
-              aspectRatio: 16 / 9,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (thumb != null)
-                    CachedNetworkImage(
-                      imageUrl: thumb,
-                      fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => _fallback(),
-                      placeholder: (_, __) => _fallback(),
-                    )
-                  else
-                    _fallback(),
+            Semantics(
+              label: 'Miniature de la video ${video.title}',
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (thumb != null)
+                      CachedNetworkImage(
+                        imageUrl: thumb,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => _fallback(),
+                        placeholder: (_, __) => _fallback(),
+                      )
+                    else
+                      _fallback(),
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -55,6 +57,7 @@ class VideoCard extends StatelessWidget {
                         color: Colors.white, size: 64),
                   ),
                 ],
+                ),
               ),
             ),
             Padding(

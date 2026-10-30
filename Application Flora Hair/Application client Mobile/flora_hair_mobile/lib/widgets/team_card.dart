@@ -30,13 +30,17 @@ class TeamCard extends StatelessWidget {
               child: AspectRatio(
                 aspectRatio: 3 / 4,
                 child: member.photoUrl != null && member.photoUrl!.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: mediaUrl(member.photoUrl),
-                        fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) =>
-                            Container(color: scheme.surfaceContainerHighest),
-                        placeholder: (_, __) =>
-                            Container(color: scheme.surfaceContainerHighest),
+                    ? Semantics(
+                        label: 'Photo de ${member.name}',
+                        image: true,
+                        child: CachedNetworkImage(
+                          imageUrl: mediaUrl(member.photoUrl),
+                          fit: BoxFit.cover,
+                          errorWidget: (_, __, ___) =>
+                              Container(color: scheme.surfaceContainerHighest),
+                          placeholder: (_, __) =>
+                              Container(color: scheme.surfaceContainerHighest),
+                        ),
                       )
                     : Container(
                         color: scheme.surfaceContainerHighest,

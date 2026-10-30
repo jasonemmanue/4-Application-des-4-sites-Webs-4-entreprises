@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/theme.dart';
 import '../models/article.dart';
 import '../providers/providers.dart';
+import '../services/api_client.dart' show ApiException;
+import '../services/input_sanitizer.dart';
 import '../services/whatsapp_service.dart';
 
 class DownloadModal extends ConsumerStatefulWidget {
@@ -74,7 +76,9 @@ class _DownloadModalState extends ConsumerState<DownloadModal> {
         ),
       );
     } catch (e) {
-      setState(() => _error = e.toString());
+      setState(() => _error = e is ApiException
+          ? e.userMessage
+          : 'Une erreur est survenue. Reessayez.');
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -120,27 +124,28 @@ class _DownloadModalState extends ConsumerState<DownloadModal> {
               const SizedBox(height: AppSpacing.lg),
               TextFormField(
                 controller: _nameCtrl,
+                maxLength: 100,
                 decoration: const InputDecoration(labelText: 'Nom complet'),
+                validator: (v) => InputSanitizer.validateOptionalText(v, max: 100),
               ),
               const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _whatsappCtrl,
                 keyboardType: TextInputType.phone,
+                maxLength: 20,
                 decoration: const InputDecoration(
                   labelText: 'Numero WhatsApp *',
                   hintText: '+225 ...',
                 ),
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) return 'Requis';
-                  if (v.trim().length < 8) return 'Numero invalide';
-                  return null;
-                },
+                validator: InputSanitizer.validatePhone,
               ),
               const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _companyCtrl,
+                maxLength: 100,
                 decoration:
                     const InputDecoration(labelText: 'Entreprise (optionnel)'),
+                validator: (v) => InputSanitizer.validateOptionalText(v, max: 100),
               ),
               if (_error != null) ...[
                 const SizedBox(height: AppSpacing.md),

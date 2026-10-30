@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 /// Configuration centrale de l'acces a l'API FastAPI du site salle-de-sport.
 ///
 /// Trois cibles possibles, choisies au build avec `--dart-define`:
@@ -22,16 +24,17 @@ class ApiConfig {
   );
 
   /// Emulateur Android : `10.0.2.2` = la machine hote (le laptop).
-  /// Port `8010` = celui expose par `docker-compose.yml` du site pour l'API
-  /// (voir `salle-de-sport/docker-compose.yml`, service `api` : `8010:8000`).
   static const String _localBase = 'http://10.0.2.2:8010';
-  /// API deployee sur Railway (production).
-  static const String _productionBase =
-      'https://api-production-fc58.up.railway.app';
 
-  /// Alias staging par defaut sur la meme instance — remplacez ici si un
-  /// deploiement de preview distinct est mis en place.
-  static const String _stagingBase = _productionBase;
+  // L'URL de production n'est pas stockee en clair dans le binaire.
+  // Base64 de 'https://api-production-fc58.up.railway.app'.
+  static final String _productionBase = _d(
+    'aHR0cHM6Ly9hcGktcHJvZHVjdGlvbi1mYzU4LnVwLnJhaWx3YXkuYXBw',
+  );
+
+  static final String _stagingBase = _productionBase;
+
+  static String _d(String b) => utf8.decode(base64Decode(b));
 
   static String get baseUrl {
     if (_override.isNotEmpty) return _override;
@@ -47,17 +50,12 @@ class ApiConfig {
   static String get uploadsBase => '$baseUrl/uploads';
 
   /// URL du site public Next.js — sert les fichiers statiques du dossier
-  /// `frontend/public/` (les `/images/...` figes en base). Ces images ne
-  /// sont pas hebergees par l'API, il faut donc pointer vers le frontend.
-  static const String siteBase = 'https://www.esliesport.com';
+  /// `frontend/public/` (les `/images/...` figes en base).
+  static final String siteBase = _d(
+    'aHR0cHM6Ly93d3cuZXNsaWVzcG9ydC5jb20=',
+  );
 
   /// Transforme une URL de media en URL absolue exploitable par le mobile.
-  ///
-  ///   * URL vide ou null  -> null
-  ///   * http:// / https:// -> renvoyee telle quelle
-  ///   * `/uploads/...`     -> prefixee par `baseUrl` (API Railway)
-  ///   * `/images/...`      -> prefixee par `siteBase` (site public Next.js)
-  ///   * autre chemin relatif -> prefixee par `siteBase` (fallback safe)
   static String? resolveMediaUrl(String? raw) {
     if (raw == null) return null;
     final path = raw.trim();
@@ -73,7 +71,6 @@ class ApiConfig {
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 20);
 
-  /// Coordonnees fallback si /settings/public est injoignable.
   static const String contactPhone = '+2250545079850';
   static const String whatsappNumber = '2250545079850';
   static const String contactPhoneDisplay = '+225 05 45 07 98 50';

@@ -31,7 +31,9 @@ class CoachCard extends StatelessWidget {
                 child: SizedBox(
                   width: 72,
                   height: 72,
-                  child: coach.photoUrl != null && coach.photoUrl!.isNotEmpty
+                  child: Semantics(
+                    label: 'Photo du coach ${coach.name}',
+                    child: coach.photoUrl != null && coach.photoUrl!.isNotEmpty
                       ? CachedNetworkImage(
                           imageUrl: coach.photoUrl!,
                           fit: BoxFit.cover,
@@ -46,6 +48,7 @@ class CoachCard extends StatelessWidget {
                           child: const Icon(Icons.person,
                               color: AppColors.darkMuted, size: 32),
                         ),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),

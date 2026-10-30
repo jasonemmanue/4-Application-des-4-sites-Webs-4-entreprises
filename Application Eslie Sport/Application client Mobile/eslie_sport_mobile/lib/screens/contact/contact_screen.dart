@@ -87,15 +87,24 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
               children: [
                 TextFormField(
                   controller: _name,
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Requis' : null,
+                  maxLength: 80,
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Requis';
+                    if (v.trim().length < 2) return 'Nom trop court';
+                    return null;
+                  },
                   decoration: const InputDecoration(labelText: 'Nom complet'),
                 ),
                 const SizedBox(height: 10),
                 TextFormField(
                   controller: _whatsapp,
                   keyboardType: TextInputType.phone,
+                  maxLength: 15,
                   validator: (v) {
                     if (v == null || v.trim().length < 8) return 'Min 8 chiffres';
+                    if (!RegExp(r'^[0-9\s\-+]+$').hasMatch(v.trim())) {
+                      return 'Chiffres uniquement';
+                    }
                     return null;
                   },
                   decoration: const InputDecoration(
@@ -106,6 +115,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                 const SizedBox(height: 10),
                 TextFormField(
                   controller: _subject,
+                  maxLength: 120,
                   validator: (v) => (v == null || v.trim().isEmpty) ? 'Requis' : null,
                   decoration: const InputDecoration(labelText: 'Sujet'),
                 ),
@@ -114,6 +124,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                   controller: _message,
                   minLines: 4,
                   maxLines: 6,
+                  maxLength: 2000,
                   validator: (v) => (v == null || v.trim().isEmpty) ? 'Requis' : null,
                   decoration: const InputDecoration(labelText: 'Message'),
                 ),

@@ -6,7 +6,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../config/theme.dart';
 import '../../models/quote_request.dart';
-import '../../services/api_client.dart';
+import '../../services/api_client.dart' show ApiClient, ApiException, apiClientProvider;
 import '../../services/whatsapp_service.dart';
 
 class QuoteScreen extends ConsumerStatefulWidget {
@@ -66,8 +66,10 @@ class _QuoteScreenState extends ConsumerState<QuoteScreen> {
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Erreur : $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(e is ApiException
+              ? e.message
+              : 'Une erreur est survenue.')));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -97,7 +99,11 @@ class _QuoteScreenState extends ConsumerState<QuoteScreen> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _name,
-              decoration: const InputDecoration(labelText: 'Nom complet'),
+              maxLength: 80,
+              decoration: const InputDecoration(
+                labelText: 'Nom complet',
+                counterText: '',
+              ),
               validator: (v) =>
                   (v == null || v.trim().length < 2) ? 'Nom requis' : null,
             ),
@@ -105,7 +111,11 @@ class _QuoteScreenState extends ConsumerState<QuoteScreen> {
             TextFormField(
               controller: _phone,
               keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: 'Telephone'),
+              maxLength: 20,
+              decoration: const InputDecoration(
+                labelText: 'Telephone',
+                counterText: '',
+              ),
               validator: (v) {
                 final digits = (v ?? '').replaceAll(RegExp(r'\D'), '');
                 return digits.length < 8 ? 'Telephone invalide' : null;
@@ -115,15 +125,20 @@ class _QuoteScreenState extends ConsumerState<QuoteScreen> {
             TextFormField(
               controller: _email,
               keyboardType: TextInputType.emailAddress,
-              decoration:
-                  const InputDecoration(labelText: 'Email (facultatif)'),
+              maxLength: 120,
+              decoration: const InputDecoration(
+                labelText: 'Email (facultatif)',
+                counterText: '',
+              ),
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _description,
               maxLines: 4,
+              maxLength: 500,
               decoration: const InputDecoration(
                 labelText: 'Description de la coiffure souhaitee',
+                counterText: '',
               ),
               validator: (v) => (v == null || v.trim().length < 10)
                   ? 'Decrivez votre souhait'
@@ -172,7 +187,11 @@ class _PhotoPicker extends StatelessWidget {
           if (file != null)
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.file(file!, height: 220, fit: BoxFit.cover),
+              child: Semantics(
+                label: 'Photo de la coiffure souhaitee',
+                image: true,
+                child: Image.file(file!, height: 220, fit: BoxFit.cover),
+              ),
             )
           else
             Container(

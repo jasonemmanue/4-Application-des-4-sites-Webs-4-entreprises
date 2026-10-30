@@ -35,11 +35,15 @@ class ArticleDetailScreen extends ConsumerWidget {
             if (article.coverUrl != null && article.coverUrl!.isNotEmpty)
               AspectRatio(
                 aspectRatio: 16 / 9,
-                child: CachedNetworkImage(
-                  imageUrl: mediaUrl(article.coverUrl),
-                  fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) =>
-                      Container(color: FloraColors.darkLight),
+                child: Semantics(
+                  label: article.title,
+                  image: true,
+                  child: CachedNetworkImage(
+                    imageUrl: mediaUrl(article.coverUrl),
+                    fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) =>
+                        Container(color: FloraColors.darkLight),
+                  ),
                 ),
               ),
             Padding(
@@ -72,7 +76,7 @@ class ArticleDetailScreen extends ConsumerWidget {
         ),
         loading: () => const LoadingState(),
         error: (e, _) => ErrorState(
-          message: 'Erreur : $e',
+          message: 'Impossible de charger l\'article.',
           onRetry: () => ref.refresh(articleDetailProvider(slug)),
         ),
       ),

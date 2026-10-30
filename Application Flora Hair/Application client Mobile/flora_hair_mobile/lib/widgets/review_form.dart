@@ -58,7 +58,10 @@ class _ReviewFormState extends ConsumerState<ReviewForm> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : $e')),
+        SnackBar(
+            content: Text(e is ApiException
+                ? e.message
+                : 'Une erreur est survenue.')),
       );
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -91,7 +94,11 @@ class _ReviewFormState extends ConsumerState<ReviewForm> {
           ),
           TextFormField(
             controller: _authorCtrl,
-            decoration: const InputDecoration(labelText: 'Nom'),
+            maxLength: 80,
+            decoration: const InputDecoration(
+              labelText: 'Nom',
+              counterText: '',
+            ),
             validator: (v) =>
                 (v == null || v.trim().isEmpty) ? 'Nom requis' : null,
           ),
@@ -99,14 +106,21 @@ class _ReviewFormState extends ConsumerState<ReviewForm> {
           TextFormField(
             controller: _emailCtrl,
             keyboardType: TextInputType.emailAddress,
-            decoration:
-                const InputDecoration(labelText: 'Email (facultatif)'),
+            maxLength: 120,
+            decoration: const InputDecoration(
+              labelText: 'Email (facultatif)',
+              counterText: '',
+            ),
           ),
           const SizedBox(height: 12),
           TextFormField(
             controller: _commentCtrl,
             maxLines: 4,
-            decoration: const InputDecoration(labelText: 'Votre message'),
+            maxLength: 1000,
+            decoration: const InputDecoration(
+              labelText: 'Votre message',
+              counterText: '',
+            ),
             validator: (v) =>
                 (v == null || v.trim().length < 5) ? 'Message trop court' : null,
           ),

@@ -25,13 +25,17 @@ class ServiceDetailScreen extends ConsumerWidget {
             if (service.imageUrl != null && service.imageUrl!.isNotEmpty)
               AspectRatio(
                 aspectRatio: 16 / 10,
-                child: CachedNetworkImage(
-                  imageUrl: mediaUrl(service.imageUrl),
-                  fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) =>
-                      Container(color: scheme.surfaceContainerHighest),
-                  placeholder: (_, __) =>
-                      Container(color: scheme.surfaceContainerHighest),
+                child: Semantics(
+                  label: service.name,
+                  image: true,
+                  child: CachedNetworkImage(
+                    imageUrl: mediaUrl(service.imageUrl),
+                    fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) =>
+                        Container(color: scheme.surfaceContainerHighest),
+                    placeholder: (_, __) =>
+                        Container(color: scheme.surfaceContainerHighest),
+                  ),
                 ),
               ),
             Padding(
@@ -77,7 +81,7 @@ class ServiceDetailScreen extends ConsumerWidget {
         ),
         loading: () => const LoadingState(),
         error: (e, _) => ErrorState(
-          message: 'Impossible de charger le service : $e',
+          message: 'Impossible de charger le service.',
           onRetry: () => ref.refresh(serviceDetailProvider(slug)),
         ),
       ),

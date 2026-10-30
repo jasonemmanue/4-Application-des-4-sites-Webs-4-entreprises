@@ -52,11 +52,14 @@ class ArticleDetailScreen extends ConsumerWidget {
                 if (a.coverImageUrl != null && a.coverImageUrl!.isNotEmpty)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(AppRadius.lg),
-                    child: CachedNetworkImage(
-                      imageUrl: a.coverImageUrl!,
-                      height: 200,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
+                    child: Semantics(
+                      label: 'Illustration de l\'article ${a.title}',
+                      child: CachedNetworkImage(
+                        imageUrl: a.coverImageUrl!,
+                        height: 200,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                 const SizedBox(height: 14),

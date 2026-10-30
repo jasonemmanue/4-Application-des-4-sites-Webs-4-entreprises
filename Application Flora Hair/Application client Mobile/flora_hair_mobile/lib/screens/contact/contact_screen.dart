@@ -4,7 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/api_config.dart';
 import '../../config/theme.dart';
-import '../../services/api_client.dart';
+import '../../services/api_client.dart' show ApiClient, ApiException, apiClientProvider;
 import '../../services/whatsapp_service.dart';
 
 class ContactScreen extends ConsumerStatefulWidget {
@@ -51,8 +51,10 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
       _message.clear();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Erreur : $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(e is ApiException
+              ? e.message
+              : 'Une erreur est survenue.')));
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -97,7 +99,11 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
               children: <Widget>[
                 TextFormField(
                   controller: _name,
-                  decoration: const InputDecoration(labelText: 'Nom'),
+                  maxLength: 80,
+                  decoration: const InputDecoration(
+                    labelText: 'Nom',
+                    counterText: '',
+                  ),
                   validator: (v) =>
                       (v == null || v.trim().isEmpty) ? 'Nom requis' : null,
                 ),
@@ -105,7 +111,11 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                 TextFormField(
                   controller: _phone,
                   keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(labelText: 'Telephone'),
+                  maxLength: 20,
+                  decoration: const InputDecoration(
+                    labelText: 'Telephone',
+                    counterText: '',
+                  ),
                   validator: (v) {
                     final digits = (v ?? '').replaceAll(RegExp(r'\D'), '');
                     return digits.length < 8 ? 'Telephone invalide' : null;
@@ -115,14 +125,21 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                 TextFormField(
                   controller: _email,
                   keyboardType: TextInputType.emailAddress,
-                  decoration:
-                      const InputDecoration(labelText: 'Email (facultatif)'),
+                  maxLength: 120,
+                  decoration: const InputDecoration(
+                    labelText: 'Email (facultatif)',
+                    counterText: '',
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _message,
                   maxLines: 4,
-                  decoration: const InputDecoration(labelText: 'Message'),
+                  maxLength: 1000,
+                  decoration: const InputDecoration(
+                    labelText: 'Message',
+                    counterText: '',
+                  ),
                   validator: (v) => (v == null || v.trim().length < 5)
                       ? 'Message trop court'
                       : null,

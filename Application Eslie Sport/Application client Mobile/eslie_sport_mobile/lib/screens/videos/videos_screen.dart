@@ -55,11 +55,14 @@ class VideosScreen extends ConsumerWidget {
                                 aspectRatio: 16 / 9,
                                 child: v.thumbnailUrl != null &&
                                         v.thumbnailUrl!.isNotEmpty
-                                    ? CachedNetworkImage(
-                                        imageUrl: v.thumbnailUrl!,
-                                        fit: BoxFit.cover,
-                                        errorWidget: (_, __, ___) => Container(
-                                            color: AppColors.darkLighter),
+                                    ? Semantics(
+                                        label: 'Miniature de la video ${v.title}',
+                                        child: CachedNetworkImage(
+                                          imageUrl: v.thumbnailUrl!,
+                                          fit: BoxFit.cover,
+                                          errorWidget: (_, __, ___) => Container(
+                                              color: AppColors.darkLighter),
+                                        ),
                                       )
                                     : Container(color: AppColors.darkLighter),
                               ),

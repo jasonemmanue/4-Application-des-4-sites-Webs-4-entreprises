@@ -10,7 +10,6 @@ import '../../models/payment.dart';
 import '../../models/schedule_slot.dart';
 import '../../services/api_client.dart';
 import '../../services/payment_service.dart';
-import '../../services/providers.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/error_state.dart';
 import '../../widgets/loading_state.dart';
@@ -239,16 +238,24 @@ class _EnrollmentScreenState extends ConsumerState<EnrollmentScreen> {
           children: [
             TextFormField(
               controller: _name,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Nom requis' : null,
+              maxLength: 80,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'Nom requis';
+                if (v.trim().length < 2) return 'Nom trop court';
+                return null;
+              },
               decoration: const InputDecoration(labelText: 'Nom complet'),
             ),
             const SizedBox(height: 10),
             TextFormField(
               controller: _whatsapp,
               keyboardType: TextInputType.phone,
+              maxLength: 15,
               validator: (v) {
                 if (v == null || v.trim().length < 8) return 'Min 8 chiffres';
+                if (!RegExp(r'^[0-9\s\-+]+$').hasMatch(v.trim())) {
+                  return 'Chiffres uniquement';
+                }
                 return null;
               },
               decoration: const InputDecoration(
@@ -353,6 +360,7 @@ class _EnrollmentScreenState extends ConsumerState<EnrollmentScreen> {
             controller: _feedback,
             minLines: 2,
             maxLines: 4,
+            maxLength: 500,
             decoration: const InputDecoration(labelText: 'Note (optionnel)'),
           ),
           const SizedBox(height: 24),
@@ -433,6 +441,7 @@ class _EnrollmentScreenState extends ConsumerState<EnrollmentScreen> {
             TextField(
               controller: _payerPhone,
               keyboardType: TextInputType.phone,
+              maxLength: 15,
               decoration: InputDecoration(
                 labelText: 'Numero ${_operator!.label}',
                 prefixText: '+225 ',

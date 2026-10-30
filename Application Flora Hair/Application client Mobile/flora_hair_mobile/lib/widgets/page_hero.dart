@@ -26,11 +26,15 @@ class PageHero extends StatelessWidget {
         fit: StackFit.expand,
         children: <Widget>[
           if (backgroundUrl != null && backgroundUrl!.isNotEmpty)
-            CachedNetworkImage(
-              imageUrl: mediaUrl(backgroundUrl),
-              fit: BoxFit.cover,
-              errorWidget: (_, __, ___) =>
-                  Container(color: FloraColors.charcoal),
+            Semantics(
+              label: title,
+              image: true,
+              child: CachedNetworkImage(
+                imageUrl: mediaUrl(backgroundUrl),
+                fit: BoxFit.cover,
+                errorWidget: (_, __, ___) =>
+                    Container(color: FloraColors.charcoal),
+              ),
             )
           else
             Container(
