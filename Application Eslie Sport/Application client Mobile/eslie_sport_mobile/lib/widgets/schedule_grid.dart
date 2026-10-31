@@ -1,172 +1,201 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/theme.dart';
 import '../models/schedule_slot.dart';
-import '../utils/formatters.dart';
+import '../services/providers.dart';
+import 'activity_card.dart';
 
-class ScheduleGrid extends StatelessWidget {
+/// Les cours d'une date : photo, nom, duree, places restantes, reservation.
+class ScheduleDayList extends StatelessWidget {
   final List<ScheduleSlot> slots;
-  final void Function(ScheduleSlot slot) onSlotTap;
-  final int selectedDay;
-  final ValueChanged<int> onDayChanged;
+  final DateTime date;
+  final ValueChanged<ScheduleSlot> onBook;
 
-  const ScheduleGrid({
+  const ScheduleDayList({
     super.key,
     required this.slots,
-    required this.onSlotTap,
-    required this.selectedDay,
-    required this.onDayChanged,
+    required this.date,
+    required this.onBook,
   });
 
   @override
   Widget build(BuildContext context) {
-    final daySlots = slots.where((s) => s.dayOfWeek == selectedDay).toList()
+    final daySlots = slots
+        .where((s) => s.isActive && s.dayOfWeek == date.weekday - 1)
+        .toList()
       ..sort((a, b) => a.startTime.compareTo(b.startTime));
 
-    return Column(
-      children: [
-        SizedBox(
-          height: 56,
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            scrollDirection: Axis.horizontal,
-            itemCount: 7,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (_, i) {
-              final active = i == selectedDay;
-              return GestureDetector(
-                onTap: () => onDayChanged(i),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    gradient: active ? AppColors.goldGradient : null,
-                    color: active ? null : AppColors.darkCard,
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    border: Border.all(
-                      color: active ? Colors.transparent : AppColors.darkBorder,
-                    ),
-                  ),
-                  child: Text(
-                    weekDayName(i, short: true),
-                    style: TextStyle(
-                      color: active ? AppColors.dark : Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              );
-            },
+    if (daySlots.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 40),
+        child: Center(
+          child: Text(
+            'Aucun cours prévu ce jour.',
+            style: TextStyle(color: AppColors.textSecondary),
           ),
         ),
-        const SizedBox(height: 12),
-        if (daySlots.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 40),
-            child: Center(
-              child: Text(
-                'Aucun cours prevu ce jour.',
-                style: TextStyle(color: AppColors.darkMuted),
-              ),
-            ),
-          )
-        else
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: daySlots.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
-            itemBuilder: (_, i) => _SlotTile(
-              slot: daySlots[i],
-              onTap: () => onSlotTap(daySlots[i]),
-            ),
+      );
+    }
+    return Column(
+      children: [
+        for (final slot in daySlots)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+            child: SlotCard(slot: slot, date: date, onBook: () => onBook(slot)),
           ),
       ],
     );
   }
 }
 
-class _SlotTile extends StatelessWidget {
+class SlotCard extends StatelessWidget {
   final ScheduleSlot slot;
-  final VoidCallback onTap;
-  const _SlotTile({required this.slot, required this.onTap});
+  final DateTime date;
+  final VoidCallback onBook;
+  const SlotCard({
+    super.key,
+    required this.slot,
+    required this.date,
+    required this.onBook,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: AppColors.darkCard,
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(color: AppColors.darkBorder),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.14),
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
+    final activity = slot.activity;
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: AppShadows.card,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 150,
+            width: double.infinity,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                ActivityPhoto(
+                  url: activity?.imageUrl,
+                  category: activity?.category ?? '',
                 ),
-                child: Text(
-                  '${slot.startTime} - ${slot.endTime}',
-                  style: const TextStyle(
-                    color: AppColors.primary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      slot.activityName.isNotEmpty
-                          ? slot.activityName
-                          : 'Cours',
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.accent,
+                      borderRadius: BorderRadius.circular(AppRadius.full),
+                    ),
+                    child: Text(
+                      '${slot.startTime} – ${slot.endTime}',
                       style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
+                        color: AppColors.onPrimary,
+                        fontSize: 12,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    if (slot.coachName != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        'Coach ${slot.coachName!}',
-                        style: const TextStyle(
-                          color: AppColors.darkMuted,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                    if (slot.capacity > 0) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        'Capacite : ${slot.capacity}',
-                        style: const TextStyle(
-                          color: AppColors.success,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  slot.activityName.isNotEmpty ? slot.activityName : 'Cours',
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 14,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    if (activity != null)
+                      _Meta(Icons.schedule, '${activity.durationMinutes} min'),
+                    _PlacesLeft(slotId: slot.id, date: date),
+                    if (slot.coachName != null)
+                      _Meta(Icons.person_outline, 'Coach ${slot.coachName!}'),
                   ],
                 ),
-              ),
-              const Icon(Icons.chevron_right, color: AppColors.darkMuted),
-            ],
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: onBook,
+                    icon: const Icon(Icons.event_available, size: 20),
+                    label: const Text('Réserver ma place'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Meta extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color color;
+  const _Meta(this.icon, this.text, {this.color = AppColors.textSecondary});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: TextStyle(
+            color: color,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
           ),
         ),
-      ),
+      ],
+    );
+  }
+}
+
+/// Places restantes en temps reel. Vert, orange sous 5 places, rouge a zero.
+class _PlacesLeft extends ConsumerWidget {
+  final String slotId;
+  final DateTime date;
+  const _PlacesLeft({required this.slotId, required this.date});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final places =
+        ref.watch(slotAvailabilityProvider((slotId: slotId, date: date)));
+    final count = places.valueOrNull;
+    if (count == null) return const SizedBox.shrink();
+    if (count == 0) {
+      return const _Meta(Icons.group_off_outlined, 'Complet — liste d\'attente',
+          color: AppColors.error);
+    }
+    return _Meta(
+      Icons.groups_outlined,
+      '$count ${count > 1 ? 'places restantes' : 'place restante'}',
+      color: count < 5 ? AppColors.warning : AppColors.success,
     );
   }
 }

@@ -19,7 +19,7 @@ L'**administration reste sur le site web** (admin Next.js sur port 3403) — il 
 
 **Backend existant** : FastAPI + PostgreSQL 16 + Redis 7
 **API base** : `/api/v1`
-**Paiement** : GeniusPay (Wave, Orange Money, MTN Mobile Money) — depot 50%
+**Paiement** : GeniusPay (Wave, Orange Money, MTN Mobile Money, carte Visa / Mastercard) — depot 50%
 
 ## Architecture technique
 
@@ -83,48 +83,40 @@ eslie_sport_mobile/
 
 ## Design System
 
-### Palette de couleurs (heritee du site web)
+Refonte 1.1.0 : voir `eslie_sport_mobile/docs/REFONTE-UI-1.1.0.md`.
+
+### Palette de couleurs (`lib/config/theme.dart`)
 
 | Token | Hex | Usage |
 |-------|-----|-------|
-| primary (gold) | `#FFD600` | CTAs, accents, titres en emphase |
-| primary-light | `#FFE44D` | Hover / etats clairs |
-| secondary | `#A8B2C1` | Texte secondaire (gris-bleu) |
-| dark (navy) | `#0F1724` | Fond principal |
-| dark-card | `#1A2332` | Fond des cartes |
-| dark-lighter | `#1E293B` | Fond eleve |
-| dark-border | `#2D3A4A` | Bordures |
-| dark-muted | `#8896A8` | Texte attenue |
-| success | `#22C55E` | Places disponibles |
-| warning | `#F59E0B` | Places limitees |
-| error | `#EF4444` | Complet / erreurs |
-
-### Mode clair (optionnel)
-
-- Fond : `#F1F5F9`
-- Cartes : `#FFFFFF`
-- Primary adapte : `#B8960A` (contraste sur fond blanc)
+| primary | `#0B4F36` | Vert : identite, navigation, icones actives |
+| primarySoft | `#E2EFE8` | Fonds d'information, selection |
+| accent | `#F2681C` | Orange : actions principales uniquement |
+| yellow | `#FFC60B` | Soulignes, badge « Populaire » |
+| bg | `#FBF8F1` | Fond creme |
+| surface | `#FFFFFF` | Cartes |
+| textPrimary | `#14231C` | Texte |
+| textSecondary | `#55645C` | Texte secondaire |
+| success / warning / error | `#16A34A` / `#D97706` / `#DC2626` | Places restantes, erreurs |
 
 ### Typographie
 
-- **Police unique** : Inter (variable weight) — pas de serif pour cette app sportive
+- **Police unique** : Poppins (google_fonts)
 
 ### Principes UI
 
-- **Style** : Sportif, energique, moderne — mode sombre par defaut
-- **Glassmorphism** pour les cartes sur fonds sombres
-- **Gradient primaire** : or -> or clair pour les CTAs
-- **Animations** : Dynamiques, transitions rapides
-- **Coins arrondis** : 12-16px pour les cartes
-- **Icones** : Style outline (Lucide-compatible)
+- **Style** : clair, sportif, cartes blanches a ombre douce
+- **Boutons principaux** : pilule orange
+- **Logo** : `assets/images/logo.png`, en haut a gauche de l'accueil, ne pas le remplacer
+- **Logos de paiement** : fichiers reels dans `assets/images/paiement/`, jamais d'icone generique
 
 ## Ecrans et navigation
 
 ### Bottom Navigation Bar (5 onglets)
 
-1. **Accueil** — Hero, chiffres cles, activites vedettes, temoignages, CTA inscription
-2. **Activites** — Catalogue filtrable (categorie: force/cardio/souplesse/arts martiaux/danse, niveau)
-3. **Planning** — Grille horaire hebdomadaire interactive avec badges de capacite
+1. **Accueil** — Logo, hero, acces rapides, prochain cours, tarifs, coachs, transformations
+2. **Activites** — Catalogue filtrable (valeurs API : `force`, `cardio`, `martial_arts`, `flexibility`)
+3. **Planning** — 7 prochains jours, places restantes en temps reel par date
 4. **Abonnements** — Comparaison des formules avec prix en FCFA
 5. **Profil** (ex-« Compte ») — carte d'identite (nom de la derniere inscription, « Visiteur » sinon), cartes photo Mes formules / Planning des cours, carte large Seance decouverte (WhatsApp), puis Coachs, Equipements, Transformations, Articles, Videos, Avis, IMC, Contact
 
@@ -141,14 +133,14 @@ Voir `docs/PROFIL_ET_PASTILLE.md`. Pastille flottante « Reservez avec 50 % d'ac
 
 ### Flux d'inscription a un cours (3 etapes)
 
-1. **Informations personnelles** : Nom, email, telephone
-2. **Details de la seance** : Activite selectionnee, creneau horaire, nombre de participants
+1. **Informations personnelles** : Nom, WhatsApp
+2. **Details de la seance** : Date (uniquement le jour du creneau), type, **formule (`payment_type`, obligatoire : sans elle pas d'acompte)**
 3. **Confirmation + Paiement** : Recapitulatif, choix du mode de paiement, depot 50%
 
 ### Ecrans de paiement
 
-- **Choix operateur** : Wave, Orange Money, MTN Mobile Money (pas Moov)
-- **Attente** : Overlay avec compte a rebours (60 secondes)
+- **Choix operateur** : liste lue dans `GET /payments/config` — Wave, Orange Money, MTN Mobile Money, carte (pas Moov)
+- **Attente** : compte a rebours sur `expires_in` du serveur ; le renvoi USSD ouvre une NOUVELLE reference a suivre
 - **Succes** : Confirmation avec details de la reservation
 - **Echec** : Message d'erreur avec option de reessai
 
@@ -199,14 +191,15 @@ Voir `docs/PROFIL_ET_PASTILLE.md`. Pastille flottante « Reservez avec 50 % d'ac
 3. L'API retourne une `checkout_url`
 4. **Wave** : Ouvrir le lien direct dans le navigateur externe (url_launcher)
 5. **Orange/MTN** : L'utilisateur recoit une notification USSD push sur son telephone — afficher un ecran d'attente
-6. L'app poll `GET /payments/{ref}` toutes les 3-4 secondes pendant 60 secondes max
+6. L'app poll `GET /payments/{ref}` toutes les 3-5 secondes jusqu'a `expires_in` + 20 s
 7. Resultat : succes -> ecran de confirmation | echec -> option de reessai avec autre operateur
 
 ### Validation du telephone
 
-- **MTN** : Prefixe `05` (format +225 05XXXXXXXX)
-- **Orange** : Prefixe `07` (format +225 07XXXXXXXX)
+- **MTN** : Prefixes `05`, `06`, `04`
+- **Orange** : Prefixes `07`, `08`, `09`
 - **Wave** : Pas de validation de prefixe (lien direct)
+- Memes plages que `PREFIXES_PAR_MOYEN` du backend
 - Normaliser au format international `+225XXXXXXXXXX`
 
 ### Montant du depot

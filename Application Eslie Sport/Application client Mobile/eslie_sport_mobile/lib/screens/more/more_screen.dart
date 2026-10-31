@@ -5,10 +5,13 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/api_config.dart';
 import '../../config/theme.dart';
+import '../../models/public_settings.dart';
 import '../../services/member_profile.dart';
+import '../../services/providers.dart';
+import '../../widgets/brand_logo.dart';
 
-/// Profil — style Airbnb, palette Eslie : carte d'identité, deux cartes
-/// photo, une carte large, puis les rubriques (icône + chevron).
+/// Profil : carte d'identité, WhatsApp, deux cartes photo, une carte large,
+/// puis les rubriques (icône + chevron).
 ///
 /// Il n'y a pas de compte : le nom affiché est celui de la dernière
 /// inscription faite depuis l'appareil, « Visiteur » sinon.
@@ -20,7 +23,7 @@ class MoreScreen extends ConsumerWidget {
         icon: Icons.groups_2_outlined, label: 'Coachs', route: '/coaches'),
     _MoreItem(
         icon: Icons.sports_gymnastics_outlined,
-        label: 'Equipements',
+        label: 'Équipements',
         route: '/equipment'),
     _MoreItem(
         icon: Icons.compare_arrows_outlined,
@@ -29,7 +32,7 @@ class MoreScreen extends ConsumerWidget {
     _MoreItem(
         icon: Icons.article_outlined, label: 'Articles', route: '/articles'),
     _MoreItem(
-        icon: Icons.play_circle_outline, label: 'Videos', route: '/videos'),
+        icon: Icons.play_circle_outline, label: 'Vidéos', route: '/videos'),
     _MoreItem(
         icon: Icons.reviews_outlined, label: 'Avis clients', route: '/reviews'),
     _MoreItem(
@@ -40,6 +43,8 @@ class MoreScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final name = ref.watch(memberNameProvider);
+    final settings = ref.watch(publicSettingsProvider).valueOrNull;
+    final whatsapp = settings?.whatsappDigits ?? ApiConfig.whatsappNumber;
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(
@@ -47,30 +52,24 @@ class MoreScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
           children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: _RoundIconButton(
-                icon: Icons.notifications_none_rounded,
-                tooltip: 'Notifications',
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                        'Vos confirmations et rappels arrivent sur WhatsApp.'),
-                  ),
-                ),
-              ),
-            ),
-            const Text(
-              'Profil',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 34,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.5,
-              ),
-            ),
-            const SizedBox(height: 24),
+            const UnderlinedTitle('Mon profil'),
+            const SizedBox(height: 18),
             _IdentityCard(name: name),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                ),
+                onPressed: () => launchUrl(
+                  Uri.parse('https://wa.me/$whatsapp'),
+                  mode: LaunchMode.externalApplication,
+                ),
+                icon: const Icon(Icons.chat_outlined),
+                label: const Text('Nous écrire sur WhatsApp'),
+              ),
+            ),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -100,7 +99,7 @@ class MoreScreen extends ConsumerWidget {
                   'avec un coach, on en parle sur WhatsApp.',
               onTap: () => launchUrl(
                 Uri.parse(
-                  'https://wa.me/${ApiConfig.whatsappNumber}?text='
+                  'https://wa.me/$whatsapp?text='
                   '${Uri.encodeComponent("Bonjour ESLIE SPORT, je souhaite réserver une séance découverte.")}',
                 ),
                 mode: LaunchMode.externalApplication,
@@ -116,7 +115,7 @@ class MoreScreen extends ConsumerWidget {
               ),
             const Divider(),
             const SizedBox(height: 20),
-            const _AboutCard(),
+            _AboutCard(settings: settings),
           ],
         ),
       ),
@@ -132,8 +131,7 @@ class _MoreItem {
       {required this.icon, required this.label, required this.route});
 }
 
-/// Cadre commun des cartes : grand rayon, ombre douce, contour fin — sur
-/// fond navy l'ombre seule ne suffit pas à détacher la carte.
+/// Cadre commun des cartes : grand rayon, ombre douce, contour fin.
 final _cardDecoration = BoxDecoration(
   color: AppColors.surface,
   borderRadius: BorderRadius.circular(22),
@@ -160,39 +158,7 @@ class _Pressable extends StatelessWidget {
   }
 }
 
-class _RoundIconButton extends StatelessWidget {
-  const _RoundIconButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onTap,
-  });
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: AppColors.surfaceElevated,
-        shape: const CircleBorder(),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: SizedBox(
-            width: 48,
-            height: 48,
-            child: Icon(icon, color: AppColors.textPrimary),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Avatar or pâle + nom. L'or remplace le vert d'Airbnb : c'est l'accent
-/// unique de la marque.
+/// Avatar + nom. Sans compte, ce nom est le seul element de profil reel.
 class _IdentityCard extends StatelessWidget {
   const _IdentityCard({required this.name});
   final String? name;
@@ -200,52 +166,56 @@ class _IdentityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 32, 20, 28),
+      padding: const EdgeInsets.all(18),
       decoration: _cardDecoration,
-      child: Column(
+      child: Row(
         children: [
           Container(
-            width: 112,
-            height: 112,
+            width: 72,
+            height: 72,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.16),
+              color: AppColors.primarySoft,
               shape: BoxShape.circle,
             ),
             child: name == null
                 ? const Icon(Icons.person_rounded,
-                    size: 56, color: AppColors.primary)
+                    size: 40, color: AppColors.primary)
                 : Text(
                     name!.characters.first.toUpperCase(),
                     style: const TextStyle(
-                      fontSize: 48,
+                      fontSize: 30,
                       fontWeight: FontWeight.w700,
                       color: AppColors.primary,
                     ),
                   ),
           ),
-          const SizedBox(height: 18),
-          Text(
-            name ?? 'Visiteur',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            name == null
-                ? 'Votre nom apparaîtra après votre première inscription'
-                : 'Membre',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name ?? 'Visiteur',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  name == null
+                      ? 'Votre nom apparaîtra après votre première inscription'
+                      : 'Membre ESLIE SPORT',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -405,10 +375,13 @@ class _Tile extends StatelessWidget {
 }
 
 class _AboutCard extends StatelessWidget {
-  const _AboutCard();
+  const _AboutCard({required this.settings});
+  final PublicSettings? settings;
 
   @override
   Widget build(BuildContext context) {
+    final phone = settings?.phone ?? ApiConfig.contactPhoneDisplay;
+    final mapUrl = settings?.mapUrl;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: _cardDecoration,
@@ -423,17 +396,21 @@ class _AboutCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(ApiConfig.slogan,
               style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.textPrimary,
                   fontStyle: FontStyle.italic,
                   fontSize: 13)),
           const SizedBox(height: 12),
-          _row(Icons.location_on_outlined, ApiConfig.gymLocation),
-          _row(Icons.phone_outlined, ApiConfig.contactPhoneDisplay,
-              onTap: () =>
-                  launchUrl(Uri.parse('tel:${ApiConfig.contactPhone}'))),
-          _row(Icons.chat_outlined, 'WhatsApp',
+          _row(Icons.location_on_outlined,
+              settings?.address ?? ApiConfig.gymLocation,
+              onTap: mapUrl == null
+                  ? null
+                  : () => launchUrl(Uri.parse(mapUrl),
+                      mode: LaunchMode.externalApplication)),
+          _row(Icons.phone_outlined, phone,
               onTap: () => launchUrl(
-                  Uri.parse('https://wa.me/${ApiConfig.whatsappNumber}'))),
+                  Uri.parse('tel:${phone.replaceAll(' ', '')}'))),
+          if (settings?.openingHours != null)
+            _row(Icons.schedule, settings!.openingHours!),
         ],
       ),
     );
@@ -450,7 +427,8 @@ class _AboutCard extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
                 child: Text(text,
-                    style: const TextStyle(color: Colors.white, fontSize: 13))),
+                    style: const TextStyle(
+                        color: AppColors.textPrimary, fontSize: 13))),
           ],
         ),
       ),

@@ -406,7 +406,7 @@ class ApiClient {
     String? enrollmentId,
     String? subscriptionOrderId,
     required PaymentOperator operator,
-    required String paymentPhone,
+    String paymentPhone = '',
   }) async {
     assert(
       (enrollmentId == null) != (subscriptionOrderId == null),

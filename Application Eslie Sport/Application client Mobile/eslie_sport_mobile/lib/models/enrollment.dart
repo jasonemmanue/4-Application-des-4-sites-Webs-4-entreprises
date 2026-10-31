@@ -1,5 +1,28 @@
 import 'package:intl/intl.dart';
 
+/// Formule du registre de la salle (`payment_type`). L'API en deduit l'acompte :
+/// sans elle, aucun montant n'est calculable et le paiement est refuse.
+enum EnrollmentFormula {
+  session('Séance', 'Séance', 'Seance individuelle / collective', 3000),
+  monthly('Abonnée mensuel', 'Abonnement mensuel', 'Mensualite', 30000),
+  kungFu('Abonnement de karaté', 'Abonnement Kung-Fu Wushu',
+      'Kung-Fu Wushu — Mensuel', 10000),
+  boxing('Abonnement de box', 'Abonnement Boxe & Kick-boxing',
+      'Boxe & Kick Boxing — Mensuel', 15000);
+
+  const EnrollmentFormula(
+      this.apiValue, this.label, this.catalogName, this.fallbackPrice);
+
+  /// Valeur exacte attendue par `PaymentType` cote FastAPI.
+  final String apiValue;
+  final String label;
+
+  /// Ligne du catalogue `subscriptions` qui porte le tarif, reglable au
+  /// back-office. Meme table que `FORMULE_VERS_ABONNEMENT` cote serveur.
+  final String catalogName;
+  final int fallbackPrice;
+}
+
 class EnrollmentRequest {
   final String userName;
   final String userWhatsapp;
@@ -42,6 +65,11 @@ class Enrollment {
   final String status;
   final String? paymentStatus;
   final double? amountPaid;
+  final double? depositAmount;
+  final double? amountDue;
+
+  /// `pending_payment` : la place n'est prise qu'au reglement de l'acompte.
+  bool get awaitsPayment => status == 'pending_payment';
 
   const Enrollment({
     required this.id,
@@ -52,6 +80,8 @@ class Enrollment {
     required this.status,
     this.paymentStatus,
     this.amountPaid,
+    this.depositAmount,
+    this.amountDue,
   });
 
   factory Enrollment.fromJson(Map<String, dynamic> json) => Enrollment(
@@ -65,5 +95,7 @@ class Enrollment {
         status: json['status'] as String? ?? 'pending',
         paymentStatus: json['payment_status'] as String?,
         amountPaid: (json['amount_paid'] as num?)?.toDouble(),
+        depositAmount: (json['deposit_amount'] as num?)?.toDouble(),
+        amountDue: (json['amount_due'] as num?)?.toDouble(),
       );
 }

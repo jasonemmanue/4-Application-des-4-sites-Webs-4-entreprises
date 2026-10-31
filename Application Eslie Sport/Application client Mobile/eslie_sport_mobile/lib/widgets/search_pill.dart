@@ -12,6 +12,7 @@ import '../models/activity.dart';
 import '../models/article.dart';
 import '../models/coach.dart';
 import '../services/providers.dart';
+import '../utils/formatters.dart';
 
 /// Version "read-only" : un tap ouvre l'ecran de recherche complet.
 /// C'est ce que l'ecran d'accueil affiche.
@@ -264,7 +265,7 @@ class _SuggestionsList extends ConsumerWidget {
                 .map((a) => _ResultTile(
                       icon: Icons.fitness_center,
                       title: a.name,
-                      subtitle: a.category,
+                      subtitle: activityCategoryLabel(a.category),
                       onTap: () {
                         Navigator.of(context).pop();
                         context.push('/activities/${a.slug}');
@@ -282,7 +283,7 @@ class _SuggestionsList extends ConsumerWidget {
                       subtitle: c.specialties.join(', '),
                       onTap: () {
                         Navigator.of(context).pop();
-                        context.push('/more');
+                        context.push('/coaches');
                       },
                     ))
                 .toList(),

@@ -28,6 +28,17 @@ final activitiesProvider =
   return api.getActivities(category: params.category, level: params.level);
 });
 
+typedef SlotDay = ({String slotId, DateTime date});
+
+/// Places restantes d'un creneau a une date precise (temps reel).
+final slotAvailabilityProvider =
+    FutureProvider.autoDispose.family<int?, SlotDay>((ref, key) async {
+  final data = await ref
+      .watch(apiClientProvider)
+      .getSlotAvailability(key.slotId, specificDate: key.date);
+  return (data['available'] as num?)?.toInt();
+});
+
 final activityBySlugProvider =
     FutureProvider.family<Activity?, String>((ref, slug) {
   return ref.watch(apiClientProvider).getActivityBySlug(slug);
@@ -92,11 +103,6 @@ final reviewsProvider = FutureProvider<List<Review>>((ref) {
 
 final publicSettingsProvider = FutureProvider<PublicSettings>((ref) {
   return ref.watch(apiClientProvider).getPublicSettings();
-});
-
-final paymentConfigProvider =
-    FutureProvider<Map<String, dynamic>>((ref) {
-  return ref.watch(apiClientProvider).getPaymentConfig();
 });
 
 final apiHealthProvider = FutureProvider<bool>((ref) {

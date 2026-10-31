@@ -2,25 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../services/member_profile.dart';
 import '../../config/api_config.dart';
 import '../../config/theme.dart';
 import '../../models/enrollment.dart';
 import '../../models/payment.dart';
 import '../../models/schedule_slot.dart';
 import '../../services/api_client.dart';
+import '../../services/member_profile.dart';
 import '../../services/payment_service.dart';
+import '../../services/providers.dart';
 import '../../utils/formatters.dart';
+import '../../widgets/checkout_section.dart';
+import '../../widgets/empty_state.dart';
 import '../../widgets/error_state.dart';
 import '../../widgets/loading_state.dart';
-import '../../widgets/payment_method_picker.dart';
-import '../payment/payment_wait_screen.dart';
 
+/// Reservation en 3 etapes : infos, seance (date + formule), paiement.
+///
+/// La formule (`payment_type`) est obligatoire : c'est d'elle que le serveur
+/// deduit l'acompte. Sans elle la reservation prendrait une place sans paiement
+/// et `POST /payments/init` repondrait 409.
 class EnrollmentScreen extends ConsumerStatefulWidget {
-  final String? activitySlug;
   final String? slotId;
+  final DateTime? date;
 
-  const EnrollmentScreen({super.key, this.activitySlug, this.slotId});
+  const EnrollmentScreen({super.key, this.slotId, this.date});
 
   @override
   ConsumerState<EnrollmentScreen> createState() => _EnrollmentScreenState();
@@ -32,22 +38,18 @@ class _EnrollmentScreenState extends ConsumerState<EnrollmentScreen> {
   final _name = TextEditingController();
   final _whatsapp = TextEditingController();
   final _feedback = TextEditingController();
-  DateTime _specificDate = DateTime.now().add(const Duration(days: 1));
-
-  PaymentOperator? _operator;
   final _payerPhone = TextEditingController();
+
+  DateTime? _date;
+  EnrollmentFormula _formula = EnrollmentFormula.session;
+  String _sessionType = 'Collectif';
+  PaymentOperator? _operator;
   bool _submitting = false;
 
-  ScheduleSlot? _slot;
-
-  int _sessionPrice = 3000;
-  int get _deposit => (_sessionPrice * ApiConfig.depositPercent / 100).round();
-
-  @override
-  void initState() {
-    super.initState();
-    _payerPhone.addListener(() => setState(() {}));
-  }
+  // Reservation deja enregistree pour ces memes choix : un second essai de
+  // paiement la reutilise au lieu de creer un doublon au back-office.
+  Enrollment? _enrollment;
+  String? _enrollmentKey;
 
   @override
   void dispose() {
@@ -58,173 +60,214 @@ class _EnrollmentScreenState extends ConsumerState<EnrollmentScreen> {
     super.dispose();
   }
 
-  Future<void> _loadContext() async {
-    if (_slot != null) return;
-    if (widget.slotId != null) {
-      final slots = await ref.read(apiClientProvider).getSchedule();
-      _slot = slots.firstWhere(
-        (s) => s.id == widget.slotId,
-        orElse: () => slots.first,
-      );
-    }
-    if (mounted) setState(() {});
-  }
-
-  Future<void> _submit() async {
-    if (_slot == null) {
-      _snack('Choisissez un creneau d\'abord.');
-      return;
-    }
-    if (_operator == null) {
-      _snack('Choisissez un moyen de paiement.');
-      return;
-    }
-    final normalized =
-        ref.read(paymentServiceProvider).normalizePhone(_payerPhone.text);
-    if (!ref
-        .read(paymentServiceProvider)
-        .validatePhoneForOperator(_operator!, normalized)) {
-      _snack('Numero incompatible avec ${_operator!.label}.');
-      return;
-    }
-    setState(() => _submitting = true);
-    try {
-      final api = ref.read(apiClientProvider);
-      final request = EnrollmentRequest(
-        userName: _name.text.trim(),
-        userWhatsapp: _whatsapp.text.trim(),
-        slotId: _slot!.id,
-        specificDate: _specificDate,
-        feedback: _feedback.text.trim().isEmpty ? null : _feedback.text.trim(),
-      );
-      final enrollment = await api.createEnrollment(request);
-      // Pas de compte : le nom de la dernière inscription personnalise le
-      // Profil.
-      await ref.read(memberNameProvider.notifier).save(_name.text);
-      final init = await ref.read(paymentServiceProvider).initiate(
-            enrollmentId: enrollment.id,
-            operator: _operator!,
-            paymentPhone: normalized,
-          );
-
-      if (!mounted) return;
-      if (_operator == PaymentOperator.wave && init.paymentUrl.isNotEmpty) {
-        await ref.read(paymentServiceProvider).openCheckoutUrl(init.paymentUrl);
-      }
-
-      final result = await Navigator.of(context).push<PaymentStatus?>(
-        MaterialPageRoute(
-          builder: (_) => PaymentWaitScreen(
-            reference: init.reference,
-            operator: _operator!,
-            amount: init.amount.round(),
-          ),
-        ),
-      );
-
-      if (!mounted) return;
-      final ok = result == PaymentStatus.completed;
-      context.pushReplacement(
-        '/payment/result',
-        extra: {
-          'reference': init.reference,
-          'success': ok,
-          'message': ok
-              ? 'Depot recu. Reservation ${enrollment.id.substring(0, 8)} confirmee.'
-              : 'Paiement non finalise. Reessayez.',
-        },
-      );
-    } catch (e) {
-      if (!mounted) return;
-      _snack(e.toString());
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
-  }
-
   void _snack(String message) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
-  bool _validateStep1() => _formStep1.currentState?.validate() ?? false;
+  /// Dates reservables : uniquement le jour de semaine du creneau.
+  List<DateTime> _datesFor(ScheduleSlot slot) {
+    if (slot.specificDate != null) return [slot.specificDate!];
+    final first = nextDateForWeekday(slot.dayOfWeek);
+    return [for (var i = 0; i < 6; i++) first.add(Duration(days: 7 * i))];
+  }
+
+  DateTime _selectedDate(ScheduleSlot slot) {
+    final dates = _datesFor(slot);
+    final wanted = _date ?? widget.date;
+    if (wanted != null) {
+      for (final d in dates) {
+        if (d.year == wanted.year &&
+            d.month == wanted.month &&
+            d.day == wanted.day) {
+          return d;
+        }
+      }
+    }
+    return dates.first;
+  }
+
+  int _price() {
+    final catalog = ref.read(subscriptionsProvider).valueOrNull ?? const [];
+    for (final s in catalog) {
+      if (s.name == _formula.catalogName) return s.price.round();
+    }
+    return _formula.fallbackPrice;
+  }
+
+  int get _deposit =>
+      (_price() * ApiConfig.depositPercent / 100).round();
+
+  Future<void> _submit(ScheduleSlot slot) async {
+    final op = _operator;
+    final paymentsOpen =
+        ref.read(paymentConfigProvider).valueOrNull?.enabled ?? true;
+    final ps = ref.read(paymentServiceProvider);
+    if (paymentsOpen) {
+      if (op == null) {
+        _snack('Choisissez un moyen de paiement.');
+        return;
+      }
+      if (op.needsPhone) {
+        final error = ps.phoneError(op, _payerPhone.text);
+        if (error != null) {
+          _snack(error);
+          return;
+        }
+      }
+    }
+
+    setState(() => _submitting = true);
+    try {
+      final api = ref.read(apiClientProvider);
+      final date = _selectedDate(slot);
+      final whatsapp = ps.normalizePhone(_whatsapp.text);
+      final key = [
+        slot.id,
+        formatIso(date),
+        _formula.apiValue,
+        _sessionType,
+        _name.text.trim(),
+        whatsapp,
+      ].join('|');
+      if (_enrollment == null || _enrollmentKey != key) {
+        _enrollment = await api.createEnrollment(EnrollmentRequest(
+          userName: _name.text.trim(),
+          userWhatsapp: whatsapp,
+          slotId: slot.id,
+          specificDate: date,
+          sessionType: _sessionType,
+          paymentType: _formula.apiValue,
+          feedback: _feedback.text.trim().isEmpty ? null : _feedback.text.trim(),
+        ));
+        _enrollmentKey = key;
+      }
+      final enrollment = _enrollment!;
+      await ref.read(memberNameProvider.notifier).save(_name.text);
+
+      if (!mounted) return;
+      // Guichet coupe cote serveur : la place est prise, l'acompte se regle
+      // a la salle. Rien a payer ici.
+      if (!enrollment.awaitsPayment) {
+        final waitlisted = enrollment.status == 'waitlisted';
+        context.pushReplacement('/payment/result', extra: {
+          'reference': '',
+          'success': true,
+          'title': waitlisted ? 'Vous êtes sur liste d\'attente' : 'Place réservée !',
+          'message': waitlisted
+              ? 'Ce cours est complet. La salle vous contactera dès qu\'une place se libère.'
+              : 'Votre place est réservée le ${formatDate(date)}. Le règlement se fait à la salle.',
+        });
+        return;
+      }
+
+      final init = await ps.initiate(
+        enrollmentId: enrollment.id,
+        operator: op!,
+        paymentPhone: op.needsPhone ? ps.normalizePhone(_payerPhone.text) : '',
+      );
+      if (!mounted) return;
+      await runCheckout(
+        context: context,
+        ref: ref,
+        init: init,
+        operator: op,
+        successMessage:
+            'Acompte de ${formatFcfa(init.amount)} reçu. Votre place est réservée le ${formatDate(date)}, le reste se règle à la salle.',
+      );
+    } on ApiException catch (e) {
+      if (mounted) _snack(e.message);
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final schedule = ref.watch(scheduleProvider);
+    // Precharge le tarif et les moyens de paiement avant l'etape 3.
+    ref.watch(subscriptionsProvider);
+    ref.watch(paymentConfigProvider);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Inscription')),
-      body: FutureBuilder(
-        future: _loadContext(),
-        builder: (_, snap) {
-          if (snap.connectionState == ConnectionState.waiting &&
-              _slot == null &&
-              widget.slotId != null) {
-            return const LoadingState();
-          }
-          if (snap.hasError) {
-            return ErrorState(
-              message: snap.error.toString(),
-              onRetry: () => setState(() {}),
+      appBar: AppBar(title: const Text('Réservation')),
+      body: schedule.when(
+        loading: () => const LoadingState(),
+        error: (e, _) => ErrorState(
+          message: e.toString(),
+          onRetry: () => ref.invalidate(scheduleProvider),
+        ),
+        data: (slots) {
+          final matches = slots.where((s) => s.id == widget.slotId);
+          if (matches.isEmpty) {
+            return EmptyState(
+              icon: Icons.event_busy,
+              title: 'Créneau introuvable',
+              subtitle: 'Choisissez un cours depuis le planning.',
+              action: ElevatedButton(
+                onPressed: () => context.go('/schedule'),
+                child: const Text('Voir le planning'),
+              ),
             );
           }
-          return _buildBody();
+          final slot = matches.first;
+          return Column(
+            children: [
+              _stepIndicator(),
+              Expanded(
+                child: IndexedStack(
+                  index: _step,
+                  children: [
+                    _stepInfos(),
+                    _stepDetails(slot),
+                    _stepPayment(slot),
+                  ],
+                ),
+              ),
+            ],
+          );
         },
       ),
     );
   }
 
-  Widget _buildBody() {
-    return Column(
-      children: [
-        _stepIndicator(),
-        Expanded(
-          child: IndexedStack(
-            index: _step,
-            children: [
-              _stepInfos(),
-              _stepDetails(),
-              _stepPayment(),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _stepIndicator() {
-    const labels = ['Infos', 'Seance', 'Paiement'];
+    const labels = ['Vos infos', 'Séance', 'Paiement'];
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
       child: Row(
-        children: List.generate(3, (i) {
-          final active = i == _step;
-          final done = i < _step;
-          return Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(right: i == 2 ? 0 : 8),
-              child: Column(
-                children: [
-                  Container(
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: (active || done)
-                          ? AppColors.primary
-                          : AppColors.darkBorder,
-                      borderRadius: BorderRadius.circular(3),
+        children: [
+          for (var i = 0; i < 3; i++)
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(right: i == 2 ? 0 : 8),
+                child: Column(
+                  children: [
+                    Container(
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color:
+                            i <= _step ? AppColors.accent : AppColors.border,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(labels[i],
+                    const SizedBox(height: 6),
+                    Text(
+                      labels[i],
                       style: TextStyle(
-                        color: active ? AppColors.primary : AppColors.darkMuted,
+                        color: i == _step
+                            ? AppColors.textPrimary
+                            : AppColors.textSecondary,
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      )),
-                ],
+                        fontWeight:
+                            i == _step ? FontWeight.w700 : FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          );
-        }),
+        ],
       ),
     );
   }
@@ -239,6 +282,7 @@ class _EnrollmentScreenState extends ConsumerState<EnrollmentScreen> {
             TextFormField(
               controller: _name,
               maxLength: 80,
+              textCapitalization: TextCapitalization.words,
               validator: (v) {
                 if (v == null || v.trim().isEmpty) return 'Nom requis';
                 if (v.trim().length < 2) return 'Nom trop court';
@@ -246,29 +290,34 @@ class _EnrollmentScreenState extends ConsumerState<EnrollmentScreen> {
               },
               decoration: const InputDecoration(labelText: 'Nom complet'),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 6),
             TextFormField(
               controller: _whatsapp,
               keyboardType: TextInputType.phone,
               maxLength: 15,
               validator: (v) {
-                if (v == null || v.trim().length < 8) return 'Min 8 chiffres';
+                if (v == null || v.trim().length < 8) {
+                  return 'Minimum 8 chiffres';
+                }
                 if (!RegExp(r'^[0-9\s\-+]+$').hasMatch(v.trim())) {
                   return 'Chiffres uniquement';
                 }
                 return null;
               },
               decoration: const InputDecoration(
-                labelText: 'Numero WhatsApp',
+                labelText: 'Numéro WhatsApp',
                 prefixText: '+225 ',
+                helperText: 'La salle vous confirme la réservation sur WhatsApp',
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  if (_validateStep1()) setState(() => _step = 1);
+                  if (_formStep1.currentState?.validate() ?? false) {
+                    setState(() => _step = 1);
+                  }
                 },
                 child: const Text('Continuer'),
               ),
@@ -279,91 +328,74 @@ class _EnrollmentScreenState extends ConsumerState<EnrollmentScreen> {
     );
   }
 
-  Widget _stepDetails() {
+  Widget _stepDetails(ScheduleSlot slot) {
+    final selected = _selectedDate(slot);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (_slot != null) ...[
-            _summaryRow('Activite', _slot!.activityName),
-            _summaryRow('Jour', weekDayName(_slot!.dayOfWeek)),
-            _summaryRow('Horaire', '${_slot!.startTime} - ${_slot!.endTime}'),
-            if (_slot!.coachName != null)
-              _summaryRow('Coach', _slot!.coachName!),
-          ] else
-            const Text('Veuillez choisir un creneau via le planning.',
-                style: TextStyle(color: AppColors.darkMuted)),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.darkCard,
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(color: AppColors.darkBorder),
-            ),
-            child: Column(
+          _card(
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Date de la seance',
-                    style: TextStyle(color: AppColors.darkMuted, fontSize: 13)),
-                const SizedBox(height: 6),
-                InkWell(
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime.now().add(const Duration(days: 60)),
-                      initialDate: _specificDate,
-                    );
-                    if (picked != null) {
-                      setState(() => _specificDate = picked);
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.darkLighter,
-                      borderRadius: BorderRadius.circular(AppRadius.sm),
-                      border: Border.all(color: AppColors.darkBorder),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.calendar_today,
-                            color: AppColors.primary, size: 16),
-                        const SizedBox(width: 10),
-                        Text(formatDate(_specificDate),
-                            style: const TextStyle(color: Colors.white)),
-                      ],
-                    ),
+                Text(
+                  slot.activityName,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                const Divider(height: 24),
-                Row(
-                  children: [
-                    const Text('Prix de la seance',
-                        style: TextStyle(
-                            color: AppColors.darkMuted, fontSize: 13)),
-                    const Spacer(),
-                    Text(formatFcfa(_sessionPrice),
-                        style: const TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 16)),
-                  ],
+                const SizedBox(height: 4),
+                Text(
+                  '${weekDayName(slot.dayOfWeek)} · ${slot.startTime} – ${slot.endTime}'
+                  '${slot.coachName != null ? ' · Coach ${slot.coachName}' : ''}',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
+          _label('Date de la séance'),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final d in _datesFor(slot))
+                _choice(
+                  '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}',
+                  d == selected,
+                  () => setState(() => _date = d),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _label('Type de séance'),
+          Wrap(
+            spacing: 8,
+            children: [
+              for (final type in const ['Collectif', 'Individuel'])
+                _choice(type, _sessionType == type,
+                    () => setState(() => _sessionType = type)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _label('Votre formule'),
+          for (final f in EnrollmentFormula.values)
+            _formulaTile(f),
+          const SizedBox(height: 6),
           TextField(
             controller: _feedback,
             minLines: 2,
             maxLines: 4,
             maxLength: 500,
-            decoration: const InputDecoration(labelText: 'Note (optionnel)'),
+            decoration: const InputDecoration(labelText: 'Note (facultatif)'),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -374,9 +406,9 @@ class _EnrollmentScreenState extends ConsumerState<EnrollmentScreen> {
               ),
               const SizedBox(width: 10),
               Expanded(
+                flex: 2,
                 child: ElevatedButton(
-                  onPressed:
-                      _slot == null ? null : () => setState(() => _step = 2),
+                  onPressed: () => setState(() => _step = 2),
                   child: const Text('Passer au paiement'),
                 ),
               ),
@@ -387,71 +419,120 @@ class _EnrollmentScreenState extends ConsumerState<EnrollmentScreen> {
     );
   }
 
-  Widget _stepPayment() {
+  Widget _formulaTile(EnrollmentFormula f) {
+    final active = f == _formula;
+    final catalog = ref.watch(subscriptionsProvider).valueOrNull ?? const [];
+    final price = catalog
+        .where((s) => s.name == f.catalogName)
+        .map((s) => s.price.round())
+        .firstOrNull ?? f.fallbackPrice;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: active ? AppColors.primarySoft : AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          onTap: () => setState(() => _formula = f),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(
+                color: active ? AppColors.primary : AppColors.border,
+                width: active ? 2 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    f.label,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Text(
+                  formatFcfa(price),
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _stepPayment(ScheduleSlot slot) {
+    final config = ref.watch(paymentConfigProvider).valueOrNull;
+    final paymentsOpen = config?.enabled ?? true;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              gradient: AppColors.goldGradient,
-              borderRadius: BorderRadius.circular(AppRadius.md),
+              gradient: AppColors.brandGradient,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.info_outline, color: AppColors.dark),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: RichText(
-                    text: TextSpan(
-                      style:
-                          const TextStyle(color: AppColors.dark, fontSize: 13),
-                      children: [
-                        const TextSpan(
-                            text: 'Depot 50% requis : ',
-                            style: TextStyle(fontWeight: FontWeight.w800)),
-                        TextSpan(text: formatFcfa(_deposit)),
-                        const TextSpan(text: ' sur '),
-                        TextSpan(text: formatFcfa(_sessionPrice)),
-                      ],
-                    ),
+                Text(
+                  '${slot.activityName} · ${formatDate(_selectedDate(slot))}',
+                  style: const TextStyle(
+                    color: AppColors.onPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  formatFcfa(_deposit),
+                  style: const TextStyle(
+                    color: AppColors.yellow,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  'Acompte de 50 % sur ${formatFcfa(_price())}. Le reste se règle à la salle.',
+                  style: const TextStyle(
+                    color: AppColors.onPrimary,
+                    fontSize: 13,
                   ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16),
-          const Text('Moyen de paiement',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 15)),
-          const SizedBox(height: 10),
-          PaymentMethodPicker(
-            selected: _operator,
-            onChanged: (op) => setState(() {
-              _operator = op;
-              if (_payerPhone.text.isEmpty) _payerPhone.text = _whatsapp.text;
-            }),
-          ),
-          if (_operator != null) ...[
-            const SizedBox(height: 10),
-            TextField(
-              controller: _payerPhone,
-              keyboardType: TextInputType.phone,
-              maxLength: 15,
-              decoration: InputDecoration(
-                labelText: 'Numero ${_operator!.label}',
-                prefixText: '+225 ',
-                helperText: _operator!.requiredPrefix != null
-                    ? 'Doit commencer par ${_operator!.requiredPrefix}'
-                    : null,
-              ),
-            ),
-          ],
-          const SizedBox(height: 20),
+          if (paymentsOpen)
+            CheckoutSection(
+              selected: _operator,
+              phone: _payerPhone,
+              onSelect: (op) => setState(() {
+                _operator = op;
+                if (op.needsPhone && _payerPhone.text.isEmpty) {
+                  _payerPhone.text = _whatsapp.text;
+                }
+              }),
+            )
+          else
+            _card(const Text(
+              'Le paiement en ligne est momentanément indisponible. Votre place sera réservée et vous réglerez à la salle.',
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+            )),
+          const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
@@ -465,18 +546,24 @@ class _EnrollmentScreenState extends ConsumerState<EnrollmentScreen> {
               Expanded(
                 flex: 2,
                 child: ElevatedButton.icon(
-                  onPressed: _submitting ? null : _submit,
+                  onPressed: _submitting ? null : () => _submit(slot),
                   icon: _submitting
                       ? const SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2, color: AppColors.dark),
+                            strokeWidth: 2,
+                            color: AppColors.onPrimary,
+                          ),
                         )
-                      : const Icon(Icons.lock),
-                  label: Text(_submitting
-                      ? 'Traitement...'
-                      : 'Payer ${formatFcfa(_deposit)}'),
+                      : Icon(paymentsOpen ? Icons.lock : Icons.check),
+                  label: Text(
+                    _submitting
+                        ? 'Traitement...'
+                        : paymentsOpen
+                            ? 'Payer ${formatFcfa(_deposit)}'
+                            : 'Réserver',
+                  ),
                 ),
               ),
             ],
@@ -486,25 +573,51 @@ class _EnrollmentScreenState extends ConsumerState<EnrollmentScreen> {
     );
   }
 
-  Widget _summaryRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 90,
-            child: Text(label,
-                style:
-                    const TextStyle(color: AppColors.darkMuted, fontSize: 13)),
+  Widget _label(String text) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
           ),
-          Expanded(
-            child: Text(value,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600)),
+        ),
+      );
+
+  Widget _card(Widget child) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: child,
+      );
+
+  Widget _choice(String label, bool active, VoidCallback onTap) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.full),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 140),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: active ? AppColors.primary : AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.full),
+          border: Border.all(
+            color: active ? AppColors.primary : AppColors.border,
           ),
-        ],
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: active ? AppColors.onPrimary : AppColors.textPrimary,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }

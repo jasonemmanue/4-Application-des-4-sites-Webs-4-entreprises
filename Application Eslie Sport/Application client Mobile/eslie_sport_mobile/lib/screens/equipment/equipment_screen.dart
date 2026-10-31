@@ -105,7 +105,7 @@ class EquipmentScreen extends ConsumerWidget {
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
-                                          color: Colors.white,
+                                          color: AppColors.textPrimary,
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600),
                                     ),

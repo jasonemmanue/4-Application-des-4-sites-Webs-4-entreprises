@@ -75,7 +75,7 @@ Future<void> showDepositNoticeSheet(BuildContext context, WidgetRef ref) async {
   await showModalBottomSheet<void>(
     context: context,
     backgroundColor: AppColors.surface,
-    barrierColor: Colors.black.withOpacity(0.6),
+    barrierColor: Colors.black.withOpacity(0.45),
     useSafeArea: true,
     // Navigateur racine : sinon la feuille s'ouvre dans celui du ShellRoute
     // et la barre de navigation basse reste visible, non assombrie.
@@ -132,7 +132,7 @@ class _DepositNoticeSheet extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const Text(
-            'Wave, Orange Money ou MTN MoMo.',
+            'Wave, Orange Money, MTN MoMo ou carte bancaire.',
             textAlign: TextAlign.center,
             style: TextStyle(color: AppColors.textSecondary, fontSize: 15),
           ),
@@ -171,14 +171,7 @@ class _Tag extends StatelessWidget {
           Icon(
             Icons.sell_rounded,
             size: size,
-            color: AppColors.primary,
-            shadows: [
-              Shadow(
-                color: Colors.black54,
-                blurRadius: size * 0.12,
-                offset: Offset(0, size * 0.05),
-              ),
-            ],
+            color: AppColors.yellow,
           ),
         ],
       ),

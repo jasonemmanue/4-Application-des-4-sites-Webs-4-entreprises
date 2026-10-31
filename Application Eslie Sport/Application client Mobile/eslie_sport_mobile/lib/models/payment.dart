@@ -1,22 +1,59 @@
-enum PaymentOperator { wave, orangeMoney, mtnMobileMoney }
+enum PaymentOperator { wave, orangeMoney, mtnMobileMoney, card, stripe }
 
 extension PaymentOperatorX on PaymentOperator {
   String get code => switch (this) {
         PaymentOperator.wave => 'wave',
         PaymentOperator.orangeMoney => 'orange_money',
         PaymentOperator.mtnMobileMoney => 'mtn_mobile_money',
+        PaymentOperator.card => 'card',
+        PaymentOperator.stripe => 'stripe',
       };
 
   String get label => switch (this) {
         PaymentOperator.wave => 'Wave',
         PaymentOperator.orangeMoney => 'Orange Money',
         PaymentOperator.mtnMobileMoney => 'MTN Mobile Money',
+        PaymentOperator.card => 'Carte bancaire',
+        PaymentOperator.stripe => 'Carte internationale',
       };
 
-  String? get requiredPrefix => switch (this) {
-        PaymentOperator.orangeMoney => '07',
-        PaymentOperator.mtnMobileMoney => '05',
-        PaymentOperator.wave => null,
+  /// Plages ARTCI, alignees sur `PREFIXES_PAR_MOYEN` du backend. Vide : tout
+  /// numero ivoirien convient (Wave est un portefeuille, pas un operateur).
+  List<String> get allowedPrefixes => switch (this) {
+        PaymentOperator.orangeMoney => const ['07', '08', '09'],
+        PaymentOperator.mtnMobileMoney => const ['05', '06', '04'],
+        _ => const [],
+      };
+
+  /// Logo reel de l'operateur. Null pour la carte, qui affiche Visa et
+  /// Mastercard (voir [cardLogos]).
+  String? get logoAsset => switch (this) {
+        PaymentOperator.wave => 'assets/images/paiement/wave.png',
+        PaymentOperator.orangeMoney => 'assets/images/paiement/orange-money.png',
+        PaymentOperator.mtnMobileMoney => 'assets/images/paiement/mtn-momo.png',
+        _ => null,
+      };
+
+  static const List<String> cardLogos = [
+    'assets/images/paiement/visa.png',
+    'assets/images/paiement/mastercard.png',
+  ];
+
+  bool get needsPhone => switch (this) {
+        PaymentOperator.wave => true,
+        PaymentOperator.orangeMoney => true,
+        PaymentOperator.mtnMobileMoney => true,
+        PaymentOperator.card => false,
+        PaymentOperator.stripe => false,
+      };
+
+  bool get isCard => this == PaymentOperator.card || this == PaymentOperator.stripe;
+
+  bool get redirectsToCheckout => switch (this) {
+        PaymentOperator.wave => true,
+        PaymentOperator.card => true,
+        PaymentOperator.stripe => true,
+        _ => false,
       };
 
   static PaymentOperator? fromCode(String code) {
@@ -28,6 +65,14 @@ extension PaymentOperatorX on PaymentOperator {
 }
 
 enum PaymentStatus { pending, processing, completed, failed, cancelled, expired }
+
+/// Ce que rend l'ecran d'attente : le verdict, et la reference en cours — le
+/// renvoi du message USSD en ouvre une nouvelle.
+class PaymentOutcome {
+  final PaymentStatus status;
+  final String reference;
+  const PaymentOutcome(this.status, this.reference);
+}
 
 extension PaymentStatusX on PaymentStatus {
   static PaymentStatus fromString(String value) {
@@ -100,6 +145,11 @@ class PaymentStatusResponse {
   final String? memberName;
   final String? activityName;
   final String? subscriptionName;
+  final String? enrollmentStatus;
+
+  /// L'operateur a signale un refus qui peut encore se retourner : on previent
+  /// sans conclure a l'echec.
+  final bool provisionalFailure;
 
   const PaymentStatusResponse({
     required this.reference,
@@ -117,6 +167,8 @@ class PaymentStatusResponse {
     this.memberName,
     this.activityName,
     this.subscriptionName,
+    this.enrollmentStatus,
+    this.provisionalFailure = false,
   });
 
   factory PaymentStatusResponse.fromJson(Map<String, dynamic> json) =>
@@ -138,5 +190,7 @@ class PaymentStatusResponse {
         memberName: json['member_name'] as String?,
         activityName: json['activity_name'] as String?,
         subscriptionName: json['subscription_name'] as String?,
+        enrollmentStatus: json['enrollment_status'] as String?,
+        provisionalFailure: json['provisional_failure'] as bool? ?? false,
       );
 }

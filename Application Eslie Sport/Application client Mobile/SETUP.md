@@ -101,8 +101,9 @@ GENIUSPAY_WEBHOOK_URL=https://api-production-fc58.up.railway.app/api/v1/payments
 | Operateur | Code API | Prefixe telephone | Mode |
 |-----------|----------|-------------------|------|
 | Wave | `wave` | Tous numeros | Lien direct (navigateur) |
-| Orange Money | `orange_money` | `07` | USSD push (notification mobile) |
-| MTN Mobile Money | `mtn_mobile_money` | `05` | USSD push (notification mobile) |
+| Orange Money | `orange_money` | `07`, `08`, `09` | USSD push (notification mobile) |
+| MTN Mobile Money | `mtn_mobile_money` | `05`, `06`, `04` | USSD push (notification mobile) |
+| Carte Visa / Mastercard | `card` | Aucun | Page securisee (navigateur) |
 
 ### Flux de paiement (cote mobile)
 
@@ -110,7 +111,7 @@ GENIUSPAY_WEBHOOK_URL=https://api-production-fc58.up.railway.app/api/v1/payments
 2. L'app appelle `POST /api/v1/payments/init`
 3. **Wave** : L'app ouvre le `payment_url` dans le navigateur externe
 4. **Orange/MTN** : L'app affiche un ecran d'attente pendant que l'utilisateur recoit un push USSD
-5. L'app poll `GET /api/v1/payments/{reference}` toutes les 3-4 secondes (max 60s)
+5. L'app poll `GET /api/v1/payments/{reference}` toutes les 3-5 secondes jusqu'a `expires_in` + 20 s
 6. Resultat : `completed` → ecran de succes | `failed`/`expired` → option de reessai
 
 ### Webhook GeniusPay
@@ -182,12 +183,19 @@ flutter run
 
 ### Build release APK
 
+> **Le build release echoue depuis le chemin du projet, jonction comprise** : le
+> compilateur Dart ne lit pas le `é` de `ainé` (`Unable to read file ... app.dill`).
+> Copier le projet dans un dossier sans accent (sans `build`, `.dart_tool`, `ios`)
+> et y lancer le build ; `android/key.properties` doit suivre pour signer.
+
 ```bash
 cd C:\Users\hp\eslie_sport_mobile
 flutter build apk --release
 ```
 
 L'APK sera dans `build/app/outputs/flutter-apk/app-release.apk`.
+Le copier a la racine du depot sous `Eslie-Sport-Client-v<version>.apk`
+(les `.apk` sont ignores par git).
 
 ### Build App Bundle (Play Store)
 

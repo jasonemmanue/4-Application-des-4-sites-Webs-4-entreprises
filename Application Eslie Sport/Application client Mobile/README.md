@@ -8,7 +8,7 @@ Application mobile Flutter pour **ESLIE SPORT**, salle de sport a Abidjan (Cote 
 Application compagnon du site web de la salle de sport, permettant aux sportifs de :
 - Decouvrir les activites (force, cardio, souplesse, arts martiaux, danse)
 - Consulter le planning hebdomadaire en temps reel avec places disponibles
-- S'inscrire a des cours avec depot 50% via Mobile Money (Wave, Orange, MTN)
+- S'inscrire a des cours avec depot 50% via Mobile Money (Wave, Orange, MTN) ou carte bancaire
 - Comparer les formules d'abonnement et souscrire en ligne
 - Decouvrir les coachs et leurs specialites
 - Explorer les equipements par zone
@@ -25,7 +25,7 @@ Application compagnon du site web de la salle de sport, permettant aux sportifs 
 | State | Riverpod |
 | Navigation | GoRouter |
 | HTTP | Dio |
-| Paiement | GeniusPay (Wave, Orange Money, MTN) |
+| Paiement | GeniusPay (Wave, Orange Money, MTN, carte Visa / Mastercard) |
 | Push | Firebase Cloud Messaging |
 | Backend | API FastAPI existante (partagee avec le site web) |
 | BDD | PostgreSQL 16 (via le backend) |
@@ -37,14 +37,14 @@ L'administration (gestion des activites, planning, coachs, reservations) se fait
 
 ## Design
 
-- **Palette** : Or (`#FFD600`) / Navy (`#0F1724`) / Gris-bleu secondaire
-- **Typographie** : Inter (variable weight)
-- **Style** : Sportif, energique, mode sombre par defaut
-- **Glassmorphism** et gradients dores
+- **Palette** : Vert (`#0B4F36`) / Orange (`#F2681C`) / Jaune (`#FFC60B`) sur fond creme (`#FBF8F1`)
+- **Typographie** : Poppins
+- **Style** : Sportif, clair, cartes blanches
+- **Version actuelle** : 1.1.0 (`docs/REFONTE-UI-1.1.0.md`)
 
 ## Fonctionnalites cles
 
-- **Planning interactif** : Grille 7j x 15h avec badges de capacite (vert/orange/rouge)
+- **Planning interactif** : 7 prochains jours, places restantes en temps reel (vert/orange/rouge)
 - **Inscription 3 etapes** : Infos -> Seance -> Paiement 50%
 - **Paiement Mobile Money** : Wave (lien direct), Orange/MTN (USSD push) via GeniusPay
 - **Calculateur IMC** : Outil interactif

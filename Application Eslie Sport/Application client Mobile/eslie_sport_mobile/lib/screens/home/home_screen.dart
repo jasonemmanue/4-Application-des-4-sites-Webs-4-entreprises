@@ -1,208 +1,293 @@
-/// Ecran d'accueil Airbnb-like :
-///   * barre de recherche pill flottante (avec autocompletion via un ecran
-///     modale plein ecran) ;
-///   * chips de categorie horizontales (`Tout`, `Force`, `Cardio`, …) ;
-///   * carrousels de cartes carrees pour les activites, formules, etc.,
-///   * pastille flottante « Réservez avec 50 % d'acompte » + pop-up.
+/// Accueil : logo en haut a gauche, hero « Reserver une seance », acces
+/// rapides, prochain cours et tarifs lus en direct depuis l'API, coachs et
+/// transformations, pastille « acompte 50 % ».
 library;
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../config/theme.dart';
-import '../../models/activity.dart';
+import '../../models/coach.dart';
+import '../../models/schedule_slot.dart';
+import '../../models/subscription.dart';
+import '../../models/transformation.dart';
+import '../../services/member_profile.dart';
 import '../../services/providers.dart';
+import '../../utils/formatters.dart';
 import '../../widgets/activity_card.dart';
+import '../../widgets/brand_logo.dart';
 import '../../widgets/deposit_notice.dart';
-import '../../widgets/loading_state.dart';
-import '../../widgets/search_pill.dart';
 import '../../widgets/section_title.dart';
-import '../../widgets/subscription_card.dart';
 
-class HomeScreen extends ConsumerStatefulWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  ConsumerState<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends ConsumerState<HomeScreen> {
-  String? _category;
-
-  @override
-  Widget build(BuildContext context) {
-    final activities =
-        ref.watch(activitiesProvider((category: _category, level: null)));
+  Widget build(BuildContext context, WidgetRef ref) {
+    final schedule = ref.watch(scheduleProvider);
     final subscriptions = ref.watch(subscriptionsProvider);
-    final transformations = ref.watch(featuredTransformationsProvider);
     final coaches = ref.watch(coachesProvider);
+    final transformations = ref.watch(featuredTransformationsProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
       body: Stack(
         children: [
           RefreshIndicator(
-            color: AppColors.textPrimary,
+            color: AppColors.primary,
             onRefresh: () async {
-              ref.invalidate(activitiesProvider);
+              ref.invalidate(scheduleProvider);
               ref.invalidate(subscriptionsProvider);
               ref.invalidate(coachesProvider);
               ref.invalidate(featuredTransformationsProvider);
+              ref.invalidate(slotAvailabilityProvider);
             },
-            child: CustomScrollView(
-              slivers: [
-                const SliverPadding(padding: EdgeInsets.only(top: 12)),
-                const SliverSafeArea(
-                  sliver: SliverToBoxAdapter(child: SearchPillTrigger()),
-                  bottom: false,
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                const _Header(),
+                const _Hero(),
+                const SizedBox(height: 16),
+                const _QuickLinks(),
+                const SizedBox(height: 16),
+                ...schedule.maybeWhen(
+                  data: (slots) {
+                    final next = _nextClass(slots);
+                    return next == null
+                        ? const <Widget>[]
+                        : [_NextClassCard(slot: next.$1, date: next.$2)];
+                  },
+                  orElse: () => const <Widget>[],
                 ),
-                SliverToBoxAdapter(
-                  child: _CategoryChips(
-                    current: _category,
-                    onSelect: (c) => setState(() => _category = c),
-                  ),
+                ...subscriptions.maybeWhen(
+                  data: (list) =>
+                      list.isEmpty ? const <Widget>[] : [_PricesCard(list: list)],
+                  orElse: () => const <Widget>[],
                 ),
-
-                // ── Activites populaires ───────────────────────────────
-                SliverToBoxAdapter(
-                  child: SectionTitle(
-                    title: _category == null
-                        ? 'Activites populaires a Blaukauss'
-                        : 'Activites · $_category',
-                    onAction: () => context.go('/activities'),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: _HorizontalCards<Activity>(
-                    asyncList: activities,
-                    itemBuilder: (a, i) => ActivityCard(
-                      activity: a,
-                      badgeLabel:
-                          i == 0 && _category == null ? 'Favori du club' : null,
-                      onTap: () => context.push('/activities/${a.slug}'),
-                    ),
-                    emptyLabel: 'Aucune activite pour cette categorie.',
-                    itemWidth: 220,
-                  ),
-                ),
-
-                // ── Formules ──────────────────────────────────────────
-                SliverToBoxAdapter(
-                  child: SectionTitle(
-                    title: 'Formules avantageuses',
-                    subtitle:
-                        'Payez 50 % en ligne pour reserver, le reste a la salle.',
-                    onAction: () => context.go('/subscriptions'),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: subscriptions.when(
-                    data: (list) {
-                      if (list.isEmpty) return const SizedBox.shrink();
-                      final display = list.take(4).toList();
-                      return SizedBox(
-                        height: 200,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          itemCount: display.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(width: 12),
-                          itemBuilder: (_, i) => SizedBox(
-                            width: 260,
-                            child: SubscriptionCard(
-                              subscription: display[i],
-                              onSubscribe: () => context.push(
-                                  '/subscriptions/order/${display[i].id}'),
+                ...coaches.maybeWhen(
+                  data: (list) => list.isEmpty
+                      ? const <Widget>[]
+                      : [
+                          SectionTitle(
+                            title: 'Vos coachs',
+                            onAction: () => context.push('/coaches'),
+                          ),
+                          SizedBox(
+                            height: 136,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: list.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(width: 12),
+                              itemBuilder: (_, i) =>
+                                  _CoachTile(coach: list[i]),
                             ),
                           ),
-                        ),
-                      );
-                    },
-                    loading: () =>
-                        const SizedBox(height: 160, child: LoadingState()),
-                    error: (_, __) => const SizedBox.shrink(),
-                  ),
+                        ],
+                  orElse: () => const <Widget>[],
                 ),
-
-                // ── Coachs ────────────────────────────────────────────
-                SliverToBoxAdapter(
-                  child: SectionTitle(
-                    title: 'Vos coachs certifies',
-                    onAction: () => context.push('/more'),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: coaches.when(
-                    data: (list) {
-                      if (list.isEmpty) return const SizedBox.shrink();
-                      final display = list.take(6).toList();
-                      return SizedBox(
-                        height: 170,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          itemCount: display.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(width: 16),
-                          itemBuilder: (_, i) => _CoachTile(coach: display[i]),
-                        ),
-                      );
-                    },
-                    loading: () =>
-                        const SizedBox(height: 140, child: LoadingState()),
-                    error: (_, __) => const SizedBox.shrink(),
-                  ),
-                ),
-
-                // ── Transformations vedettes ──────────────────────────
-                SliverToBoxAdapter(
-                  child: SectionTitle(
-                    title: 'Ils ont transforme leur corps',
-                    onAction: () => context.push('/more'),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: transformations.when(
-                    data: (list) {
-                      if (list.isEmpty) return const SizedBox.shrink();
-                      final display = list.take(6).toList();
-                      return SizedBox(
-                        height: 240,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          itemCount: display.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(width: 12),
-                          itemBuilder: (_, i) => _TransformationTile(
-                            memberName: display[i].memberName,
-                            duration: display[i].durationText ?? '',
-                            beforeUrl: display[i].beforeImageUrl,
-                            afterUrl: display[i].afterImageUrl,
+                ...transformations.maybeWhen(
+                  data: (list) => list.isEmpty
+                      ? const <Widget>[]
+                      : [
+                          SectionTitle(
+                            title: 'Ils ont transformé leur corps',
+                            onAction: () => context.push('/transformations'),
                           ),
-                        ),
-                      );
-                    },
-                    loading: () =>
-                        const SizedBox(height: 180, child: LoadingState()),
-                    error: (_, __) => const SizedBox.shrink(),
-                  ),
+                          SizedBox(
+                            height: 148,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: list.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(width: 12),
+                              itemBuilder: (_, i) =>
+                                  _TransformationTile(item: list[i]),
+                            ),
+                          ),
+                        ],
+                  orElse: () => const <Widget>[],
                 ),
-
-                const SliverToBoxAdapter(child: SizedBox(height: 120)),
+                const SizedBox(height: 96),
               ],
             ),
           ),
-
-          // Pastille flottante — comme « Les prix comprennent tous les
-          // frais » d'Airbnb. Un tap ouvre le pop-up explicatif.
           const Positioned(
             left: 16,
             right: 16,
-            bottom: 16,
+            bottom: 14,
             child: Center(child: DepositNoticePill()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Prochain cours a partir de maintenant, sur les 7 jours a venir.
+  static (ScheduleSlot, DateTime)? _nextClass(List<ScheduleSlot> slots) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final clock = '${now.hour.toString().padLeft(2, '0')}:'
+        '${now.minute.toString().padLeft(2, '0')}';
+    for (var offset = 0; offset < 7; offset++) {
+      final date = today.add(Duration(days: offset));
+      final candidates = slots
+          .where((s) =>
+              s.isActive &&
+              s.dayOfWeek == date.weekday - 1 &&
+              (offset > 0 || s.startTime.compareTo(clock) > 0))
+          .toList()
+        ..sort((a, b) => a.startTime.compareTo(b.startTime));
+      if (candidates.isNotEmpty) return (candidates.first, date);
+    }
+    return null;
+  }
+}
+
+class _Header extends ConsumerWidget {
+  const _Header();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final name = ref.watch(memberNameProvider);
+    return SafeArea(
+      bottom: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+        child: Row(
+          children: [
+            const BrandLogo(),
+            const Spacer(),
+            Semantics(
+              button: true,
+              label: 'Mon profil',
+              excludeSemantics: true,
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: () => context.go('/more'),
+                child: CircleAvatar(
+                  radius: 21,
+                  backgroundColor: AppColors.primarySoft,
+                  child: name == null
+                      ? const Icon(Icons.person, color: AppColors.primary)
+                      : Text(
+                          name.characters.first.toUpperCase(),
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 17,
+                          ),
+                        ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Hero extends StatelessWidget {
+  const _Hero();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        child: SizedBox(
+          height: 268,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset(
+                'assets/images/hero-accueil.jpg',
+                fit: BoxFit.cover,
+                semanticLabel: 'Séance de musculation en salle',
+              ),
+              const DecoratedBox(
+                decoration: BoxDecoration(gradient: AppColors.heroOverlay),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Ton énergie.\nTes objectifs.',
+                      style: TextStyle(
+                        color: AppColors.onPrimary,
+                        fontSize: 27,
+                        fontWeight: FontWeight.w800,
+                        height: 1.15,
+                        letterSpacing: -0.4,
+                      ),
+                    ),
+                    const Text(
+                      'Notre équipe.',
+                      style: TextStyle(
+                        color: AppColors.yellow,
+                        fontSize: 27,
+                        fontWeight: FontWeight.w800,
+                        height: 1.15,
+                        letterSpacing: -0.4,
+                      ),
+                    ),
+                    const Spacer(),
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(AppRadius.full),
+                        boxShadow: AppShadows.cta,
+                      ),
+                      child: ElevatedButton.icon(
+                        onPressed: () => context.go('/schedule'),
+                        icon: const Icon(Icons.event_available, size: 20),
+                        label: const Text('Réserver une séance'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickLinks extends StatelessWidget {
+  const _QuickLinks();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          _QuickLink(
+            icon: Icons.directions_run,
+            label: 'Activités',
+            onTap: () => context.go('/activities'),
+          ),
+          const SizedBox(width: 10),
+          _QuickLink(
+            icon: Icons.calendar_month,
+            label: 'Planning',
+            onTap: () => context.go('/schedule'),
+          ),
+          const SizedBox(width: 10),
+          _QuickLink(
+            icon: Icons.workspace_premium,
+            label: 'Abonnements',
+            onTap: () => context.go('/subscriptions'),
           ),
         ],
       ),
@@ -210,99 +295,51 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-class _CategoryChips extends StatelessWidget {
-  final String? current;
-  final ValueChanged<String?> onSelect;
-  const _CategoryChips({required this.current, required this.onSelect});
-
-  static const _cats = <(String? key, String label, IconData icon)>[
-    (null, 'Tout', Icons.language),
-    ('force', 'Force', Icons.fitness_center),
-    ('cardio', 'Cardio', Icons.favorite),
-    ('souplesse', 'Souplesse', Icons.self_improvement),
-    ('arts martiaux', 'Arts martiaux', Icons.sports_martial_arts),
-    ('danse', 'Danse', Icons.music_note),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      // Hauteur de la pilule (44) + marge pour son ombre portée.
-      height: 76,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        clipBehavior: Clip.none,
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-        itemCount: _cats.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
-        itemBuilder: (_, i) {
-          final (key, label, icon) = _cats[i];
-          final selected = key == current;
-          return _ChipCategory(
-            label: label,
-            icon: icon,
-            selected: selected,
-            onTap: () => onSelect(key),
-          );
-        },
-      ),
-    );
-  }
-}
-
-/// Chip pilule — style Airbnb : fond plein, contour, ombre douce. La
-/// sélection se lit au contour or épaissi et au fond plus clair.
-class _ChipCategory extends StatelessWidget {
-  final String label;
+class _QuickLink extends StatelessWidget {
   final IconData icon;
-  final bool selected;
+  final String label;
   final VoidCallback onTap;
-  const _ChipCategory({
-    required this.label,
+  const _QuickLink({
     required this.icon,
-    required this.selected,
+    required this.label,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      decoration: BoxDecoration(
-        color: selected ? AppColors.surfaceElevated : AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.full),
-        border: Border.all(
-          color: selected ? AppColors.primary : AppColors.border,
-          width: selected ? 2 : 1,
+    return Expanded(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          boxShadow: AppShadows.card,
         ),
-        boxShadow: AppShadows.card,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppRadius.full),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  icon,
-                  size: 18,
-                  color: selected ? AppColors.primary : AppColors.textSecondary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                    color: AppColors.textPrimary,
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+              child: Column(
+                children: [
+                  Icon(icon, color: AppColors.primary, size: 32),
+                  const SizedBox(height: 8),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -311,79 +348,223 @@ class _ChipCategory extends StatelessWidget {
   }
 }
 
-class _HorizontalCards<T> extends StatelessWidget {
-  final AsyncValue<List<T>> asyncList;
-  final Widget Function(T item, int index) itemBuilder;
-  final String emptyLabel;
-  final double itemWidth;
-  const _HorizontalCards({
-    required this.asyncList,
-    required this.itemBuilder,
-    required this.emptyLabel,
-    this.itemWidth = 220,
-  });
+class _NextClassCard extends ConsumerWidget {
+  final ScheduleSlot slot;
+  final DateTime date;
+  const _NextClassCard({required this.slot, required this.date});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final places = ref
+        .watch(slotAvailabilityProvider((slotId: slot.id, date: date)))
+        .valueOrNull;
+    final today = DateTime.now();
+    final isToday = date.day == today.day && date.month == today.month;
+    final activity = slot.activity;
+
+    return _HomeCard(
+      onTap: () => context.push(
+        '/enroll',
+        extra: {'slotId': slot.id, 'date': date},
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            child: ActivityPhoto(
+              url: activity?.imageUrl,
+              category: activity?.category ?? '',
+              width: 112,
+              height: 96,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Prochain cours',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  slot.activityName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.schedule,
+                        size: 15, color: AppColors.textSecondary),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        '${isToday ? "Aujourd'hui" : weekDayName(date.weekday - 1)}'
+                        ' · ${slot.startTime} – ${slot.endTime}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (places != null) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.primarySoft,
+                      borderRadius: BorderRadius.circular(AppRadius.full),
+                    ),
+                    child: Text(
+                      places == 0
+                          ? 'Complet'
+                          : '$places ${places > 1 ? 'places restantes' : 'place restante'}',
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PricesCard extends StatelessWidget {
+  final List<Subscription> list;
+  const _PricesCard({required this.list});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: itemWidth + 76,
-      child: asyncList.when(
-        data: (list) {
-          if (list.isEmpty) {
-            return Center(
-              child: Text(emptyLabel,
-                  style: const TextStyle(color: AppColors.textSecondary)),
-            );
-          }
-          final display = list.take(8).toList();
-          return ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: display.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 14),
-            itemBuilder: (_, i) =>
-                SizedBox(width: itemWidth, child: itemBuilder(display[i], i)),
-          );
-        },
-        loading: () => const LoadingState(),
-        error: (_, __) => const SizedBox.shrink(),
+    final main = list
+        .where((s) => !s.name.contains('—'))
+        .take(3)
+        .toList(growable: false);
+    return _HomeCard(
+      onTap: () => context.go('/subscriptions'),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Nos tarifs',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                for (final s in main)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 3),
+                    child: Text(
+                      '${s.name} : ${formatFcfa(s.price)}',
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 13.5,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          const RoundArrow(
+            background: AppColors.yellow,
+            foreground: AppColors.textPrimary,
+            size: 38,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeCard extends StatelessWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  const _HomeCard({required this.child, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          boxShadow: AppShadows.card,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(padding: const EdgeInsets.all(12), child: child),
+          ),
+        ),
       ),
     );
   }
 }
 
 class _CoachTile extends StatelessWidget {
-  final dynamic coach;
+  final Coach coach;
   const _CoachTile({required this.coach});
 
   @override
   Widget build(BuildContext context) {
+    final photo = coach.photoUrl;
     return SizedBox(
-      width: 110,
+      width: 92,
       child: Column(
         children: [
-          Container(
-            width: 96,
-            height: 96,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.surfaceSubtle,
-              border: Border.all(color: AppColors.border),
-              image: coach.photoUrl != null &&
-                      (coach.photoUrl as String).isNotEmpty
-                  ? DecorationImage(
-                      image: NetworkImage(coach.photoUrl as String),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
-            ),
-            child: coach.photoUrl == null || (coach.photoUrl as String).isEmpty
-                ? const Icon(Icons.person, color: AppColors.textMuted, size: 40)
+          CircleAvatar(
+            radius: 38,
+            backgroundColor: AppColors.primarySoft,
+            backgroundImage: photo != null && photo.isNotEmpty
+                ? CachedNetworkImageProvider(photo)
+                : null,
+            child: photo == null || photo.isEmpty
+                ? Text(
+                    coach.name.characters.first.toUpperCase(),
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  )
                 : null,
           ),
           const SizedBox(height: 8),
           Text(
-            coach.name as String,
+            coach.name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
@@ -393,9 +574,9 @@ class _CoachTile extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
-          if ((coach.specialties as List).isNotEmpty)
+          if (coach.specialties.isNotEmpty)
             Text(
-              (coach.specialties as List).first.toString(),
+              coach.specialties.first,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
@@ -411,91 +592,48 @@ class _CoachTile extends StatelessWidget {
 }
 
 class _TransformationTile extends StatelessWidget {
-  final String memberName;
-  final String duration;
-  final String? beforeUrl;
-  final String? afterUrl;
-  const _TransformationTile({
-    required this.memberName,
-    required this.duration,
-    required this.beforeUrl,
-    required this.afterUrl,
-  });
+  final Transformation item;
+  const _TransformationTile({required this.item});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 260,
+    return Container(
+      width: 250,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.border),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            child: SizedBox(
-              height: 180,
-              child: Row(
-                children: [
-                  Expanded(child: _photo(beforeUrl, 'Avant')),
-                  const SizedBox(width: 2),
-                  Expanded(child: _photo(afterUrl, 'Apres')),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
           Text(
-            memberName,
+            item.memberName,
             style: const TextStyle(
               color: AppColors.textPrimary,
-              fontWeight: FontWeight.w700,
               fontSize: 15,
+              fontWeight: FontWeight.w700,
             ),
           ),
-          if (duration.isNotEmpty)
+          if ((item.durationText ?? '').isNotEmpty)
             Text(
-              duration,
+              item.durationText!,
+              style: const TextStyle(
+                color: AppColors.accent,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          const SizedBox(height: 6),
+          Expanded(
+            child: Text(
+              item.testimonial ?? '',
+              overflow: TextOverflow.fade,
               style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _photo(String? url, String label) {
-    return Container(
-      color: AppColors.surfaceSubtle,
-      alignment: Alignment.bottomLeft,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (url != null && url.isNotEmpty)
-            Image.network(url,
-                fit: BoxFit.cover,
-                semanticLabel: 'Transformation $label',
-                errorBuilder: (_, __, ___) => Container(
-                    color: AppColors.surfaceSubtle,
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.image_not_supported,
-                        color: AppColors.textMuted))),
-          Positioned(
-            left: 8,
-            bottom: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(AppRadius.full),
-              ),
-              child: Text(
-                label,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                ),
+                height: 1.4,
               ),
             ),
           ),

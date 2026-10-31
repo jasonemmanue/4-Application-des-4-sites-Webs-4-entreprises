@@ -19,7 +19,7 @@ class ReviewsScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openReviewSheet(context, ref),
         backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.dark,
+        foregroundColor: AppColors.onPrimary,
         icon: const Icon(Icons.edit_note),
         label: const Text('Laisser un avis'),
       ),
@@ -73,7 +73,7 @@ class ReviewsScreen extends ConsumerWidget {
                       const SizedBox(height: 8),
                       Text(r.comment!,
                           style: const TextStyle(
-                              color: Colors.white,
+                              color: AppColors.textPrimary,
                               fontSize: 13,
                               height: 1.5)),
                     ],
@@ -157,7 +157,7 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
         children: [
           const Text('Laisser un avis',
               style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.textPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.w800)),
           const SizedBox(height: 16),

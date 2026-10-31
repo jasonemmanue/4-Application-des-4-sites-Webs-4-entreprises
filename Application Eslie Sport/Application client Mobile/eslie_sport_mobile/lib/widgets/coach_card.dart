@@ -59,7 +59,7 @@ class CoachCard extends StatelessWidget {
                     Text(
                       coach.name,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.textPrimary,
                         fontWeight: FontWeight.w700,
                         fontSize: 16,
                       ),

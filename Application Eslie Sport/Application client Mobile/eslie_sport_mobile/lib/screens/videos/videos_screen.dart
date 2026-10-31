@@ -34,8 +34,15 @@ class VideosScreen extends ConsumerWidget {
               return Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: () => launchUrl(Uri.parse(v.videoUrl),
-                      mode: LaunchMode.externalApplication),
+                  onTap: () {
+                    if (!v.isPlayable) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('Cette vidéo sera bientôt disponible.')));
+                      return;
+                    }
+                    launchUrl(Uri.parse(v.videoUrl),
+                      mode: LaunchMode.externalApplication);
+                  },
                   borderRadius: BorderRadius.circular(AppRadius.md),
                   child: Container(
                     decoration: BoxDecoration(
@@ -79,7 +86,7 @@ class VideosScreen extends ConsumerWidget {
                           padding: const EdgeInsets.all(12),
                           child: Text(v.title,
                               style: const TextStyle(
-                                color: Colors.white,
+                                color: AppColors.textPrimary,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
                               )),

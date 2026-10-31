@@ -1,9 +1,8 @@
-/// Design system — layout Airbnb, palette Eslie Sport.
+/// Design system ESLIE SPORT — fond creme, vert profond, orange energie.
 ///
-/// Fond navy #0F1724 tire du logo, or #FFD600 comme accent unique (CTAs,
-/// icones actives, coeurs des favoris), argent-gris #A8B2C1 pour les
-/// libelles secondaires. Les cartes prennent un navy plus clair pour se
-/// detacher du fond sans introduire de nouvelle teinte.
+/// Vert pour l'identite (titres, icones actives, navigation), orange reserve
+/// aux actions principales, jaune pour les accents ponctuels (soulignes,
+/// badge « Populaire »). Le logo de la salle reste tel quel sur ce fond clair.
 library;
 
 import 'package:flutter/material.dart';
@@ -12,101 +11,104 @@ import 'package:google_fonts/google_fonts.dart';
 class AppColors {
   AppColors._();
 
-  // Or Eslie — CTAs, icones actives, coeurs.
-  static const Color primary = Color(0xFFFFD600);
-  static const Color primaryLight = Color(0xFFFFE44D);
-  static const Color primaryDark = Color(0xFFB8960A);
+  // Vert ESLIE — identite, icones actives, navigation.
+  static const Color primary = Color(0xFF0B4F36);
+  static const Color primaryLight = Color(0xFF15754F);
+  static const Color primaryDark = Color(0xFF07382A);
+  static const Color primarySoft = Color(0xFFE2EFE8);
 
-  // Alias : `accent` pointait vers le rose Airbnb sur l'iteration precedente ;
-  // on le remet sur l'or Eslie pour eviter toute rechute vers une teinte
-  // etrangere a la marque.
-  static const Color accent = primary;
+  // Texte et icones poses sur le vert ou l'orange.
+  static const Color onPrimary = Color(0xFFFFFFFF);
 
-  // Navy — decliné en 3 tons pour distinguer fond / cartes / bordures.
-  static const Color bg = Color(0xFF0F1724);
-  static const Color surface = Color(0xFF1A2332);
-  static const Color surfaceSubtle = Color(0xFF1E293B);
-  static const Color surfaceElevated = Color(0xFF223046);
-  static const Color border = Color(0xFF2D3A4A);
-  static const Color borderStrong = Color(0xFF3A4A62);
+  // Orange — uniquement les actions principales.
+  static const Color accent = Color(0xFFF2681C);
+  static const Color accentDark = Color(0xFFD9560F);
 
-  // Texte : blanc pur pour les titres, argent-gris pour tout le reste.
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFFA8B2C1);
-  static const Color textMuted = Color(0xFF8896A8);
+  // Jaune — soulignes et badges.
+  static const Color yellow = Color(0xFFFFC60B);
+  static const Color yellowSoft = Color(0xFFFFF4CC);
+
+  // Fond creme, cartes blanches.
+  static const Color bg = Color(0xFFFBF8F1);
+  static const Color surface = Color(0xFFFFFFFF);
+  static const Color surfaceSubtle = Color(0xFFF4F0E6);
+  static const Color surfaceElevated = Color(0xFFFFFFFF);
+  static const Color border = Color(0xFFEAE5D8);
+  static const Color borderStrong = Color(0xFFD8D2C2);
+
+  static const Color textPrimary = Color(0xFF14231C);
+  static const Color textSecondary = Color(0xFF55645C);
+  static const Color textMuted = Color(0xFF7D8982);
 
   // Etats.
-  static const Color success = Color(0xFF22C55E);
-  static const Color warning = Color(0xFFF59E0B);
-  static const Color error = Color(0xFFEF4444);
+  static const Color success = Color(0xFF16A34A);
+  static const Color warning = Color(0xFFD97706);
+  static const Color error = Color(0xFFDC2626);
+  static const Color whatsapp = Color(0xFF25D366);
 
-  // Alias historiques — pointent maintenant vers la palette navy.
-  static const Color dark = bg;
+  // Alias historiques, conserves pour les ecrans secondaires.
   static const Color darkCard = surface;
   static const Color darkLighter = surfaceSubtle;
   static const Color darkBorder = border;
   static const Color darkMuted = textSecondary;
   static const Color secondary = textSecondary;
-  static const Color lightBg = surfaceSubtle;
-  static const Color lightCard = surface;
 
-  static const LinearGradient goldGradient = LinearGradient(
+  static const LinearGradient brandGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [primary, primaryLight],
   );
 
-  static const LinearGradient darkGradient = LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-    colors: [bg, surfaceElevated],
+  static const LinearGradient heroOverlay = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [Color(0xE607382A), Color(0x8C07382A), Color(0x1A07382A)],
   );
 }
 
 class AppTheme {
   AppTheme._();
 
-  static ThemeData get dark {
-    final textTheme = GoogleFonts.interTextTheme(ThemeData.dark().textTheme)
-        .apply(bodyColor: Colors.white, displayColor: Colors.white);
+  static ThemeData get light {
+    final textTheme = GoogleFonts.poppinsTextTheme(ThemeData.light().textTheme)
+        .apply(
+      bodyColor: AppColors.textPrimary,
+      displayColor: AppColors.textPrimary,
+    );
 
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark,
+      brightness: Brightness.light,
       scaffoldBackgroundColor: AppColors.bg,
       primaryColor: AppColors.primary,
       canvasColor: AppColors.bg,
-      colorScheme: const ColorScheme.dark(
+      colorScheme: const ColorScheme.light(
         primary: AppColors.primary,
-        onPrimary: AppColors.bg,
-        secondary: AppColors.primary,
-        onSecondary: AppColors.bg,
+        onPrimary: AppColors.onPrimary,
+        secondary: AppColors.accent,
+        onSecondary: AppColors.onPrimary,
         surface: AppColors.surface,
-        onSurface: Colors.white,
+        onSurface: AppColors.textPrimary,
         error: AppColors.error,
       ),
       textTheme: textTheme.copyWith(
         headlineLarge: textTheme.headlineLarge?.copyWith(
-          fontSize: 32,
+          fontSize: 30,
           fontWeight: FontWeight.w800,
           letterSpacing: -0.4,
-          color: Colors.white,
         ),
         headlineMedium: textTheme.headlineMedium?.copyWith(
           fontSize: 24,
           fontWeight: FontWeight.w800,
           letterSpacing: -0.3,
-          color: Colors.white,
         ),
         titleLarge: textTheme.titleLarge?.copyWith(
           fontSize: 20,
           fontWeight: FontWeight.w700,
-          color: Colors.white,
         ),
         titleMedium: textTheme.titleMedium?.copyWith(
           fontSize: 16,
           fontWeight: FontWeight.w600,
-          color: Colors.white,
         ),
         bodyMedium: textTheme.bodyMedium?.copyWith(
           fontSize: 14,
@@ -116,15 +118,15 @@ class AppTheme {
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: AppColors.bg,
-        foregroundColor: Colors.white,
+        foregroundColor: AppColors.textPrimary,
         elevation: 0,
         scrolledUnderElevation: 0,
-        centerTitle: false,
+        centerTitle: true,
         surfaceTintColor: Colors.transparent,
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: GoogleFonts.poppins(
           fontSize: 18,
           fontWeight: FontWeight.w700,
-          color: Colors.white,
+          color: AppColors.textPrimary,
         ),
       ),
       cardTheme: CardThemeData(
@@ -138,14 +140,16 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.bg,
+          backgroundColor: AppColors.accent,
+          foregroundColor: AppColors.onPrimary,
+          disabledBackgroundColor: AppColors.borderStrong,
+          disabledForegroundColor: AppColors.textSecondary,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.md),
+            borderRadius: BorderRadius.circular(AppRadius.full),
           ),
-          textStyle: GoogleFonts.inter(
+          textStyle: GoogleFonts.poppins(
             fontSize: 15,
             fontWeight: FontWeight.w700,
           ),
@@ -157,19 +161,23 @@ class AppTheme {
           side: const BorderSide(color: AppColors.primary, width: 1.5),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.md),
+            borderRadius: BorderRadius.circular(AppRadius.full),
+          ),
+          textStyle: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.primary,
-          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          textStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.surfaceSubtle,
+        fillColor: AppColors.surface,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -190,21 +198,16 @@ class AppTheme {
         labelStyle: const TextStyle(color: AppColors.textSecondary),
         hintStyle: const TextStyle(color: AppColors.textMuted),
       ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: AppColors.surface,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: AppColors.textSecondary,
-        type: BottomNavigationBarType.fixed,
-        elevation: 0,
-        showUnselectedLabels: true,
-        selectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-        unselectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+      snackBarTheme: const SnackBarThemeData(
+        backgroundColor: AppColors.primaryDark,
+        contentTextStyle: TextStyle(color: AppColors.onPrimary),
+        behavior: SnackBarBehavior.floating,
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.surface,
         selectedColor: AppColors.primary,
-        labelStyle: GoogleFonts.inter(
-          color: Colors.white,
+        labelStyle: GoogleFonts.poppins(
+          color: AppColors.textPrimary,
           fontWeight: FontWeight.w600,
         ),
         shape: RoundedRectangleBorder(
@@ -218,14 +221,10 @@ class AppTheme {
         thickness: 1,
         space: 1,
       ),
-      splashColor: Colors.white.withOpacity(0.04),
-      highlightColor: Colors.white.withOpacity(0.03),
+      splashColor: AppColors.primary.withOpacity(0.06),
+      highlightColor: AppColors.primary.withOpacity(0.04),
     );
   }
-
-  /// Alias : le theme "light" pointe vers le meme theme sombre navy — la
-  /// marque n'a pas de mode clair dedie.
-  static ThemeData get light => dark;
 }
 
 class AppSpacing {
@@ -242,7 +241,7 @@ class AppRadius {
   AppRadius._();
   static const double sm = 8;
   static const double md = 12;
-  static const double lg = 16;
+  static const double lg = 18;
   static const double xl = 24;
   static const double full = 999;
 }
@@ -250,9 +249,12 @@ class AppRadius {
 class AppShadows {
   AppShadows._();
   static const List<BoxShadow> card = [
-    BoxShadow(color: Color(0x33000000), blurRadius: 20, offset: Offset(0, 6)),
+    BoxShadow(color: Color(0x12000000), blurRadius: 18, offset: Offset(0, 6)),
   ];
   static const List<BoxShadow> pill = [
-    BoxShadow(color: Color(0x66000000), blurRadius: 14, offset: Offset(0, 4)),
+    BoxShadow(color: Color(0x26000000), blurRadius: 14, offset: Offset(0, 4)),
+  ];
+  static const List<BoxShadow> cta = [
+    BoxShadow(color: Color(0x4DF2681C), blurRadius: 16, offset: Offset(0, 6)),
   ];
 }

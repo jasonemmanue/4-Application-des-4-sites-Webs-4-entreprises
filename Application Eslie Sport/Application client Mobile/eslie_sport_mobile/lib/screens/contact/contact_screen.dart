@@ -59,7 +59,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              gradient: AppColors.goldGradient,
+              gradient: AppColors.brandGradient,
               borderRadius: BorderRadius.circular(AppRadius.lg),
             ),
             child: Column(
@@ -67,7 +67,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
               children: [
                 const Text('Contactez-nous',
                     style: TextStyle(
-                        color: AppColors.dark,
+                        color: AppColors.onPrimary,
                         fontSize: 18,
                         fontWeight: FontWeight.w900)),
                 const SizedBox(height: 8),
@@ -152,12 +152,12 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
           children: [
-            Icon(icon, size: 16, color: AppColors.dark),
+            Icon(icon, size: 16, color: AppColors.onPrimary),
             const SizedBox(width: 8),
             Expanded(
               child: Text(text,
                   style: const TextStyle(
-                      color: AppColors.dark,
+                      color: AppColors.onPrimary,
                       fontSize: 13,
                       fontWeight: FontWeight.w600)),
             ),

@@ -66,7 +66,7 @@ class _TransformationSliderState extends State<TransformationSlider> {
           const SizedBox(height: 10),
           Text(t.memberName,
               style: const TextStyle(
-                color: Colors.white,
+                color: AppColors.textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
               )),

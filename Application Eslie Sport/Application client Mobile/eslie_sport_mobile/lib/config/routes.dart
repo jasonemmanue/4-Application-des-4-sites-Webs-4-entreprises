@@ -42,7 +42,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/schedule',
             name: 'schedule',
-            builder: (_, __) => const ScheduleScreen(),
+            builder: (_, state) => ScheduleScreen(
+              activityId: state.uri.queryParameters['activity'],
+            ),
           ),
           GoRoute(
             path: '/subscriptions',
@@ -67,8 +69,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, state) {
           final extra = state.extra as Map<String, dynamic>?;
           return EnrollmentScreen(
-            activitySlug: extra?['activitySlug'] as String?,
             slotId: extra?['slotId'] as String?,
+            date: extra?['date'] as DateTime?,
           );
         },
       ),
@@ -85,6 +87,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           return PaymentResultScreen(
             reference: extra?['reference'] as String? ?? '',
             success: extra?['success'] as bool? ?? false,
+            title: extra?['title'] as String?,
             message: extra?['message'] as String?,
           );
         },

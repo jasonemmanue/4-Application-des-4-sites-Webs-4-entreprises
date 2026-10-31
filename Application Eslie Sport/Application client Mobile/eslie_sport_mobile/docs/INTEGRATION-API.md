@@ -73,17 +73,47 @@ Tous prefixes par `/api/v1`.
 Le montant n'est jamais transmis par le client — c'est le backend qui recalcule
 l'acompte de 50 % depuis la formule choisie (`PAYMENT_DEPOSIT_RATE`).
 
-Codes operateurs acceptes (`method` dans `POST /payments/init`) :
+Codes operateurs acceptes (`method` dans `POST /payments/init`), affiches selon
+`GET /payments/config` :
 
 | Enum Dart | Code envoye | Notes |
 |-----------|-------------|-------|
-| `PaymentOperator.wave` | `wave` | Portefeuille QR (URL a ouvrir dans le navigateur externe) |
-| `PaymentOperator.orangeMoney` | `orange_money` | Numero `07XXXXXXXX` |
-| `PaymentOperator.mtnMobileMoney` | `mtn_mobile_money` | Numero `05XXXXXXXX` |
+| `PaymentOperator.wave` | `wave` | Portefeuille (URL a ouvrir dans le navigateur externe) |
+| `PaymentOperator.orangeMoney` | `orange_money` | Numero `07`, `08` ou `09` |
+| `PaymentOperator.mtnMobileMoney` | `mtn_mobile_money` | Numero `05`, `06` ou `04` |
+| `PaymentOperator.card` | `card` | Page securisee GeniusPay, aucun numero |
+| `PaymentOperator.stripe` | `stripe` | Propose seulement si le serveur l'annonce |
+
+**La reservation doit porter `payment_type`** (`Séance`, `Abonnée mensuel`,
+`Abonnement de karaté`, `Abonnement de box`). Sans cette formule, le serveur ne
+calcule aucun acompte, prend la place sans paiement et `POST /payments/init`
+repond 409.
+
+**`POST /payments/{ref}/push/resend` renvoie une NOUVELLE reference** : l'ecran
+d'attente suit alors celle-ci.
 
 Le polling cote client (`PaymentService.pollStatus`) sonde `/payments/{ref}`
-toutes les 3 s pendant 90 s au maximum. Passe ce delai, le paiement n'est PAS
-annule cote serveur : la notification GeniusPay peut toujours arriver.
+toutes les 3 s (5 s pour la carte) jusqu'a `expires_in` + 20 s. Passe ce delai,
+le paiement n'est PAS annule cote serveur : la notification GeniusPay peut
+toujours arriver.
+
+## Valeurs du back-office
+
+- `category` : `force`, `cardio`, `martial_arts`, `flexibility`.
+- `level` : `all`, `beginner`, `intermediate`, `advanced`.
+- `opening_hours` est une chaine ; `phone`, `address`, `map_url` s'affichent
+  dans l'app des qu'ils sont modifies au back-office.
+- `video_url` : une URL absolue ou `/uploads/...`. Un simple nom de fichier n'est
+  pas lisible et l'app annonce « bientot disponible ».
+
+## Tests de contrat
+
+`test/api_contract_live_test.dart` interroge la vraie API sans rien y ecrire
+(les POST sont volontairement invalides) :
+
+```bash
+flutter test test/api_contract_live_test.dart
+```
 
 ## Codes d'erreur
 

@@ -1,9 +1,9 @@
-/// Orchestration cote client du paiement GeniusPay.
+/// Orchestration cote client du paiement GeniusPay / Stripe.
 ///
 /// Le backend est la seule source de verite : montant, expiration et statut
 /// sont recalcules cote serveur. Ce service se limite a :
 ///   * normaliser le numero (+225XXXXXXXXXX) et valider le prefixe operateur ;
-///   * ouvrir le guichet dans le navigateur externe (Wave ou USSD) ;
+///   * ouvrir le guichet dans le navigateur externe (Wave, carte, USSD) ;
 ///   * poller `/payments/{reference}` jusqu'a un etat terminal ou expiration.
 ///
 /// Le polling n'annule PAS le paiement quand il expire cote client : le
@@ -23,36 +23,43 @@ class PaymentService {
 
   final ApiClient _api;
 
-  /// Cadence de sondage recommandee cote site web : 3-4 s.
   static const Duration pollInterval = Duration(seconds: 3);
+  static const Duration pollIntervalCard = Duration(seconds: 5);
 
-  /// Duree maximale de sondage cote client. Le backend impose une expiration
-  /// distincte (60 s par defaut, `session_seconds` de `/payments/config`).
-  static const Duration pollMaxDuration = Duration(seconds: 90);
+  /// Marge apres l'expiration annoncee : la notification de l'operateur peut
+  /// arriver juste apres la fin de session.
+  static const Duration pollGrace = Duration(seconds: 20);
+  static const int defaultSessionSeconds = 300;
 
-  /// Normalise un numero saisi par l'utilisateur en `+225XXXXXXXXXX`.
   String normalizePhone(String raw) {
     var digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
     if (digits.startsWith('00')) digits = digits.substring(2);
     if (digits.startsWith('225')) return '+$digits';
-    // On accepte un numero national a 10 chiffres et on ajoute l'indicatif.
     return '+225$digits';
   }
 
-  /// Verifie que le prefixe local (07/05) correspond a l'operateur choisi.
-  /// Wave n'impose aucun prefixe (portefeuille QR).
-  bool validatePhoneForOperator(PaymentOperator op, String normalizedPhone) {
-    final prefix = op.requiredPrefix;
-    if (prefix == null) return true;
-    final national = normalizedPhone.replaceFirst('+225', '');
-    return national.startsWith(prefix);
+  /// Message d'erreur a afficher, ou null si le numero convient. Memes regles
+  /// que `_verifier_le_numero` cote backend, pour refuser avant l'appel.
+  String? phoneError(PaymentOperator op, String raw) {
+    final national = normalizePhone(raw).replaceFirst('+225', '');
+    if (!RegExp(r'^[0-9]{10}$').hasMatch(national)) {
+      return 'Un numéro ivoirien à 10 chiffres est attendu.';
+    }
+    final prefixes = op.allowedPrefixes;
+    if (prefixes.isNotEmpty && !prefixes.any(national.startsWith)) {
+      return 'Ce numéro ne correspond pas à ${op.label} '
+          '(${prefixes.join(', ')}).';
+    }
+    return null;
   }
 
-  /// L'acompte cote client est indicatif — le backend recalcule.
   int computeDeposit(num totalAmount, {int percent = 50}) =>
       (totalAmount * percent / 100).round();
 
-  Future<Map<String, dynamic>> loadConfig() => _api.getPaymentConfig();
+  Future<PaymentConfig> loadConfig() async {
+    final raw = await _api.getPaymentConfig();
+    return PaymentConfig.fromJson(raw);
+  }
 
   Future<PaymentInit> initiate({
     String? enrollmentId,
@@ -68,8 +75,6 @@ class PaymentService {
     );
   }
 
-  /// Ouvre le guichet (URL Wave ou page hebergee) dans le navigateur externe.
-  /// Retourne `false` si l'URL est vide ou si le lien ne peut pas s'ouvrir.
   Future<bool> openCheckoutUrl(String? url) async {
     if (url == null || url.isEmpty) return false;
     final uri = Uri.tryParse(url);
@@ -77,24 +82,28 @@ class PaymentService {
     return launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
-  /// Flux de statuts jusqu'a un etat terminal ou l'expiration cote client.
-  /// L'appelant peut break/cancel librement — chaque tick releve `getPaymentStatus`.
-  Stream<PaymentStatusResponse> pollStatus(String reference) async* {
-    final deadline = DateTime.now().add(pollMaxDuration);
+  Stream<PaymentStatusResponse> pollStatus(
+    String reference, {
+    bool isCard = false,
+    int? expiresIn,
+  }) async* {
+    final maxDuration =
+        Duration(seconds: expiresIn ?? defaultSessionSeconds) + pollGrace;
+    final interval = isCard ? pollIntervalCard : pollInterval;
+    final deadline = DateTime.now().add(maxDuration);
     while (DateTime.now().isBefore(deadline)) {
       try {
         final status = await _api.getPaymentStatus(reference);
         yield status;
-        if (_isTerminal(status.status) || status.expired) return;
+        if (isTerminal(status)) return;
       } on ApiException catch (e) {
-        // 404 = reference inconnue : inutile de continuer.
         if (e.isNotFound) return;
-      } catch (_) {
-        // Erreur reseau transitoire : on retente au tick suivant.
-      }
-      await Future<void>.delayed(pollInterval);
+      } catch (_) {}
+      await Future<void>.delayed(interval);
     }
   }
+
+  bool isTerminal(PaymentStatusResponse s) => s.expired || _isTerminal(s.status);
 
   bool _isTerminal(PaymentStatus s) =>
       s == PaymentStatus.completed ||
@@ -108,10 +117,79 @@ class PaymentService {
   Future<PaymentStatusResponse> cancel(String reference) =>
       _api.cancelPayment(reference);
 
+  /// Le renvoi ouvre une tentative neuve : la reponse porte une NOUVELLE
+  /// reference, que l'appelant doit suivre a la place de l'ancienne.
   Future<PaymentStatusResponse> resendPush(String reference) =>
       _api.resendPush(reference);
 }
 
+class PaymentConfig {
+  final bool enabled;
+  final String mode;
+  final String provider;
+  final double depositRate;
+  final int sessionSeconds;
+  final List<PaymentMethodInfo> methods;
+
+  const PaymentConfig({
+    required this.enabled,
+    required this.mode,
+    required this.provider,
+    required this.depositRate,
+    required this.sessionSeconds,
+    required this.methods,
+  });
+
+  factory PaymentConfig.fromJson(Map<String, dynamic> json) {
+    final rawMethods = json['methods'] as List? ?? [];
+    return PaymentConfig(
+      enabled: json['enabled'] as bool? ?? false,
+      mode: json['mode'] as String? ?? 'sandbox',
+      provider: json['provider'] as String? ?? 'geniuspay',
+      depositRate: (json['deposit_rate'] as num?)?.toDouble() ?? 0.5,
+      sessionSeconds: (json['session_seconds'] as num?)?.toInt() ?? 360,
+      methods: rawMethods
+          .whereType<Map<String, dynamic>>()
+          .map(PaymentMethodInfo.fromJson)
+          .toList(growable: false),
+    );
+  }
+
+  List<PaymentOperator> get operators {
+    return methods
+        .map((m) => PaymentOperatorX.fromCode(m.value))
+        .whereType<PaymentOperator>()
+        .toList(growable: false);
+  }
+}
+
+class PaymentMethodInfo {
+  final String value;
+  final String label;
+  final String provider;
+  final bool needsPhone;
+
+  const PaymentMethodInfo({
+    required this.value,
+    required this.label,
+    required this.provider,
+    required this.needsPhone,
+  });
+
+  factory PaymentMethodInfo.fromJson(Map<String, dynamic> json) {
+    return PaymentMethodInfo(
+      value: json['value'] as String? ?? '',
+      label: json['label'] as String? ?? '',
+      provider: json['provider'] as String? ?? 'geniuspay',
+      needsPhone: json['needs_phone'] as bool? ?? true,
+    );
+  }
+}
+
 final paymentServiceProvider = Provider<PaymentService>((ref) {
   return PaymentService(ref.watch(apiClientProvider));
+});
+
+final paymentConfigProvider = FutureProvider.autoDispose<PaymentConfig>((ref) {
+  return ref.watch(paymentServiceProvider).loadConfig();
 });

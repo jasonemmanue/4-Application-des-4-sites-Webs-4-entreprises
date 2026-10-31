@@ -7,12 +7,14 @@ import '../../services/whatsapp_service.dart';
 class PaymentResultScreen extends StatelessWidget {
   final String reference;
   final bool success;
+  final String? title;
   final String? message;
 
   const PaymentResultScreen({
     super.key,
     required this.reference,
     required this.success,
+    this.title,
     this.message,
   });
 
@@ -22,7 +24,8 @@ class PaymentResultScreen extends StatelessWidget {
     final icon = success ? Icons.check_circle : Icons.error;
     return Scaffold(
       appBar: AppBar(
-        title: Text(success ? 'Paiement reussi' : 'Paiement echoue'),
+        automaticallyImplyLeading: false,
+        title: Text(success ? 'Confirmation' : 'Paiement non finalisé'),
       ),
       body: SafeArea(
         child: Padding(
@@ -31,23 +34,25 @@ class PaymentResultScreen extends StatelessWidget {
             children: [
               const Spacer(),
               Container(
-                width: 120,
-                height: 120,
+                width: 112,
+                height: 112,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
+                  color: color.withOpacity(0.12),
                   shape: BoxShape.circle,
-                  border: Border.all(color: color, width: 3),
                 ),
                 child: Icon(icon, color: color, size: 68),
               ),
               const SizedBox(height: 24),
               Text(
-                success ? 'Merci pour votre inscription !' : 'Paiement non finalise',
+                title ??
+                    (success
+                        ? 'Merci, c\'est confirmé !'
+                        : 'Le paiement n\'a pas abouti'),
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.textPrimary,
                   fontSize: 22,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
               const SizedBox(height: 8),
@@ -56,22 +61,30 @@ class PaymentResultScreen extends StatelessWidget {
                   message!,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                      color: AppColors.darkMuted, fontSize: 14, height: 1.5),
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
                 ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.darkCard,
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                  border: Border.all(color: AppColors.darkBorder),
-                ),
-                child: Text('Ref : $reference',
+              if (reference.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySoft,
+                    borderRadius: BorderRadius.circular(AppRadius.full),
+                  ),
+                  child: Text(
+                    'Réf. $reference',
                     style: const TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13)),
-              ),
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
               const Spacer(),
               if (success)
                 SizedBox(
@@ -79,12 +92,13 @@ class PaymentResultScreen extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: () {
                       WhatsAppService.instance.sendMessage(
-                        message:
-                            'Bonjour, je viens de finaliser un paiement. Ref : $reference',
+                        message: reference.isEmpty
+                            ? 'Bonjour, je viens de réserver une séance depuis l\'application.'
+                            : 'Bonjour, je viens de finaliser un paiement. Réf. $reference',
                       );
                     },
-                    icon: const Icon(Icons.chat),
-                    label: const Text('Envoyer la confirmation par WhatsApp'),
+                    icon: const Icon(Icons.chat_outlined),
+                    label: const Text('Écrire à la salle sur WhatsApp'),
                   ),
                 ),
               const SizedBox(height: 10),
@@ -92,7 +106,7 @@ class PaymentResultScreen extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () => context.go('/'),
-                  child: const Text('Retour a l\'accueil'),
+                  child: const Text('Retour à l\'accueil'),
                 ),
               ),
             ],

@@ -65,7 +65,7 @@ class ArticleDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 14),
                 Text(a.title,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
                       height: 1.2,
@@ -99,7 +99,7 @@ class ArticleDetailScreen extends ConsumerWidget {
                   Text(
                     _stripHtml(a.content),
                     style: const TextStyle(
-                        color: Colors.white, fontSize: 14.5, height: 1.6),
+                        color: AppColors.textPrimary, fontSize: 14.5, height: 1.6),
                   ),
               ],
             ),

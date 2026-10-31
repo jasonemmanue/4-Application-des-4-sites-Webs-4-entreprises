@@ -37,37 +37,48 @@ class _CountdownTimerState extends State<CountdownTimer> {
     super.dispose();
   }
 
+  String get _label {
+    final minutes = _remaining ~/ 60;
+    final seconds = (_remaining % 60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final progress =
-        widget.duration.inSeconds == 0 ? 0.0 : _remaining / widget.duration.inSeconds;
+    final progress = widget.duration.inSeconds == 0
+        ? 0.0
+        : _remaining / widget.duration.inSeconds;
     return SizedBox(
-      width: 140,
-      height: 140,
+      width: 132,
+      height: 132,
       child: Stack(
         alignment: Alignment.center,
         children: [
           SizedBox.expand(
             child: CircularProgressIndicator(
               value: progress,
-              strokeWidth: 6,
-              backgroundColor: AppColors.darkBorder,
+              strokeWidth: 7,
+              strokeCap: StrokeCap.round,
+              backgroundColor: AppColors.border,
               valueColor:
-                  const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  const AlwaysStoppedAnimation<Color>(AppColors.accent),
             ),
           ),
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('${_remaining}s',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.w900,
-                  )),
-              const SizedBox(height: 2),
-              const Text('restantes',
-                  style: TextStyle(color: AppColors.darkMuted, fontSize: 12)),
+              Text(
+                _label,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 30,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const Text(
+                'restantes',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              ),
             ],
           ),
         ],

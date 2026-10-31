@@ -15,7 +15,7 @@ class BmiScreen extends StatelessWidget {
         children: [
           const Text('Indice de Masse Corporelle',
               style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.textPrimary,
                   fontSize: 22,
                   fontWeight: FontWeight.w900)),
           const SizedBox(height: 6),
@@ -43,7 +43,7 @@ class BmiScreen extends StatelessWidget {
                 SizedBox(height: 6),
                 Text(
                   'L\'IMC est un indicateur general. Il ne tient pas compte de la masse musculaire. Consultez votre coach pour un bilan complet.',
-                  style: TextStyle(color: Colors.white, fontSize: 13, height: 1.5),
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 13, height: 1.5),
                 ),
               ],
             ),

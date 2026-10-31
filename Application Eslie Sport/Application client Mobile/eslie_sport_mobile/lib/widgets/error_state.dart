@@ -27,7 +27,7 @@ class ErrorState extends StatelessWidget {
             const SizedBox(height: 16),
             Text(message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white, fontSize: 15)),
+                style: const TextStyle(color: AppColors.textPrimary, fontSize: 15)),
             if (onRetry != null) ...[
               const SizedBox(height: 16),
               OutlinedButton.icon(

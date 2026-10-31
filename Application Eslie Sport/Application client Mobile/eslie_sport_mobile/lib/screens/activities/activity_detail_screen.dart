@@ -1,10 +1,11 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../config/theme.dart';
 import '../../services/providers.dart';
+import '../../utils/formatters.dart';
+import '../../widgets/activity_card.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_state.dart';
 import '../../widgets/loading_state.dart';
@@ -20,82 +21,82 @@ class ActivityDetailScreen extends ConsumerWidget {
       body: async.when(
         data: (a) {
           if (a == null) {
-            return const EmptyState(
-              icon: Icons.fitness_center,
-              title: 'Activite introuvable',
+            return Scaffold(
+              appBar: AppBar(),
+              body: const EmptyState(
+                icon: Icons.fitness_center,
+                title: 'Activité introuvable',
+              ),
             );
           }
           return CustomScrollView(
             slivers: [
               SliverAppBar(
-                expandedHeight: 240,
+                expandedHeight: 260,
                 pinned: true,
-                foregroundColor: Colors.white,
-                backgroundColor: AppColors.dark,
+                foregroundColor: AppColors.onPrimary,
+                backgroundColor: AppColors.primaryDark,
                 flexibleSpace: FlexibleSpaceBar(
-                  title: Text(a.name,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700)),
-                  background: a.imageUrl != null && a.imageUrl!.isNotEmpty
-                      ? Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            CachedNetworkImage(
-                                imageUrl: a.imageUrl!,
-                                fit: BoxFit.cover,
-                            ),
-                            Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Colors.transparent,
-                                    AppColors.dark.withOpacity(0.9),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        )
-                      : Container(color: AppColors.darkLighter),
+                  title: Text(
+                    a.name,
+                    style: const TextStyle(
+                      color: AppColors.onPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  background: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ActivityPhoto(url: a.imageUrl, category: a.category),
+                      const DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Color(0x4D07382A), Color(0xE607382A)],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               SliverPadding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
                         if (a.category.isNotEmpty)
-                          _chip(a.category.toUpperCase(), AppColors.primary),
-                        const SizedBox(width: 8),
-                        if (a.level.isNotEmpty)
-                          _chip(a.level.toUpperCase(), AppColors.success),
+                          _chip(activityCategoryLabel(a.category)),
+                        _chip(activityLevelLabel(a.level)),
                       ],
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 16),
                     if (a.description.isNotEmpty)
-                      Text(a.description,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              height: 1.5)),
+                      Text(
+                        a.description,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 15,
+                          height: 1.55,
+                        ),
+                      ),
                     const SizedBox(height: 16),
                     _infoRow(Icons.schedule, '${a.durationMinutes} minutes'),
-                    _infoRow(Icons.groups,
-                        'Capacite max : ${a.maxCapacity} personnes'),
+                    _infoRow(Icons.groups_outlined,
+                        '${a.maxCapacity} places par séance'),
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
-                        onPressed: () => context.push(
-                          '/schedule',
-                        ),
+                        onPressed: () =>
+                            context.go('/schedule?activity=${a.id}'),
                         icon: const Icon(Icons.event_available),
-                        label: const Text('Voir les creneaux dans le planning'),
+                        label: const Text('Réserver ma place'),
                       ),
                     ),
                   ]),
@@ -113,30 +114,36 @@ class ActivityDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _chip(String text, Color color) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+  Widget _chip(String text) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(AppRadius.sm),
+          color: AppColors.primarySoft,
+          borderRadius: BorderRadius.circular(AppRadius.full),
         ),
-        child: Text(text,
-            style: TextStyle(
-              color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.5,
-            )),
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: AppColors.primary,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       );
 
   Widget _infoRow(IconData icon, String text) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: 5),
         child: Row(
           children: [
-            Icon(icon, size: 16, color: AppColors.primary),
+            Icon(icon, size: 18, color: AppColors.primary),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(text,
-                  style: const TextStyle(color: Colors.white, fontSize: 13)),
+              child: Text(
+                text,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 14,
+                ),
+              ),
             ),
           ],
         ),
