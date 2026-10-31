@@ -8,6 +8,7 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/error_state.dart';
 import '../../widgets/loading_state.dart';
 import '../../widgets/testimonial_card.dart';
+import '../../services/input_sanitizer.dart';
 
 class TestimonialsScreen extends ConsumerWidget {
   const TestimonialsScreen({super.key});
@@ -28,7 +29,7 @@ class TestimonialsScreen extends ConsumerWidget {
       body: testimonials.when(
         loading: () => const LoadingState(),
         error: (e, _) => ErrorState(
-          message: e.toString(),
+          message: InputSanitizer.safeErrorMessage(e),
           onRetry: () => ref.invalidate(testimonialsProvider),
         ),
         data: (items) {
@@ -183,7 +184,7 @@ class TestimonialsScreen extends ConsumerWidget {
                               } catch (e) {
                                 setSheetState(() => submitting = false);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(e.toString())),
+                                  SnackBar(content: Text(InputSanitizer.safeErrorMessage(e))),
                                 );
                               }
                             },

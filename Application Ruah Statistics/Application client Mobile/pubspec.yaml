@@ -26,6 +26,9 @@ dependencies:
   shimmer: ^3.0.0
   flutter_animate: ^4.5.0
 
+  # Payment
+  cinetpay: ^1.0.4
+
   # System
   url_launcher: ^6.3.0
   share_plus: ^10.0.2

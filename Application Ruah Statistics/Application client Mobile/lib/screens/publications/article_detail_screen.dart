@@ -9,6 +9,7 @@ import '../../models/article.dart';
 import '../../providers/providers.dart';
 import '../../widgets/download_modal.dart';
 import '../../widgets/error_state.dart';
+import '../../services/input_sanitizer.dart';
 import '../../widgets/loading_state.dart';
 
 class ArticleDetailScreen extends ConsumerWidget {
@@ -23,7 +24,7 @@ class ArticleDetailScreen extends ConsumerWidget {
       body: article.when(
         loading: () => const LoadingState(),
         error: (e, _) => ErrorState(
-          message: e.toString(),
+          message: InputSanitizer.safeErrorMessage(e),
           onRetry: () => ref.invalidate(articleDetailProvider(slug)),
         ),
         data: (a) => _Body(article: a),

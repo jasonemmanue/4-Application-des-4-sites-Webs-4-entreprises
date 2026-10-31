@@ -7,6 +7,8 @@ import '../screens/home/home_screen.dart';
 import '../screens/home/search_screen.dart';
 import '../screens/main_scaffold.dart';
 import '../screens/more/more_screen.dart';
+import '../screens/payment/payment_result_screen.dart';
+import '../screens/payment/payment_screen.dart';
 import '../screens/projects/project_detail_screen.dart';
 import '../screens/projects/projects_list_screen.dart';
 import '../screens/publications/article_detail_screen.dart';
@@ -38,6 +40,8 @@ class AppRoutes {
   static const String contact = '/more/contact';
   static const String quote = '/more/quote';
   static const String quoteConfirmation = '/more/quote/confirmation';
+  static const String payment = '/more/payment';
+  static const String paymentResult = '/more/payment/result';
 }
 
 final GlobalKey<NavigatorState> rootNavigatorKey =
@@ -153,6 +157,36 @@ final GoRouter appRouter = GoRouter(
                   builder: (context, state) => QuoteConfirmationScreen(
                     reference: state.extra as String? ?? '',
                   ),
+                ),
+              ],
+            ),
+            GoRoute(
+              path: 'payment',
+              parentNavigatorKey: rootNavigatorKey,
+              builder: (context, state) {
+                final extra = state.extra;
+                if (extra is Map<String, dynamic>) {
+                  return PaymentScreen(
+                    initialAmount: extra['amount'] as int?,
+                    reference: extra['reference'] as String?,
+                  );
+                }
+                return const PaymentScreen();
+              },
+              routes: [
+                GoRoute(
+                  path: 'result',
+                  parentNavigatorKey: rootNavigatorKey,
+                  builder: (context, state) {
+                    final data = state.extra as Map<String, dynamic>? ?? {};
+                    return PaymentResultScreen(
+                      success: data['success'] as bool? ?? false,
+                      amount: data['amount'] as int?,
+                      transactionId: data['transactionId'] as String?,
+                      method: data['method'] as String?,
+                      message: data['message'] as String?,
+                    );
+                  },
                 ),
               ],
             ),

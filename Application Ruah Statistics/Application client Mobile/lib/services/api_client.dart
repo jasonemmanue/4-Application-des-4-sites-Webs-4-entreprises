@@ -28,51 +28,107 @@ class PagedResult<T> {
 }
 
 class ApiException implements Exception {
-  final String userMessage;
+  final String message;
   final int? statusCode;
-  const ApiException(this.userMessage, {this.statusCode});
+  const ApiException(this.message, {this.statusCode});
   @override
-  String toString() => userMessage;
+  String toString() => message;
 }
 
 class ApiClient {
   final Dio _dio;
 
-  ApiClient([Dio? dio])
-      : _dio = dio ??
-            Dio(BaseOptions(
-              baseUrl: ApiConfig.baseUrl,
-              connectTimeout: ApiConfig.connectTimeout,
-              receiveTimeout: ApiConfig.receiveTimeout,
-              headers: {
-                'Accept': 'application/json',
-                // Permet a l'admin de distinguer les soumissions mobiles des
-                // soumissions site web. Le backend lit ce header et le stocke
-                // dans la colonne `source`. Absence de header = "website"
-                // (defaut cote backend), donc pas de casse pour le site.
-                'X-Client-Source': 'android',
-              },
-              responseType: ResponseType.json,
-            )) {
+  ApiClient([Dio? dio]) : _dio = dio ?? _build();
+
+  static Dio _build() {
+    final dio = Dio(BaseOptions(
+      baseUrl: ApiConfig.baseUrl,
+      connectTimeout: ApiConfig.connectTimeout,
+      receiveTimeout: ApiConfig.receiveTimeout,
+      headers: {
+        'Accept': 'application/json',
+        'X-Client-Source': 'android',
+      },
+      responseType: ResponseType.json,
+    ));
+
     if (kDebugMode) {
-      _dio.interceptors.add(LogInterceptor(
+      dio.interceptors.add(LogInterceptor(
         request: false,
         requestBody: false,
         responseBody: false,
         error: true,
       ));
     }
+
+    dio.interceptors.add(InterceptorsWrapper(
+      onError: (e, handler) {
+        handler.reject(DioException(
+          requestOptions: e.requestOptions,
+          error: ApiException(
+            _extractMessage(e),
+            statusCode: e.response?.statusCode,
+          ),
+          response: e.response,
+          type: e.type,
+        ));
+      },
+    ));
+
+    return dio;
   }
 
+  static String _extractMessage(DioException e) {
+    final code = e.response?.statusCode;
+    final data = e.response?.data;
+
+    if (data is Map) {
+      final raw = (data['detail'] ?? data['message'])?.toString();
+      if (raw != null && raw.length < 200 && !_looksInternal(raw)) return raw;
+    }
+
+    if (code == 429) return 'Trop de requetes. Reessayez dans quelques instants.';
+    if (code == 401) return 'Session expiree.';
+    if (code == 403) return 'Acces refuse.';
+    if (code == 404) return 'Ressource introuvable.';
+    if (code == 422) return 'Donnees invalides. Verifiez votre saisie.';
+    if (code != null && code >= 500) return 'Erreur serveur. Reessayez plus tard.';
+
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout ||
+        e.type == DioExceptionType.sendTimeout) {
+      return 'Delai depasse. Verifiez votre connexion.';
+    }
+    if (e.type == DioExceptionType.connectionError) {
+      return 'Impossible de joindre le serveur.';
+    }
+    return 'Une erreur est survenue.';
+  }
+
+  static bool _looksInternal(String msg) {
+    final lower = msg.toLowerCase();
+    return lower.contains('traceback') ||
+        lower.contains('stacktrace') ||
+        lower.contains('internal server') ||
+        lower.contains('sqlalchemy') ||
+        lower.contains('postgres') ||
+        lower.contains('redis') ||
+        lower.contains('file "');
+  }
+
+  // ---------------------------------------------------------------
+  // GET
+  // ---------------------------------------------------------------
+
   Future<List<Service>> fetchServices() async {
-    final data = await _get<List>('/services');
+    final data = await _getList('/services');
     return data
         .map((e) => Service.fromJson(e as Map<String, dynamic>))
         .toList();
   }
 
   Future<Service> fetchServiceBySlug(String slug) async {
-    final data = await _get<Map<String, dynamic>>('/services/$slug');
+    final data = await _getMap('/services/$slug');
     return Service.fromJson(data);
   }
 
@@ -82,7 +138,7 @@ class ApiClient {
     String? country,
     int? year,
   }) async {
-    final data = await _get<Map<String, dynamic>>(
+    final data = await _getMap(
       '/projects',
       query: {
         'page': page,
@@ -95,12 +151,12 @@ class ApiClient {
   }
 
   Future<Project> fetchProjectBySlug(String slug) async {
-    final data = await _get<Map<String, dynamic>>('/projects/$slug');
+    final data = await _getMap('/projects/$slug');
     return Project.fromJson(data);
   }
 
   Future<List<TeamMember>> fetchTeam() async {
-    final data = await _get<List>('/team');
+    final data = await _getList('/team');
     return data
         .map((e) => TeamMember.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -118,7 +174,7 @@ class ApiClient {
     int page = 1,
     ArticleType? type,
   }) async {
-    final data = await _get<Map<String, dynamic>>(
+    final data = await _getMap(
       '/articles',
       query: {
         'page': page,
@@ -130,9 +186,39 @@ class ApiClient {
   }
 
   Future<Article> fetchArticleBySlug(String slug) async {
-    final data = await _get<Map<String, dynamic>>('/articles/$slug');
+    final data = await _getMap('/articles/$slug');
     return Article.fromJson(data);
   }
+
+  Future<List<Video>> fetchVideos() async {
+    final data = await _getList('/videos');
+    return data.map((e) => Video.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<List<Testimonial>> fetchTestimonials() async {
+    final data = await _getList('/testimonials');
+    return data
+        .map((e) => Testimonial.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<Partner>> fetchPartners() async {
+    final data = await _getList('/partners');
+    return data
+        .map((e) => Partner.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<KeyFigure>> fetchKeyFigures() async {
+    final data = await _getList('/key-figures');
+    return data
+        .map((e) => KeyFigure.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  // ---------------------------------------------------------------
+  // POST
+  // ---------------------------------------------------------------
 
   Future<Map<String, dynamic>> requestWhitepaperDownload({
     required String articleId,
@@ -151,34 +237,8 @@ class ApiClient {
     return _asMap(resp.data);
   }
 
-  Future<List<Video>> fetchVideos() async {
-    final data = await _get<List>('/videos');
-    return data.map((e) => Video.fromJson(e as Map<String, dynamic>)).toList();
-  }
-
-  Future<List<Testimonial>> fetchTestimonials() async {
-    final data = await _get<List>('/testimonials');
-    return data
-        .map((e) => Testimonial.fromJson(e as Map<String, dynamic>))
-        .toList();
-  }
-
   Future<void> submitTestimonial(TestimonialSubmission submission) async {
     await _dio.post('/testimonials/submit', data: submission.toJson());
-  }
-
-  Future<List<Partner>> fetchPartners() async {
-    final data = await _get<List>('/partners');
-    return data
-        .map((e) => Partner.fromJson(e as Map<String, dynamic>))
-        .toList();
-  }
-
-  Future<List<KeyFigure>> fetchKeyFigures() async {
-    final data = await _get<List>('/key-figures');
-    return data
-        .map((e) => KeyFigure.fromJson(e as Map<String, dynamic>))
-        .toList();
   }
 
   Future<Map<String, dynamic>> submitQuoteRequest(QuoteLead lead) async {
@@ -192,25 +252,23 @@ class ApiClient {
     return _asMap(resp.data);
   }
 
-  Future<T> _get<T>(String path, {Map<String, dynamic>? query}) async {
-    try {
-      final resp = await _dio.get(path, queryParameters: query);
-      final data = resp.data;
-      if (T == List) {
-        if (data is List) return data as T;
-        if (data is Map && data['items'] is List) return data['items'] as T;
-        if (data is Map && data['data'] is List) return data['data'] as T;
-      }
-      if (T == Map<String, dynamic>) {
-        return _asMap(data) as T;
-      }
-      return data as T;
-    } on DioException catch (e) {
-      throw ApiException(
-        _errorMessage(e),
-        statusCode: e.response?.statusCode,
-      );
-    }
+  // ---------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------
+
+  Future<List> _getList(String path, {Map<String, dynamic>? query}) async {
+    final resp = await _dio.get(path, queryParameters: query);
+    final data = resp.data;
+    if (data is List) return data;
+    if (data is Map && data['items'] is List) return data['items'] as List;
+    if (data is Map && data['data'] is List) return data['data'] as List;
+    return const [];
+  }
+
+  Future<Map<String, dynamic>> _getMap(String path,
+      {Map<String, dynamic>? query}) async {
+    final resp = await _dio.get(path, queryParameters: query);
+    return _asMap(resp.data);
   }
 
   Map<String, dynamic> _asMap(dynamic data) {
@@ -230,48 +288,9 @@ class ApiClient {
     return PagedResult<T>(
       items: raw.map((e) => fromJson(e as Map<String, dynamic>)).toList(),
       page: (data['page'] as int?) ?? 1,
-      totalPages: (data['total_pages'] as int?) ??
-          (data['pages'] as int?) ??
-          1,
+      totalPages:
+          (data['total_pages'] as int?) ?? (data['pages'] as int?) ?? 1,
       total: (data['total'] as int?) ?? raw.length,
     );
-  }
-
-  String _errorMessage(DioException e) {
-    if (e.type == DioExceptionType.connectionTimeout ||
-        e.type == DioExceptionType.receiveTimeout ||
-        e.type == DioExceptionType.sendTimeout) {
-      return 'Delai depasse. Verifiez votre connexion.';
-    }
-    if (e.type == DioExceptionType.connectionError) {
-      return 'Impossible de contacter le serveur.';
-    }
-    final status = e.response?.statusCode;
-    if (status == 429) return 'Trop de requetes. Reessayez dans quelques instants.';
-    if (status == 422) return 'Donnees invalides. Verifiez votre saisie.';
-    if (status != null && status >= 500) return 'Erreur du serveur. Reessayez plus tard.';
-    final data = e.response?.data;
-    if (data is Map) {
-      final detail = data['detail'];
-      if (detail is String && detail.length < 200 && !_looksLikeTechnicalError(detail)) {
-        return detail;
-      }
-      final message = data['message'];
-      if (message is String && message.length < 200 && !_looksLikeTechnicalError(message)) {
-        return message;
-      }
-    }
-    return 'Une erreur est survenue. Reessayez.';
-  }
-
-  bool _looksLikeTechnicalError(String s) {
-    final lower = s.toLowerCase();
-    return lower.contains('traceback') ||
-        lower.contains('exception') ||
-        lower.contains('stack') ||
-        lower.contains('sql') ||
-        lower.contains('internal server') ||
-        lower.contains('file "') ||
-        lower.contains('line ') && lower.contains(', in ');
   }
 }

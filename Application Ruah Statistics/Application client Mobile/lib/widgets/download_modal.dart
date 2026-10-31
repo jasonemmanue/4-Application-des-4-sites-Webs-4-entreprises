@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/theme.dart';
 import '../models/article.dart';
 import '../providers/providers.dart';
-import '../services/api_client.dart' show ApiException;
 import '../services/input_sanitizer.dart';
 import '../services/whatsapp_service.dart';
 
@@ -76,9 +75,7 @@ class _DownloadModalState extends ConsumerState<DownloadModal> {
         ),
       );
     } catch (e) {
-      setState(() => _error = e is ApiException
-          ? e.userMessage
-          : 'Une erreur est survenue. Reessayez.');
+      setState(() => _error = InputSanitizer.safeErrorMessage(e));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }

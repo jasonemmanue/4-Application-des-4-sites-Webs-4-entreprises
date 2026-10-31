@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -12,7 +10,7 @@ import 'app.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // --- Securite : couper TOUS les logs en release (y compris les isolats) ---
+  // Securite : couper TOUS les logs en release (rien dans adb logcat).
   if (kReleaseMode) {
     debugPrint = (String? message, {int? wrapWidth}) {};
   }
@@ -28,11 +26,6 @@ Future<void> main() async {
     // Fail-open : si google-services.json n'est pas encore branché ou si
     // Firebase renvoie une erreur, l'app doit continuer de tourner. Les push
     // notifications sont un bonus, pas un pré-requis pour consulter le site.
-  }
-
-  // --- Securite : empêcher les captures d'ecran en release (Android) ---
-  if (kReleaseMode && Platform.isAndroid) {
-    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   }
 
   runApp(const ProviderScope(child: RuahStatisticsApp()));

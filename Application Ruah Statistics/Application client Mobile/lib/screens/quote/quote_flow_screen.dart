@@ -6,7 +6,6 @@ import '../../config/routes.dart';
 import '../../config/theme.dart';
 import '../../models/lead.dart';
 import '../../providers/providers.dart';
-import '../../services/api_client.dart' show ApiException;
 import '../../services/client_profile.dart';
 import '../../services/input_sanitizer.dart';
 
@@ -89,9 +88,7 @@ class _QuoteFlowScreenState extends ConsumerState<QuoteFlowScreen> {
       context.go(AppRoutes.quoteConfirmation, extra: reference);
     } catch (e) {
       if (!mounted) return;
-      final msg = e is ApiException
-          ? e.userMessage
-          : 'Une erreur est survenue. Reessayez.';
+      final msg = InputSanitizer.safeErrorMessage(e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(msg)),
       );

@@ -6,6 +6,7 @@ import '../../config/theme.dart';
 import '../../models/project.dart';
 import '../../providers/providers.dart';
 import '../../widgets/error_state.dart';
+import '../../services/input_sanitizer.dart';
 import '../../widgets/loading_state.dart';
 
 class ProjectDetailScreen extends ConsumerWidget {
@@ -20,7 +21,7 @@ class ProjectDetailScreen extends ConsumerWidget {
       body: project.when(
         loading: () => const LoadingState(),
         error: (e, _) => ErrorState(
-          message: e.toString(),
+          message: InputSanitizer.safeErrorMessage(e),
           onRetry: () => ref.invalidate(projectDetailProvider(slug)),
         ),
         data: (p) => _Body(project: p),

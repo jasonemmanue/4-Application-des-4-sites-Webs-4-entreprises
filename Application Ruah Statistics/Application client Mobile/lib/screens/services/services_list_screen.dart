@@ -9,6 +9,7 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/error_state.dart';
 import '../../widgets/loading_state.dart';
 import '../../widgets/service_card.dart';
+import '../../services/input_sanitizer.dart';
 
 class ServicesListScreen extends ConsumerWidget {
   const ServicesListScreen({super.key});
@@ -22,7 +23,7 @@ class ServicesListScreen extends ConsumerWidget {
       body: services.when(
         loading: () => const LoadingState(),
         error: (e, _) => ErrorState(
-          message: e.toString(),
+          message: InputSanitizer.safeErrorMessage(e),
           onRetry: () => ref.invalidate(servicesProvider),
         ),
         data: (items) {

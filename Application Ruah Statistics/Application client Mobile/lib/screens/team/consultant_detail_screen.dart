@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/theme.dart';
 import '../../providers/providers.dart';
 import '../../widgets/error_state.dart';
+import '../../services/input_sanitizer.dart';
 import '../../widgets/loading_state.dart';
 
 class ConsultantDetailScreen extends ConsumerWidget {
@@ -22,7 +23,7 @@ class ConsultantDetailScreen extends ConsumerWidget {
       body: member.when(
         loading: () => const LoadingState(),
         error: (e, _) => ErrorState(
-          message: e.toString(),
+          message: InputSanitizer.safeErrorMessage(e),
           onRetry: () => ref.invalidate(teamMemberProvider(id)),
         ),
         data: (m) {

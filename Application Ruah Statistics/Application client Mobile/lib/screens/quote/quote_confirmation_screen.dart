@@ -55,6 +55,19 @@ class QuoteConfirmationScreen extends StatelessWidget {
               ),
             ],
             const SizedBox(height: AppSpacing.lg),
+            ElevatedButton.icon(
+              onPressed: () => context.push(
+                AppRoutes.payment,
+                extra: {'reference': reference},
+              ),
+              icon: const Icon(Icons.payments_rounded),
+              label: const Text('Payer en ligne'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.brand600,
+                foregroundColor: Colors.white,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
             ElevatedButton(
               onPressed: () => context.go(AppRoutes.home),
               child: const Text("Retour a l'accueil"),

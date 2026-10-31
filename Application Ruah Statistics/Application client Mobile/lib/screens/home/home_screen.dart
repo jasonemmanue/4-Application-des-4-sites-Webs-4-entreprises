@@ -9,6 +9,7 @@ import '../../models/project.dart';
 import '../../models/service.dart';
 import '../../providers/providers.dart';
 import '../../services/api_client.dart' show PagedResult;
+import '../../services/input_sanitizer.dart';
 import '../../widgets/error_state.dart';
 import '../../widgets/loading_state.dart';
 import '../../widgets/quote_notice.dart';
@@ -406,7 +407,7 @@ class _ServicesSection extends StatelessWidget {
         ),
         services.when(
           loading: () => const LoadingState(itemCount: 1),
-          error: (e, _) => ErrorState(message: e.toString(), onRetry: () {}),
+          error: (e, _) => ErrorState(message: InputSanitizer.safeErrorMessage(e), onRetry: () {}),
           data: (items) {
             if (items.isEmpty) return const SizedBox.shrink();
             return SizedBox(
@@ -457,7 +458,7 @@ class _ProjectsSection extends StatelessWidget {
         ),
         projects.when(
           loading: () => const LoadingState(itemCount: 1),
-          error: (e, _) => ErrorState(message: e.toString(), onRetry: () {}),
+          error: (e, _) => ErrorState(message: InputSanitizer.safeErrorMessage(e), onRetry: () {}),
           data: (page) {
             if (page.items.isEmpty) return const SizedBox.shrink();
             return SizedBox(

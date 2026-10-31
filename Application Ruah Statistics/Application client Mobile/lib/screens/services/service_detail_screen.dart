@@ -8,6 +8,7 @@ import '../../config/theme.dart';
 import '../../models/service.dart';
 import '../../providers/providers.dart';
 import '../../widgets/error_state.dart';
+import '../../services/input_sanitizer.dart';
 import '../../widgets/loading_state.dart';
 
 class ServiceDetailScreen extends ConsumerWidget {
@@ -23,7 +24,7 @@ class ServiceDetailScreen extends ConsumerWidget {
       body: service.when(
         loading: () => const LoadingState(),
         error: (e, _) => ErrorState(
-          message: e.toString(),
+          message: InputSanitizer.safeErrorMessage(e),
           onRetry: () => ref.invalidate(serviceDetailProvider(slug)),
         ),
         data: (s) => _Body(service: s),

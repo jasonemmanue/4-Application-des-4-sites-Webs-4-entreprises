@@ -1,3 +1,5 @@
+import 'lien_api.dart';
+
 /// Configuration des URLs de l'API cabinet-etudes.
 ///
 /// Par defaut, l'app cible **l'API en production sur Railway** — la meme
@@ -16,21 +18,10 @@
 /// * Autre environnement Railway (staging par ex.) :
 ///   `flutter build apk --dart-define=API_BASE_URL=https://<staging>/api/v1`
 class ApiConfig {
-  static const String _envOverride = String.fromEnvironment('API_BASE_URL');
-
-  static final String baseUrl = _envOverride.isNotEmpty
-      ? _envOverride
-      : _decodeUrl(const [
-          0x68, 0x74, 0x74, 0x70, 0x73, 0x3a, 0x2f, 0x2f, // https://
-          0x61, 0x70, 0x69, 0x2d, 0x70, 0x72, 0x6f, 0x64, // api-prod
-          0x75, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x2d, 0x62, // uction-b
-          0x63, 0x38, 0x36, 0x33, 0x2e, 0x75, 0x70, 0x2e, // c863.up.
-          0x72, 0x61, 0x69, 0x6c, 0x77, 0x61, 0x79, 0x2e, // railway.
-          0x61, 0x70, 0x70, 0x2f, 0x61, 0x70, 0x69, 0x2f, // app/api/
-          0x76, 0x31, //                                       v1
-        ]);
-
-  static String _decodeUrl(List<int> bytes) => String.fromCharCodes(bytes);
+  static final String baseUrl =
+      const String.fromEnvironment('API_BASE_URL').isEmpty
+          ? LienApi.apiUrl
+          : const String.fromEnvironment('API_BASE_URL');
 
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 20);

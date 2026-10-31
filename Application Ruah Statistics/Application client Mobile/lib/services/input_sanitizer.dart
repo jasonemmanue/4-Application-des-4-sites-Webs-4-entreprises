@@ -1,13 +1,18 @@
+import 'package:dio/dio.dart' show DioException;
+
 import 'api_client.dart' show ApiException;
 
 abstract final class InputSanitizer {
   static String safeErrorMessage(Object error) {
-    if (error is ApiException) return error.userMessage;
-    return 'Une erreur est survenue. Reessayez.';
+    if (error is DioException) {
+      final inner = error.error;
+      if (inner is ApiException) return inner.message;
+    }
+    if (error is ApiException) return error.message;
+    return 'Une erreur est survenue.';
   }
 
   static final _htmlTag = RegExp(r'<[^>]*>');
-  static final _phoneDigits = RegExp(r'[\d\s\+\-\(\)]+');
 
   static String stripHtml(String input) => input.replaceAll(_htmlTag, '');
 

@@ -5,7 +5,6 @@ import '../../config/api_config.dart';
 import '../../config/theme.dart';
 import '../../models/contact_message.dart';
 import '../../providers/providers.dart';
-import '../../services/api_client.dart' show ApiException;
 import '../../services/input_sanitizer.dart';
 
 class ContactScreen extends ConsumerStatefulWidget {
@@ -57,9 +56,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      final msg = e is ApiException
-          ? e.userMessage
-          : 'Une erreur est survenue. Reessayez.';
+      final msg = InputSanitizer.safeErrorMessage(e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(msg)),
       );
@@ -217,6 +214,4 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
     );
   }
 
-  String? _required(String? v) =>
-      (v == null || v.trim().isEmpty) ? 'Requis' : null;
 }

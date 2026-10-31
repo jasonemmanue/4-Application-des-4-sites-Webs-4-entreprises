@@ -9,6 +9,7 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/error_state.dart';
 import '../../widgets/loading_state.dart';
 import '../../widgets/project_card.dart';
+import '../../services/input_sanitizer.dart';
 
 class ProjectsListScreen extends ConsumerWidget {
   const ProjectsListScreen({super.key});
@@ -31,7 +32,7 @@ class ProjectsListScreen extends ConsumerWidget {
       body: projects.when(
         loading: () => const LoadingState(),
         error: (e, _) => ErrorState(
-          message: e.toString(),
+          message: InputSanitizer.safeErrorMessage(e),
           onRetry: () => ref.invalidate(projectsProvider),
         ),
         data: (page) {

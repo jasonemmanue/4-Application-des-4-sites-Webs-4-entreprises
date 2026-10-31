@@ -71,9 +71,9 @@ class MoreScreen extends ConsumerWidget {
                 Expanded(
                   child: _TileCard(
                     palette: p,
-                    icon: Icons.insights_rounded,
-                    title: 'Nos réalisations',
-                    onTap: () => context.go(AppRoutes.projects),
+                    icon: Icons.payments_rounded,
+                    title: 'Payer une prestation',
+                    onTap: () => context.push(AppRoutes.payment),
                   ),
                 ),
               ],

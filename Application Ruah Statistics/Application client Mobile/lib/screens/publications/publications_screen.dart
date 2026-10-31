@@ -9,6 +9,7 @@ import '../../providers/providers.dart';
 import '../../widgets/article_card.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_state.dart';
+import '../../services/input_sanitizer.dart';
 import '../../widgets/loading_state.dart';
 
 class PublicationsScreen extends ConsumerWidget {
@@ -40,7 +41,7 @@ class PublicationsScreen extends ConsumerWidget {
             child: articles.when(
               loading: () => const LoadingState(),
               error: (e, _) => ErrorState(
-                message: e.toString(),
+                message: InputSanitizer.safeErrorMessage(e),
                 onRetry: () => ref.invalidate(articlesProvider),
               ),
               data: (page) {

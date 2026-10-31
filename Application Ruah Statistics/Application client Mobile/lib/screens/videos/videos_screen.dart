@@ -7,6 +7,7 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/error_state.dart';
 import '../../widgets/loading_state.dart';
 import '../../widgets/video_card.dart';
+import '../../services/input_sanitizer.dart';
 
 class VideosScreen extends ConsumerWidget {
   const VideosScreen({super.key});
@@ -21,7 +22,7 @@ class VideosScreen extends ConsumerWidget {
       body: videos.when(
         loading: () => const LoadingState(),
         error: (e, _) => ErrorState(
-          message: e.toString(),
+          message: InputSanitizer.safeErrorMessage(e),
           onRetry: () => ref.invalidate(videosProvider),
         ),
         data: (items) {
