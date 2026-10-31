@@ -79,8 +79,14 @@ class HomeScreen extends ConsumerWidget {
         async.when(
           data: (list) => _buildContent(context, ref, list),
           loading: () =>
-              const SliverToBoxAdapter(child: LoadingCards(count: 3)),
-          error: (e, _) => SliverToBoxAdapter(
+              const SliverFillRemaining(
+            hasScrollBody: true,
+            child: LoadingCards(count: 3),
+          ),
+          // Remplit l'espace restant et centre le message : sinon l'erreur
+          // s'accroche sous les chips et laisse un grand vide blanc jusqu'en bas.
+          error: (e, _) => SliverFillRemaining(
+            hasScrollBody: false,
             child: ErrorView(
               message: e.toString(),
               onRetry: () => ref.invalidate(residencesProvider),
@@ -95,7 +101,8 @@ class HomeScreen extends ConsumerWidget {
   Widget _buildContent(
       BuildContext context, WidgetRef ref, List<Residence> list) {
     if (list.isEmpty) {
-      return const SliverToBoxAdapter(
+      return const SliverFillRemaining(
+        hasScrollBody: false,
         child: EmptyView(
           title: 'Aucune résidence',
           description:
