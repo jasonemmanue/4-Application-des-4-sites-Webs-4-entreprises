@@ -30,6 +30,10 @@ android {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         applicationId = "com.florahair.flora_hair_mobile"
         minSdk = flutter.minSdkVersion
