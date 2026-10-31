@@ -33,6 +33,7 @@ dependencies:
 
   # Utils
   url_launcher: ^6.2.5
+  uuid: ^4.4.0
 
   # Firebase (push)
   firebase_core: ^3.3.0

@@ -10,8 +10,13 @@ import '../../services/payment_service.dart';
 import '../../widgets/payment_overlay.dart';
 
 class PaymentWaitScreen extends ConsumerStatefulWidget {
-  const PaymentWaitScreen({super.key, required this.reference});
+  const PaymentWaitScreen({
+    super.key,
+    required this.reference,
+    this.isCard = false,
+  });
   final String reference;
+  final bool isCard;
 
   @override
   ConsumerState<PaymentWaitScreen> createState() => _PaymentWaitScreenState();
@@ -64,9 +69,11 @@ class _PaymentWaitScreenState extends ConsumerState<PaymentWaitScreen> {
     return Scaffold(
       body: PaymentOverlay(
         title: 'Paiement en cours',
-        description:
-            'Validez la notification recue sur votre telephone pour '
-            'confirmer le paiement du depot.',
+        description: widget.isCard
+            ? 'Finalisez le paiement par carte dans votre navigateur. '
+                'Cette page se mettra a jour automatiquement.'
+            : 'Validez la notification recue sur votre telephone pour '
+                'confirmer le paiement du depot.',
         totalSeconds: ApiConfig.paymentTimeoutSeconds,
         onCancel: _cancel,
         onExpired: () =>

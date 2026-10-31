@@ -31,7 +31,7 @@ class ArticlesScreen extends ConsumerWidget {
         },
         loading: () => const LoadingState(),
         error: (e, _) => ErrorState(
-          message: 'Erreur : $e',
+          message: 'Impossible de charger les articles.',
           onRetry: () => ref.refresh(articlesProvider),
         ),
       ),

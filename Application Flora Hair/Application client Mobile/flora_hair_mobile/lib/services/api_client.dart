@@ -97,31 +97,37 @@ class ApiClient {
           'Impossible de joindre le serveur. Verifiez votre connexion.', status);
     }
 
+    // Messages metier du serveur : on les affiche seulement s'ils ne
+    // contiennent pas de trace technique.
     String message = 'Une erreur est survenue.';
     if (data is Map<String, dynamic>) {
-      final detail = data['detail'];
-      if (detail is String && detail.isNotEmpty) {
-        message = _sanitize(detail);
+      final raw = (data['detail'] ?? data['message'])?.toString();
+      if (raw != null && raw.length < 200 && !_looksInternal(raw)) {
+        message = raw;
       }
     }
 
+    if (status == 429) return ApiException('Trop de tentatives. Reessayez dans quelques instants.', status);
+    if (status == 401) return ApiException('Session expiree. Reconnectez-vous.', status);
+    if (status == 403) return ApiException('Acces refuse.', status);
+    if (status == 404) return ApiException('Ressource introuvable.', status);
     if (status != null && status >= 500) {
-      message = 'Le service est temporairement indisponible.';
+      return ApiException('Erreur serveur. Reessayez plus tard.', status);
     }
 
     return ApiException(message, status);
   }
 
-  static String _sanitize(String raw) {
-    if (raw.contains('Traceback') ||
-        raw.contains('File "') ||
-        raw.contains('sqlalchemy') ||
-        raw.contains('psycopg') ||
-        raw.contains('Internal Server Error')) {
-      return 'Une erreur est survenue.';
-    }
-    if (raw.length > 200) return '${raw.substring(0, 200)}…';
-    return raw;
+  static bool _looksInternal(String msg) {
+    final lower = msg.toLowerCase();
+    return lower.contains('traceback') ||
+        lower.contains('stacktrace') ||
+        lower.contains('internal server') ||
+        lower.contains('sqlalchemy') ||
+        lower.contains('postgres') ||
+        lower.contains('psycopg') ||
+        lower.contains('redis') ||
+        lower.contains('file "');
   }
 
   List<T> _asList<T>(Response<dynamic> res, T Function(Map<String, dynamic>) f) {

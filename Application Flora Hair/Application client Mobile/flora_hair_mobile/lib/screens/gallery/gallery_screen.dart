@@ -76,7 +76,7 @@ class GalleryScreen extends ConsumerWidget {
         },
         loading: () => const LoadingState(),
         error: (e, _) => ErrorState(
-          message: 'Erreur : $e',
+          message: 'Impossible de charger la galerie.',
           onRetry: () => ref.refresh(galleryProvider),
         ),
       ),

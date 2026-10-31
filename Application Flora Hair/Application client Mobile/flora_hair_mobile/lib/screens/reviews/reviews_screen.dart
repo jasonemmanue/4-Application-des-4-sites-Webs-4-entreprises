@@ -35,7 +35,7 @@ class ReviewsScreen extends ConsumerWidget {
         ),
         loading: () => const LoadingState(),
         error: (e, _) => ErrorState(
-          message: 'Erreur : $e',
+          message: 'Impossible de charger les avis.',
           onRetry: () => ref.refresh(reviewsProvider),
         ),
       ),

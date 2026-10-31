@@ -50,11 +50,15 @@ class VideosScreen extends ConsumerWidget {
                           fit: StackFit.expand,
                           children: <Widget>[
                             if (v.thumbnailUrl != null)
-                              CachedNetworkImage(
-                                imageUrl: mediaUrl(v.thumbnailUrl),
-                                fit: BoxFit.cover,
-                                errorWidget: (_, __, ___) =>
-                                    Container(color: FloraColors.darkLight),
+                              Semantics(
+                                label: v.title,
+                                image: true,
+                                child: CachedNetworkImage(
+                                  imageUrl: mediaUrl(v.thumbnailUrl),
+                                  fit: BoxFit.cover,
+                                  errorWidget: (_, __, ___) =>
+                                      Container(color: FloraColors.darkLight),
+                                ),
                               )
                             else
                               Container(color: FloraColors.darkLight),
@@ -80,7 +84,7 @@ class VideosScreen extends ConsumerWidget {
         },
         loading: () => const LoadingState(),
         error: (e, _) => ErrorState(
-          message: 'Erreur : $e',
+          message: 'Impossible de charger les videos.',
           onRetry: () => ref.refresh(videosProvider),
         ),
       ),

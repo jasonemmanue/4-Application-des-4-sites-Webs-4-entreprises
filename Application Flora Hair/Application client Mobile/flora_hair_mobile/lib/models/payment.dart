@@ -1,4 +1,4 @@
-enum PaymentOperator { wave, orangeMoney, mtnMoney }
+enum PaymentOperator { wave, orangeMoney, mtnMoney, card }
 
 extension PaymentOperatorX on PaymentOperator {
   String get code {
@@ -9,6 +9,8 @@ extension PaymentOperatorX on PaymentOperator {
         return 'orange_money';
       case PaymentOperator.mtnMoney:
         return 'mtn_money';
+      case PaymentOperator.card:
+        return 'card';
     }
   }
 
@@ -20,6 +22,8 @@ extension PaymentOperatorX on PaymentOperator {
         return 'Orange Money';
       case PaymentOperator.mtnMoney:
         return 'MTN Mobile Money';
+      case PaymentOperator.card:
+        return 'Carte bancaire';
     }
   }
 
@@ -30,9 +34,12 @@ extension PaymentOperatorX on PaymentOperator {
       case PaymentOperator.mtnMoney:
         return '05';
       case PaymentOperator.wave:
+      case PaymentOperator.card:
         return null;
     }
   }
+
+  bool get needsPhone => this != PaymentOperator.card;
 }
 
 enum PaymentStatus { pending, processing, success, failed, cancelled, expired }

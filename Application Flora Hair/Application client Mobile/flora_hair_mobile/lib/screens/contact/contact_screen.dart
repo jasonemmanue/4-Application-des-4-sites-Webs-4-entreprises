@@ -4,7 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/api_config.dart';
 import '../../config/theme.dart';
-import '../../services/api_client.dart' show ApiClient, ApiException, apiClientProvider;
+import '../../services/api_client.dart' show ApiException, apiClientProvider;
 import '../../services/whatsapp_service.dart';
 
 class ContactScreen extends ConsumerStatefulWidget {

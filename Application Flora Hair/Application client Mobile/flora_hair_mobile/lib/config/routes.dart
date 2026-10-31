@@ -74,7 +74,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/payment/wait',
         builder: (context, state) {
           final ref = state.uri.queryParameters['ref'] ?? '';
-          return PaymentWaitScreen(reference: ref);
+          final isCard = state.uri.queryParameters['card'] == '1';
+          return PaymentWaitScreen(reference: ref, isCard: isCard);
         },
       ),
       GoRoute(

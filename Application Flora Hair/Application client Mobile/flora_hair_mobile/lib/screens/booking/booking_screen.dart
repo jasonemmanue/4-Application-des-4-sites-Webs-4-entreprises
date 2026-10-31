@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/client_profile.dart';
 import '../../config/theme.dart';
@@ -73,7 +74,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Erreur creneaux : $e')));
+          .showSnackBar(const SnackBar(content: Text('Impossible de charger les creneaux.')));
     } finally {
       if (mounted) setState(() => _loadingSlots = false);
     }
@@ -83,19 +84,20 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_operator == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Choisissez un moyen de paiement Mobile Money.')),
+        const SnackBar(content: Text('Choisissez un moyen de paiement.')),
       );
       return;
     }
-    final phoneError = PaymentService.validatePhoneForOperator(
-      _payPhoneCtrl.text,
-      _operator!,
-    );
-    if (phoneError != null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(phoneError)));
-      return;
+    if (_operator!.needsPhone) {
+      final phoneError = PaymentService.validatePhoneForOperator(
+        _payPhoneCtrl.text,
+        _operator!,
+      );
+      if (phoneError != null) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(phoneError)));
+        return;
+      }
     }
 
     final notifier = ref.read(bookingDraftProvider.notifier);
@@ -119,21 +121,32 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
         notes: draft.notes.isEmpty ? null : draft.notes,
       );
       final created = await ref.read(apiClientProvider).createBooking(booking);
-      // Pas de compte : le nom du dernier rendez-vous personnalise le
-      // Profil.
       await ref.read(clientNameProvider.notifier).save(draft.customerName);
       final bookingId = created.id ?? created.reference ?? '';
       final init = await ref.read(paymentServiceProvider).initPayment(
             bookingId: bookingId,
             operator: _operator!,
-            phone: PaymentService.toInternational(_payPhoneCtrl.text),
+            phone: _operator!.needsPhone
+                ? PaymentService.toInternational(_payPhoneCtrl.text)
+                : null,
           );
       if (!mounted) return;
-      context.go('/payment/wait?ref=${init.reference}');
+
+      final isCard = _operator == PaymentOperator.card;
+      final checkoutUrl = init.checkoutUrl;
+      if (checkoutUrl != null && isCard) {
+        await launchUrl(Uri.parse(checkoutUrl),
+            mode: LaunchMode.externalApplication);
+        if (!mounted) return;
+      }
+      context.go('/payment/wait?ref=${init.reference}'
+          '${isCard ? '&card=1' : ''}');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Erreur : $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(e is ApiException
+              ? e.message
+              : 'Une erreur est survenue.')));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -291,17 +304,32 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                 selected: _operator,
                 onSelect: (op) => setState(() => _operator = op),
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _payPhoneCtrl,
-                keyboardType: TextInputType.phone,
-                decoration: InputDecoration(
-                  labelText: 'Numero Mobile Money',
-                  hintText: _operator?.expectedPrefix != null
-                      ? 'Commence par ${_operator!.expectedPrefix}'
-                      : '10 chiffres',
+              if (_operator != null && _operator!.needsPhone) ...[
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _payPhoneCtrl,
+                  keyboardType: TextInputType.phone,
+                  maxLength: 20,
+                  decoration: InputDecoration(
+                    labelText: 'Numero Mobile Money',
+                    counterText: '',
+                    hintText: _operator?.expectedPrefix != null
+                        ? 'Commence par ${_operator!.expectedPrefix}'
+                        : '10 chiffres',
+                  ),
                 ),
-              ),
+              ],
+              if (_operator == PaymentOperator.card) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Vous serez redirige vers une page de paiement '
+                  'securisee (Visa / Mastercard).',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: FloraColors.textMuted),
+                ),
+              ],
             ],
           ),
         );
@@ -338,7 +366,10 @@ class _StepService extends ConsumerWidget {
         },
       ),
       loading: () => const LoadingState(),
-      error: (e, _) => ErrorState(message: 'Erreur : $e'),
+      error: (_, __) => ErrorState(
+        message: 'Impossible de charger les services.',
+        onRetry: () => ref.refresh(servicesProvider),
+      ),
     );
   }
 }
@@ -377,7 +408,10 @@ class _StepTeam extends ConsumerWidget {
         },
       ),
       loading: () => const LoadingState(),
-      error: (e, _) => ErrorState(message: 'Erreur : $e'),
+      error: (_, __) => ErrorState(
+        message: 'Impossible de charger l\'equipe.',
+        onRetry: () => ref.refresh(teamProvider),
+      ),
     );
   }
 }

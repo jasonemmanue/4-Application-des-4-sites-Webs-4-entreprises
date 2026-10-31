@@ -6,7 +6,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../config/theme.dart';
 import '../../models/quote_request.dart';
-import '../../services/api_client.dart' show ApiClient, ApiException, apiClientProvider;
+import '../../services/api_client.dart' show ApiException, apiClientProvider;
 import '../../services/whatsapp_service.dart';
 
 class QuoteScreen extends ConsumerStatefulWidget {

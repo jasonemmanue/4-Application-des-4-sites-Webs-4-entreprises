@@ -24,8 +24,8 @@ class PushNotificationService {
         debugPrint('[FCM] foreground: ${msg.notification?.title}');
       });
       _initialized = true;
-    } catch (e) {
-      debugPrint('[FCM] init failed: $e');
+    } catch (_) {
+      // Best-effort : l'app demarre sans Firebase.
     }
   }
 }

@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 import '../config/api_config.dart';
 import '../models/payment.dart';
@@ -9,6 +11,9 @@ import 'api_client.dart';
 class PaymentService {
   PaymentService(this._api);
   final ApiClient _api;
+  static const _uuid = Uuid();
+
+  bool _initInProgress = false;
 
   Future<Map<String, dynamic>> fetchConfig() async {
     final res = await _api.dio.get('/payments/config');
@@ -17,22 +22,33 @@ class PaymentService {
 
   /// Initialise un paiement pour la reservation donnee.
   ///
-  /// Le backend attend :
-  ///   { booking_id: UUID, method?: 'wave'|'orange_money'|'mtn_money',
-  ///     phone?: str }
+  /// Verrou anti-double clic + header X-Cle-Demande (idempotence).
   Future<PaymentInit> initPayment({
     required String bookingId,
     required PaymentOperator operator,
-    required String phone,
-    // Pas utilise cote backend mais garde pour compat.
+    String? phone,
     int? amount,
   }) async {
-    final res = await _api.dio.post('/payments/init', data: <String, dynamic>{
-      'booking_id': bookingId,
-      'method': operator.code,
-      'phone': phone,
-    });
-    return PaymentInit.fromJson(res.data as Map<String, dynamic>);
+    if (_initInProgress) {
+      throw ApiException('Paiement deja en cours. Patientez.');
+    }
+    _initInProgress = true;
+    try {
+      final idempotencyKey = _uuid.v4();
+      final data = <String, dynamic>{
+        'booking_id': bookingId,
+        'method': operator.code,
+      };
+      if (phone != null && phone.isNotEmpty) {
+        data['phone'] = phone;
+      }
+      final res = await _api.dio.post('/payments/init',
+          data: data,
+          options: Options(headers: {'X-Cle-Demande': idempotencyKey}));
+      return PaymentInit.fromJson(res.data as Map<String, dynamic>);
+    } finally {
+      _initInProgress = false;
+    }
   }
 
   /// `GET /payments/{transaction_id}`
@@ -41,18 +57,23 @@ class PaymentService {
     return PaymentStatusResponse.fromJson(res.data as Map<String, dynamic>);
   }
 
-  /// `POST /payments/{transaction_id}/retry`
+  /// `POST /payments/{transaction_id}/retry` — avec cle d'idempotence.
   Future<PaymentInit> retry({
     required String reference,
     required PaymentOperator operator,
-    required String phone,
+    String? phone,
   }) async {
+    final idempotencyKey = _uuid.v4();
+    final data = <String, dynamic>{
+      'method': operator.code,
+    };
+    if (phone != null && phone.isNotEmpty) {
+      data['phone'] = phone;
+    }
     final res = await _api.dio.post(
       '/payments/$reference/retry',
-      data: <String, dynamic>{
-        'method': operator.code,
-        'phone': phone,
-      },
+      data: data,
+      options: Options(headers: {'X-Cle-Demande': idempotencyKey}),
     );
     return PaymentInit.fromJson(res.data as Map<String, dynamic>);
   }

@@ -74,7 +74,7 @@ class ServicesScreen extends ConsumerWidget {
               },
               loading: () => const LoadingState(),
               error: (e, _) => ErrorState(
-                message: 'Erreur : $e',
+                message: 'Impossible de charger les services.',
                 onRetry: () => ref.refresh(servicesProvider),
               ),
             ),
