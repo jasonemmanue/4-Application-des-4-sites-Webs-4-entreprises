@@ -51,7 +51,7 @@ class ApiConfig {
   /// distinguer, dans l'administration, une demande mobile Android d'une
   /// demande venue du site web (qui n'envoie pas cet en-tête). Version à
   /// garder alignée sur `pubspec.yaml`.
-  static const String appSource = 'android/1.0.0+1';
+  static const String appSource = 'android/1.1.0+2';
 
   // ── Contact salon ────────────────────────────────────
   static const String salonPhone = '+2250545079850';

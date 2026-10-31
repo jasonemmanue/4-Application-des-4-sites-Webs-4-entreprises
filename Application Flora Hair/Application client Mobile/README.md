@@ -59,6 +59,11 @@ L'administration (services, reservations, galerie, avis, devis) se fait exclusiv
 | Samedi | 08:00 - 18:00 |
 | Dimanche | Ferme |
 
+## Derniere version
+
+**v1.1.0+2** : refonte UI/UX bordeaux, Favoris, Mes rendez-vous, paiements fiabilises.
+Voir [docs/REFONTE_UI_2026-10.md](docs/REFONTE_UI_2026-10.md).
+
 ## Demarrage
 
 ```bash

@@ -2,95 +2,161 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../config/theme.dart';
+import '../../services/appointments.dart';
 import '../../services/client_profile.dart';
+import '../../services/whatsapp_service.dart';
+import '../../widgets/flora_ui.dart';
+import '../appointments/appointments_screen.dart';
 
-/// Profil — style Airbnb, palette Flora : carte d'identité, deux cartes
-/// photo, une carte large, puis les rubriques (icône + chevron).
+/// « Mon espace » : prochain rendez-vous, accès rapides, salon et rubriques.
 ///
-/// Il n'y a pas de compte : le nom affiché est celui du dernier rendez-vous
-/// pris depuis l'appareil, « Visiteuse » sinon.
-class MoreScreen extends ConsumerWidget {
+/// Il n'y a pas de compte : le nom affiché est celui du dernier rendez-vous pris
+/// depuis l'appareil.
+class MoreScreen extends ConsumerStatefulWidget {
   const MoreScreen({super.key});
 
+  @override
+  ConsumerState<MoreScreen> createState() => _MoreScreenState();
+}
+
+class _MoreScreenState extends ConsumerState<MoreScreen> {
   static const _tiles = <_MoreTile>[
+    _MoreTile('Galerie & réalisations', Icons.photo_library_outlined, '/gallery'),
+    _MoreTile('Devis sur photo', Icons.add_a_photo_outlined, '/quote'),
     _MoreTile('Notre équipe', Icons.groups_outlined, '/team'),
     _MoreTile('Articles beauté', Icons.menu_book_outlined, '/articles'),
     _MoreTile('Vidéos', Icons.play_circle_outline, '/videos'),
     _MoreTile('Avis clients', Icons.star_outline, '/reviews'),
     _MoreTile('Formations', Icons.school_outlined, '/training'),
-    _MoreTile('Contact & WhatsApp', Icons.chat_bubble_outline, '/contact'),
   ];
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final cs = Theme.of(context).colorScheme;
+  void initState() {
+    super.initState();
+    // Le rendez-vous a pu être confirmé dans l'administration entre-temps.
+    Future<void>.microtask(
+        () => ref.read(appointmentsProvider.notifier).refresh());
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final name = ref.watch(clientNameProvider);
+    final next = ref.watch(nextAppointmentProvider);
 
     return SafeArea(
       bottom: false,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
         children: <Widget>[
-          Align(
-            alignment: Alignment.centerRight,
-            child: _RoundIconButton(
-              icon: Icons.notifications_none_rounded,
-              tooltip: 'Notifications',
-              onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                      'Vos confirmations et rappels arrivent sur WhatsApp.'),
-                ),
+          const Center(
+            child: Text(
+              'Mon espace',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: FloraColors.textPrimary,
               ),
             ),
           ),
-          Text(
-            'Profil',
-            style: TextStyle(
-              color: cs.onSurface,
-              fontSize: 34,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
-            ),
+          const SizedBox(height: 18),
+          _Greeting(name: name),
+          const SizedBox(height: 18),
+          FloraCard(
+            child: next == null
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      const Text(
+                        'Prochain rendez-vous',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: FloraColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        "Vous n'avez pas de rendez-vous à venir.",
+                        style: TextStyle(color: FloraColors.textSecondary),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: () => context.go('/booking'),
+                        child: const Text('Prendre rendez-vous'),
+                      ),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      const Text(
+                        'Prochain rendez-vous',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: FloraColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      AppointmentCard(appointment: next, showActions: false),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: () => context.push('/appointments'),
+                        child: const Text('Voir les détails  →'),
+                      ),
+                    ],
+                  ),
           ),
-          const SizedBox(height: 24),
-          _IdentityCard(name: name),
-          const SizedBox(height: 16),
-          Row(
+          const SizedBox(height: 14),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.55,
             children: <Widget>[
-              Expanded(
-                child: _PhotoCard(
-                  image: 'assets/images/profil-rdv.jpg',
-                  title: 'Prendre rendez-vous',
-                  onTap: () => context.go('/booking'),
-                ),
+              _QuickAction(
+                icon: Icons.calendar_month_outlined,
+                label: 'Mes rendez-vous',
+                onTap: () => context.push('/appointments'),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _PhotoCard(
-                  image: 'assets/images/profil-galerie.jpg',
-                  title: 'Nos réalisations',
-                  onTap: () => context.go('/gallery'),
-                ),
+              _QuickAction(
+                icon: Icons.favorite_border_rounded,
+                label: 'Mes favoris',
+                onTap: () => context.go('/favorites'),
+              ),
+              _QuickAction(
+                icon: Icons.history_rounded,
+                label: 'Historique',
+                onTap: () => context.push('/appointments?tab=history'),
+              ),
+              _QuickAction(
+                icon: Icons.phone_outlined,
+                label: 'Contacter le salon',
+                onTap: () => context.push('/contact'),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          _WideCard(
-            image: 'assets/images/profil-devis.jpg',
-            title: 'Devis sur photo',
-            description: 'Envoyez la photo de la coiffure qui vous fait '
-                'envie, on vous répond avec un prix.',
-            onTap: () => context.push('/quote'),
-          ),
-          const SizedBox(height: 28),
-          const Divider(),
-          for (final t in _tiles)
-            _Tile(
-              icon: t.icon,
-              title: t.label,
-              onTap: () => context.push(t.route),
+          const SizedBox(height: 14),
+          const _SalonCard(),
+          const SizedBox(height: 14),
+          FloraCard(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            child: Column(
+              children: <Widget>[
+                for (int i = 0; i < _tiles.length; i++) ...<Widget>[
+                  if (i > 0) const Divider(height: 1),
+                  _Tile(
+                    icon: _tiles[i].icon,
+                    title: _tiles[i].label,
+                    onTap: () => context.push(_tiles[i].route),
+                  ),
+                ],
+              ],
             ),
+          ),
         ],
       ),
     );
@@ -104,247 +170,163 @@ class _MoreTile {
   final String route;
 }
 
-/// Cadre commun des cartes : grand rayon, ombre douce chaude (teintée
-/// chocolat plutôt que noire, pour rester dans la palette crème).
-BoxDecoration _cardDecoration(ColorScheme cs) => BoxDecoration(
-      color: cs.surface,
-      borderRadius: BorderRadius.circular(22),
-      boxShadow: const <BoxShadow>[
-        BoxShadow(
-          color: Color(0x1F1A1510),
-          blurRadius: 24,
-          offset: Offset(0, 8),
-        ),
-      ],
-    );
-
-class _Pressable extends StatelessWidget {
-  const _Pressable({required this.onTap, required this.child});
-  final VoidCallback onTap;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: _cardDecoration(Theme.of(context).colorScheme),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(22),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(onTap: onTap, child: child),
-      ),
-    );
-  }
-}
-
-class _RoundIconButton extends StatelessWidget {
-  const _RoundIconButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onTap,
-  });
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: cs.surfaceContainerHighest,
-        shape: const CircleBorder(),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: SizedBox(
-            width: 48,
-            height: 48,
-            child: Icon(icon, color: cs.onSurface),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Avatar or pâle + nom. L'or remplace le vert d'Airbnb : c'est l'accent de
-/// la marque.
-class _IdentityCard extends StatelessWidget {
-  const _IdentityCard({required this.name});
+class _Greeting extends StatelessWidget {
+  const _Greeting({required this.name});
   final String? name;
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 32, 20, 28),
-      decoration: _cardDecoration(cs),
-      child: Column(
-        children: <Widget>[
-          Container(
-            width: 112,
-            height: 112,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: cs.primary.withOpacity(0.18),
-              shape: BoxShape.circle,
-            ),
-            child: name == null
-                ? Icon(Icons.person_rounded, size: 56, color: cs.secondary)
-                : Text(
-                    name!.characters.first.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 48,
-                      fontWeight: FontWeight.w700,
-                      // Or foncé : l'or standard manque de contraste sur
-                      // le disque or pâle.
-                      color: Color(0xFF8A6D24),
-                    ),
+    return Row(
+      children: <Widget>[
+        Container(
+          width: 76,
+          height: 76,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            color: FloraColors.blush,
+            shape: BoxShape.circle,
+          ),
+          child: name == null
+              ? const Icon(Icons.person_rounded,
+                  size: 40, color: FloraColors.burgundy)
+              : Text(
+                  name!.characters.first.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w700,
+                    color: FloraColors.burgundy,
                   ),
+                ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                name == null
+                    ? 'Bonjour !'
+                    : 'Bonjour ${name!.split(' ').first} !',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.4,
+                  color: FloraColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                name == null
+                    ? 'Votre nom apparaîtra après votre premier rendez-vous'
+                    : "Belle journée à vous aujourd'hui !",
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: FloraColors.textSecondary,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 18),
-          Text(
-            name ?? 'Visiteuse',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: cs.onSurface,
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickAction extends StatelessWidget {
+  const _QuickAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return FloraCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(10),
+      child: SizedBox.expand(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Icon(icon, color: FloraColors.burgundy, size: 28),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: FloraColors.textPrimary,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            name == null
-                ? 'Votre nom apparaîtra après votre premier rendez-vous'
-                : 'Cliente Flora Hair',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: cs.onSurfaceVariant,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-class _Thumb extends StatelessWidget {
-  const _Thumb({required this.image, required this.size});
-  final String image;
-  final double size;
+class _SalonCard extends ConsumerWidget {
+  const _SalonCard();
 
   @override
-  Widget build(BuildContext context) => ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Image.asset(
-          image,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          cacheWidth: (size * MediaQuery.devicePixelRatioOf(context)).round(),
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[FloraColors.blushLight, FloraColors.blush],
         ),
-      );
-}
-
-class _PhotoCard extends StatelessWidget {
-  const _PhotoCard({
-    required this.image,
-    required this.title,
-    required this.onTap,
-  });
-  final String image;
-  final String title;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return _Pressable(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
-        child: Column(
-          children: <Widget>[
-            _Thumb(image: image, size: 92),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 44,
-              child: Center(
+        borderRadius: BorderRadius.circular(FloraTheme.cardRadius),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Row(
+            children: <Widget>[
+              Icon(Icons.location_on_rounded,
+                  color: FloraColors.burgundy, size: 20),
+              SizedBox(width: 6),
+              Expanded(
                 child: Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
+                  'Flora Hair · Abidjan',
                   style: TextStyle(
-                    color: cs.onSurface,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    height: 1.2,
+                    fontWeight: FontWeight.w700,
+                    color: FloraColors.textPrimary,
                   ),
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Lun – Mer : 9h – 19h · Jeu – Ven : 9h – 20h\nSam : 8h – 18h · Dim : fermé',
+            style: TextStyle(fontSize: 13, color: FloraColors.textPrimary),
+          ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: () => ref.read(whatsappServiceProvider).openChat(
+                  message: 'Bonjour Flora Hair, ',
+                ),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: FloraColors.textPrimary,
+              minimumSize: const Size(0, 42),
+              textStyle: const TextStyle(fontWeight: FontWeight.w700),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _WideCard extends StatelessWidget {
-  const _WideCard({
-    required this.image,
-    required this.title,
-    required this.description,
-    required this.onTap,
-  });
-  final String image;
-  final String title;
-  final String description;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return _Pressable(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Row(
-          children: <Widget>[
-            _Thumb(image: image, size: 92),
-            const SizedBox(width: 18),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: cs.onSurface,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    description,
-                    style: TextStyle(
-                      color: cs.onSurfaceVariant,
-                      fontSize: 14,
-                      height: 1.35,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+            icon: const Icon(Icons.chat_outlined, size: 18),
+            label: const Text('WhatsApp'),
+          ),
+        ],
       ),
     );
   }
@@ -358,26 +340,26 @@ class _Tile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: 14),
         child: Row(
           children: <Widget>[
-            Icon(icon, size: 24, color: cs.onSurface),
-            const SizedBox(width: 18),
+            Icon(icon, size: 22, color: FloraColors.burgundy),
+            const SizedBox(width: 14),
             Expanded(
               child: Text(
                 title,
-                style: TextStyle(
-                  color: cs.onSurface,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: FloraColors.textPrimary,
                 ),
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: cs.onSurfaceVariant),
+            const Icon(Icons.chevron_right_rounded,
+                color: FloraColors.textSecondary),
           ],
         ),
       ),

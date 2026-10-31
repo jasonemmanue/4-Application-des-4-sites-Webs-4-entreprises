@@ -7,18 +7,19 @@ class RootShell extends StatelessWidget {
 
   static const _tabs = <_TabItem>[
     _TabItem('/home', Icons.home_outlined, Icons.home_rounded, 'Accueil'),
-    _TabItem('/services', Icons.spa_outlined, Icons.spa_rounded, 'Services'),
+    _TabItem('/services', Icons.content_cut_outlined, Icons.content_cut_rounded,
+        'Prestations'),
     _TabItem(
       '/booking',
       Icons.calendar_month_outlined,
       Icons.calendar_month_rounded,
-      'RDV',
+      'Réserver',
     ),
     _TabItem(
-      '/gallery',
-      Icons.photo_library_outlined,
-      Icons.photo_library_rounded,
-      'Galerie',
+      '/favorites',
+      Icons.favorite_border_rounded,
+      Icons.favorite_rounded,
+      'Favoris',
     ),
     _TabItem(
         '/more', Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),

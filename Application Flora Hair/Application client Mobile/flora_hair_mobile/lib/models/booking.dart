@@ -13,7 +13,14 @@ class Booking {
     this.depositStatus,
     this.status,
     this.reference,
+    this.paymentMethod,
   });
+
+  /// Libellés exacts attendus par le backend (`PaymentMethod`). Le premier est
+  /// aussi ce qui fait expirer une demande restée sans acompte : sans lui, le
+  /// créneau d'une cliente qui abandonne le paiement resterait bloqué.
+  static const onlinePayment = 'Payement electronique';
+  static const cashPayment = 'Espèce';
 
   final String? id;
   final String serviceId;
@@ -28,6 +35,7 @@ class Booking {
   final String? depositStatus;
   final String? status;
   final String? reference;
+  final String? paymentMethod;
 
   // Alias historique
   String get startTime => timeSlot;
@@ -35,15 +43,16 @@ class Booking {
   Map<String, dynamic> toCreateJson() => <String, dynamic>{
         'service_id': serviceId,
         'team_member_id': teamMemberId,
-        'date': _dateOnly(date),
+        'date': dateOnly(date),
         'time_slot': timeSlot,
         'client_name': customerName,
         'client_phone': customerPhone,
         'client_email': customerEmail ?? '',
         'notes': notes ?? '',
+        if (paymentMethod != null) 'payment_method': paymentMethod,
       };
 
-  static String _dateOnly(DateTime d) =>
+  static String dateOnly(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-'
       '${d.month.toString().padLeft(2, '0')}-'
       '${d.day.toString().padLeft(2, '0')}';

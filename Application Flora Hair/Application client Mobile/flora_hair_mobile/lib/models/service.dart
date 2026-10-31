@@ -1,5 +1,18 @@
 enum ServicePriceType { fixed, range, startingAt }
 
+String _thousands(int amount) {
+  final s = amount.toString();
+  final buffer = StringBuffer();
+  for (int i = 0; i < s.length; i++) {
+    if (i > 0 && (s.length - i) % 3 == 0) buffer.write(' ');
+    buffer.write(s[i]);
+  }
+  return buffer.toString();
+}
+
+/// `15000` → `15 000 FCFA`. Le franc CFA n'a pas de subdivision.
+String formatFcfa(num amount) => '${_thousands(amount.toInt())} FCFA';
+
 class Service {
   const Service({
     required this.id,
@@ -37,25 +50,28 @@ class Service {
 
   int get depositAmount => (priceMin * 0.5).round();
 
+  /// `60 min`, `2 h`, `1 h 30`.
+  String get formattedDuration {
+    if (durationMinutes < 60) return '$durationMinutes min';
+    final h = durationMinutes ~/ 60;
+    final m = durationMinutes % 60;
+    return m == 0 ? '$h h' : '$h h ${m.toString().padLeft(2, '0')}';
+  }
+
+  /// Prix court des vignettes : `dès 5 000 FCFA`, ou le prix exact s'il est fixe.
+  String get shortPrice => priceType == ServicePriceType.fixed
+      ? formatFcfa(priceMin)
+      : 'dès ${formatFcfa(priceMin)}';
+
   String formattedPrice() {
     switch (priceType) {
       case ServicePriceType.fixed:
-        return _fmt(priceMin);
+        return formatFcfa(priceMin);
       case ServicePriceType.range:
-        return '${_fmt(priceMin)} - ${_fmt(priceMax!)}';
+        return '${_thousands(priceMin)} – ${formatFcfa(priceMax!)}';
       case ServicePriceType.startingAt:
-        return 'A partir de ${_fmt(priceMin)}';
+        return 'À partir de ${formatFcfa(priceMin)}';
     }
-  }
-
-  static String _fmt(int amount) {
-    final s = amount.toString();
-    final buffer = StringBuffer();
-    for (int i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) buffer.write(' ');
-      buffer.write(s[i]);
-    }
-    return '${buffer.toString()} FCFA';
   }
 
   factory Service.fromJson(Map<String, dynamic> json) => Service(

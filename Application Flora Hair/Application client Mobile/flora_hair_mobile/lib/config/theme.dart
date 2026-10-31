@@ -1,121 +1,120 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Palette Flora Hair — deux thèmes cohérents, dérivés du logo :
+/// Palette Flora Hair (refonte 2026-10) — bordeaux, rose poudré et or sur
+/// fond crème rosé, d'après la maquette validée.
 ///
-/// - **Clair** (défaut) : crème `#FBF8F0` en fond, chocolat `#1A1510` en
-///   texte, or `#C5A55A` en accent. Aspect « lounge doré » du salon.
-/// - **Sombre** : chocolat très sombre `#12100C` en fond, crème `#F5F0E1`
-///   en texte, or clair `#D4BA78` en accent — le contraste inverse pour
-///   une lecture confortable de nuit sans changer l'identité.
-///
-/// Règle : les widgets ne lisent PLUS `FloraColors` en dur. Ils passent
-/// par `Theme.of(context)` (colorScheme + textTheme). C'est ce qui
-/// garantit que basculer le mode se propage sans revisiter chaque écran.
-///
-/// Les constantes historiques (`charcoal`, `cream`, `dark`, `grayWarm`…)
-/// sont conservées mais **repointées sur les valeurs du thème CLAIR** :
-/// tout écran qui les utilisait encore reste lisible dans le mode par
-/// défaut, sans casser la compilation. À long terme, ces constantes
-/// sont à retirer au profit de `Theme.of(context)`.
+/// Les noms historiques (`lime`, `cream`, `charcoal`…) sont conservés et
+/// repointés : les écrans secondaires qui les utilisent encore suivent la
+/// nouvelle identité sans être réécrits. `lime` désigne donc l'accent principal
+/// (bordeaux).
 class FloraColors {
-  // ── Accents Flora Hair (or, partagés entre les deux modes) ──────────
-  static const Color lime = Color(0xFFC5A55A);
-  static const Color limeLight = Color(0xFFD4BA78);
-  static const Color limeDark = Color(0xFFA88B3D);
-  static const Color mint = Color(0xFFD4A853);
+  // ── Identité ────────────────────────────────────────────────────────
+  static const Color burgundy = Color(0xFF6B1F3A);
+  static const Color burgundyDark = Color(0xFF4F132A);
+  static const Color blush = Color(0xFFF4C9CE);
+  static const Color blushLight = Color(0xFFFBE8E6);
+  static const Color gold = Color(0xFFD9A441);
+  static const Color cocoa = Color(0xFF3E2723);
+  static const Color success = Color(0xFF2E7D4F);
+  static const Color successSoft = Color(0xFFDDF0E3);
+  static const Color warning = Color(0xFF8A5E0C);
+  static const Color warningSoft = Color(0xFFFBEFD5);
+  static const Color danger = Color(0xFFB3261E);
+  static const Color dangerSoft = Color(0xFFF9DEDC);
+
+  // ── Accents (noms historiques) ──────────────────────────────────────
+  static const Color lime = burgundy;
+  static const Color limeLight = Color(0xFF8A3352);
+  static const Color limeDark = burgundyDark;
+  static const Color mint = gold;
 
   // ── Palette CLAIRE — utilisée par le thème par défaut ───────────────
-  /// Fond des scaffolds : crème pâle du logo.
-  static const Color background = Color(0xFFFBF8F0);
-  /// Surface légèrement teintée (chips, pill de recherche, avatars).
-  static const Color surfaceMuted = Color(0xFFF0EBD8);
-  /// Cartes surélevées : blanc pur, tranche sur le crème.
+  static const Color background = Color(0xFFFFF7F1);
+  static const Color surfaceMuted = blushLight;
   static const Color surface = Color(0xFFFFFFFF);
-  /// Texte principal : chocolat sombre chaud.
-  static const Color textPrimary = Color(0xFF1A1510);
-  /// Texte secondaire (prix, meta, sous-titres).
-  static const Color textSecondary = Color(0xFF6B5A3D);
-  /// Texte grisé (placeholders).
-  static const Color textMuted = Color(0xFFA88B3D);
-  /// Trait fin, séparateurs.
-  static const Color border = Color(0xFFE7DFCB);
-  /// Bordure marquée (chip actif).
-  static const Color borderStrong = Color(0xFF1A1510);
+  static const Color textPrimary = Color(0xFF2B1A1D);
+  static const Color textSecondary = Color(0xFF6F5A5E);
+  static const Color textMuted = Color(0xFF8C7A7D);
+  static const Color border = Color(0xFFF0E1DC);
+  static const Color borderStrong = burgundy;
 
-  // ── Palette SOMBRE — utilisée par le thème dark ─────────────────────
-  static const Color darkBackground = Color(0xFF12100C);
-  static const Color darkSurface = Color(0xFF1E1B16);
-  static const Color darkSurfaceMuted = Color(0xFF2A2318);
-  static const Color darkTextPrimary = Color(0xFFF5F0E1);
-  static const Color darkTextSecondary = Color(0xFFB8AC8C);
-  static const Color darkBorder = Color(0xFF3A3328);
-  static const Color darkAccent = Color(0xFFD4BA78); // or clair, +contraste
+  // ── Palette SOMBRE ──────────────────────────────────────────────────
+  static const Color darkBackground = Color(0xFF1B1013);
+  static const Color darkSurface = Color(0xFF28181D);
+  static const Color darkSurfaceMuted = Color(0xFF3A2329);
+  static const Color darkTextPrimary = Color(0xFFFBEFEA);
+  static const Color darkTextSecondary = Color(0xFFCDB8B8);
+  static const Color darkBorder = Color(0xFF4A2F36);
+  static const Color darkAccent = blush;
 
   // ── Alias historiques — repointés sur le mode CLAIR ─────────────────
-  //
-  // Ces noms viennent d'un ancien design 100 % sombre. Ils restent
-  // utilisés par une vingtaine d'écrans qui n'ont pas encore migré vers
-  // `Theme.of(context)`. En les repointant sur les valeurs claires, les
-  // écrans historiques cessent d'afficher un fond chocolat sur fond
-  // crème (le bug rapporté sur la page « Services »).
-  static const Color cream = textPrimary;       // ex-texte clair → chocolat
-  static const Color charcoal = surface;         // ex-fond carte → blanc
-  static const Color dark = background;          // ex-fond principal → crème
-  static const Color darkLight = surfaceMuted;   // ex-surface elevée → crème+
-  static const Color grayWarm = border;          // ex-bordure sombre → or clair
+  static const Color cream = textPrimary;
+  static const Color charcoal = surface;
+  static const Color dark = background;
+  static const Color darkLight = surfaceMuted;
+  static const Color grayWarm = border;
 
-  // Compat rétro déjà utilisée ailleurs.
   static const Color limeLightMode = lime;
   static const Color creamLightMode = textPrimary;
   static const Color darkLightMode = background;
   static const Color charcoalLightMode = surface;
 
-  // Dégradés or, communs.
+  // Dégradés communs.
   static const LinearGradient goldGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: <Color>[limeLight, lime, limeDark],
+    colors: <Color>[limeLight, burgundy, burgundyDark],
   );
   static const LinearGradient softGoldGradient = LinearGradient(
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
-    colors: <Color>[lime, mint],
+    colors: <Color>[burgundy, limeLight],
+  );
+  static const LinearGradient heroGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: <Color>[blushLight, background],
   );
 }
 
+/// Ombre douce commune aux cartes, teintée bordeaux plutôt que noire.
+const List<BoxShadow> floraCardShadow = <BoxShadow>[
+  BoxShadow(color: Color(0x146B1F3A), blurRadius: 18, offset: Offset(0, 6)),
+];
+
 class FloraTheme {
-  static const double borderRadius = 12.0;
-  static const double cardRadius = 14.0;
+  static const double borderRadius = 14.0;
+  static const double cardRadius = 18.0;
   static const double pillRadius = 999.0;
 
   static TextTheme _textTheme({required Color body, required Color heading}) {
     return TextTheme(
-      displayLarge: GoogleFonts.inter(
+      displayLarge: GoogleFonts.dmSans(
         fontSize: 32, fontWeight: FontWeight.w800, color: heading,
         height: 1.15, letterSpacing: -0.4,
       ),
-      displayMedium: GoogleFonts.inter(
+      displayMedium: GoogleFonts.dmSans(
         fontSize: 26, fontWeight: FontWeight.w800, color: heading,
         height: 1.2, letterSpacing: -0.3,
       ),
-      displaySmall: GoogleFonts.inter(
+      displaySmall: GoogleFonts.dmSans(
         fontSize: 22, fontWeight: FontWeight.w700, color: heading,
         height: 1.25, letterSpacing: -0.2,
       ),
-      headlineMedium: GoogleFonts.inter(
+      headlineMedium: GoogleFonts.dmSans(
         fontSize: 20, fontWeight: FontWeight.w700, color: heading,
       ),
-      titleLarge: GoogleFonts.inter(
+      titleLarge: GoogleFonts.dmSans(
         fontSize: 17, fontWeight: FontWeight.w600, color: heading,
       ),
-      titleMedium: GoogleFonts.inter(
+      titleMedium: GoogleFonts.dmSans(
         fontSize: 15, fontWeight: FontWeight.w600, color: heading,
       ),
-      bodyLarge: GoogleFonts.inter(fontSize: 15, color: body, height: 1.45),
-      bodyMedium: GoogleFonts.inter(fontSize: 14, color: body, height: 1.4),
-      bodySmall: GoogleFonts.inter(fontSize: 12, color: body),
-      labelLarge: GoogleFonts.inter(
+      bodyLarge: GoogleFonts.dmSans(fontSize: 15, color: body, height: 1.45),
+      bodyMedium: GoogleFonts.dmSans(fontSize: 14, color: body, height: 1.4),
+      bodySmall: GoogleFonts.dmSans(fontSize: 12, color: body),
+      labelLarge: GoogleFonts.dmSans(
         fontSize: 14, fontWeight: FontWeight.w600, color: heading,
       ),
     );
@@ -150,13 +149,21 @@ class FloraTheme {
         onSurfaceVariant: textSecondary,
         outline: border,
       ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: FloraColors.cocoa,
+        contentTextStyle: GoogleFonts.dmSans(color: Colors.white, fontSize: 14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(borderRadius),
+        ),
+      ),
       textTheme: _textTheme(body: textSecondary, heading: textPrimary),
       appBarTheme: AppBarTheme(
         backgroundColor: background,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: GoogleFonts.dmSans(
           color: textPrimary,
           fontSize: 20,
           fontWeight: FontWeight.w700,
@@ -177,41 +184,41 @@ class FloraTheme {
         unselectedItemColor: textSecondary,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
-        selectedLabelStyle: GoogleFonts.inter(
+        selectedLabelStyle: GoogleFonts.dmSans(
           fontSize: 11, fontWeight: FontWeight.w600,
         ),
-        unselectedLabelStyle: GoogleFonts.inter(
+        unselectedLabelStyle: GoogleFonts.dmSans(
           fontSize: 11, fontWeight: FontWeight.w500,
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: surfaceMuted,
+        fillColor: surface,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        hintStyle: GoogleFonts.inter(color: textSecondary),
-        labelStyle: GoogleFonts.inter(color: textPrimary),
+        hintStyle: GoogleFonts.dmSans(color: textSecondary),
+        labelStyle: GoogleFonts.dmSans(color: textPrimary),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(pillRadius),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(borderRadius),
+          borderSide: BorderSide(color: border),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(pillRadius),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(borderRadius),
+          borderSide: BorderSide(color: border),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(pillRadius),
-          borderSide: BorderSide(color: textPrimary, width: 1.5),
+          borderRadius: BorderRadius.circular(borderRadius),
+          borderSide: BorderSide(color: primary, width: 1.5),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: textPrimary,
-          foregroundColor: brightness == Brightness.light ? Colors.white : background,
+          backgroundColor: primary,
+          foregroundColor: onPrimary,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(pillRadius),
           ),
-          textStyle: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
+          textStyle: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w700),
           elevation: 0,
         ),
       ),
@@ -228,17 +235,17 @@ class FloraTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: primary,
-          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          textStyle: GoogleFonts.dmSans(fontWeight: FontWeight.w600),
         ),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: surface,
-        selectedColor: textPrimary,
-        secondarySelectedColor: textPrimary,
-        labelStyle: GoogleFonts.inter(
+        selectedColor: primary,
+        secondarySelectedColor: primary,
+        labelStyle: GoogleFonts.dmSans(
           color: textPrimary, fontSize: 13, fontWeight: FontWeight.w600,
         ),
-        secondaryLabelStyle: GoogleFonts.inter(
+        secondaryLabelStyle: GoogleFonts.dmSans(
           color: brightness == Brightness.light ? Colors.white : background,
           fontSize: 13, fontWeight: FontWeight.w600,
         ),

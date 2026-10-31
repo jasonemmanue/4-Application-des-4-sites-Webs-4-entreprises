@@ -1,10 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../models/payment.dart';
+import '../screens/appointments/appointments_screen.dart';
 import '../screens/articles/article_detail_screen.dart';
 import '../screens/articles/articles_screen.dart';
 import '../screens/booking/booking_screen.dart';
 import '../screens/contact/contact_screen.dart';
+import '../screens/favorites/favorites_screen.dart';
 import '../screens/gallery/gallery_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/more/more_screen.dart';
@@ -42,9 +45,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                 const NoTransitionPage(child: BookingScreen()),
           ),
           GoRoute(
-            path: '/gallery',
+            path: '/favorites',
             pageBuilder: (_, __) =>
-                const NoTransitionPage(child: GalleryScreen()),
+                const NoTransitionPage(child: FavoritesScreen()),
           ),
           GoRoute(
             path: '/more',
@@ -57,6 +60,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/services/:slug',
         builder: (context, state) =>
             ServiceDetailScreen(slug: state.pathParameters['slug']!),
+      ),
+      GoRoute(path: '/gallery', builder: (_, __) => const GalleryScreen()),
+      GoRoute(
+        path: '/appointments',
+        builder: (context, state) => AppointmentsScreen(
+          initialTab: state.uri.queryParameters['tab'] == 'history' ? 1 : 0,
+        ),
       ),
       GoRoute(path: '/team', builder: (_, __) => const TeamScreen()),
       GoRoute(path: '/articles', builder: (_, __) => const ArticlesScreen()),
@@ -74,16 +84,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/payment/wait',
         builder: (context, state) {
           final ref = state.uri.queryParameters['ref'] ?? '';
-          final isCard = state.uri.queryParameters['card'] == '1';
-          return PaymentWaitScreen(reference: ref, isCard: isCard);
+          return PaymentWaitScreen(
+            reference: ref,
+            operator:
+                paymentOperatorFromCode(state.uri.queryParameters['op']),
+          );
         },
       ),
       GoRoute(
         path: '/payment/result',
         builder: (context, state) {
           final ref = state.uri.queryParameters['ref'] ?? '';
-          final ok = state.uri.queryParameters['ok'] == '1';
-          return PaymentResultScreen(reference: ref, success: ok);
+          return PaymentResultScreen(reference: ref);
         },
       ),
     ],

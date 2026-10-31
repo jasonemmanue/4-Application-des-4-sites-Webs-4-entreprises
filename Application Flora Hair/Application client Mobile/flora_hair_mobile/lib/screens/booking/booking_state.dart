@@ -79,3 +79,9 @@ final bookingDraftProvider =
 );
 
 final bookingStepProvider = StateProvider<int>((_) => 0);
+
+/// Démarre (ou reprend) une réservation sur une prestation choisie ailleurs.
+void startBookingWith(WidgetRef ref, Service service) {
+  ref.read(bookingDraftProvider.notifier).setService(service);
+  ref.read(bookingStepProvider.notifier).state = 0;
+}

@@ -32,7 +32,7 @@ flora_hair_mobile/
     app.dart
     config/
       api_config.dart
-      theme.dart               # Theme or/chocolat
+      theme.dart               # Theme bordeaux / rose / or
       routes.dart
     models/
       service.dart
@@ -51,9 +51,11 @@ flora_hair_mobile/
       whatsapp_service.dart
       push_notification_service.dart
     screens/
+      appointments/            # Mes rendez-vous (a venir, historique)
+      favorites/               # Favoris locaux
       home/
       services/                # Catalogue avec filtres par categorie + tarifs
-      booking/                 # Reservation multi-etapes
+      booking/                 # Reservation en 3 etapes
       gallery/                 # Galerie photos + avant/apres
       team/                    # Equipe / coiffeuses
       articles/                # Blog beaute
@@ -64,7 +66,8 @@ flora_hair_mobile/
       contact/                 # Contact + WhatsApp
       payment/                 # Ecrans paiement
     widgets/
-      service_card.dart
+      flora_ui.dart            # Briques visuelles communes
+      payment_sheet.dart       # Choix du moyen, relance
       team_card.dart
       article_card.dart
       gallery_grid.dart
@@ -72,9 +75,7 @@ flora_hair_mobile/
       review_card.dart
       review_form.dart
       booking_form.dart
-      calendar.dart
       operator_grid.dart
-      payment_overlay.dart
       payment_countdown.dart
       section_heading.dart
       page_hero.dart
@@ -85,70 +86,53 @@ flora_hair_mobile/
 
 ## Design System
 
-### Palette de couleurs (heritee du site web)
+Refonte du 2026-10-31 (v1.1.0+2) : voir `docs/REFONTE_UI_2026-10.md`.
 
-| Token | Hex | Usage |
+| Token (`FloraColors`) | Hex | Usage |
 |-------|-----|-------|
-| lime (gold) | `#C5A55A` | Couleur primaire (or) |
-| lime-light | `#D4BA78` | Etats hover |
-| lime-dark | `#A88B3D` | Etats presses |
-| mint | `#D4A853` | Or secondaire |
-| cream | `#F5F0E1` | Texte principal (mode sombre) |
-| charcoal | `#1E1B16` | Fond cartes |
-| dark | `#1A1510` | Fond principal (chocolat sombre) |
-| dark-light | `#2A2318` | Surfaces elevees |
-| gray-warm | `#3A3328` | Bordures, separateurs |
-| text-muted | `#94A3B8` | Texte attenue |
+| burgundy (alias `lime`) | `#6B1F3A` | Couleur primaire |
+| blush / blushLight | `#F4C9CE` / `#FBE8E6` | Rose poudre, surfaces |
+| gold | `#D9A441` | Accent, mot « beaute. » |
+| cocoa | `#3E2723` | Brun |
+| background | `#FFF7F1` | Fond creme rose |
 
-### Mode clair
-
-- lime : `#8B6914` (or fonce pour contraste)
-- cream : `#1A1510` (texte sombre)
-- dark : `#FBF8F0` (fond creme)
-- charcoal : `#FFFFFF` (cartes blanches)
-
-### Typographie
-
-- **Titres** : Playfair Display (serif, elegance beaute)
-- **Corps** : Inter (sans-serif, lisibilite)
-
-### Principes UI
-
-- **Style** : Elegant, feminin, luxe accessible — mode sombre par defaut
-- **Glassmorphism** discret sur les cartes
-- **Gradient or** pour les boutons principaux
-- **Animations** : CSS pures (slide-up, fade-in, scale-in, float, shimmer)
-- **Coins arrondis** : 12-16px
-- **Photos** : Overlays contraste avec classes `.photo-scrim-*` pour texte lisible sur photos
+- **Logo** : celui du salon, dore (`assets/branding/logo_mark.png`), en haut a gauche de l'accueil.
+- **Typographie** : DM Sans ; Allura pour « beaute. » ; Playfair Display pour le nom du salon.
+- **Mode** : clair uniquement (`ThemeMode.light`).
+- **Coins arrondis** : 14-18 px, boutons en pilule, ombre douce teintee bordeaux.
+- **Briques communes** : `lib/widgets/flora_ui.dart`.
 
 ## Ecrans et navigation
 
 ### Bottom Navigation Bar (5 onglets)
 
-1. **Accueil** — Hero avec stats, services vedettes, galerie, equipe, avis, articles
-2. **Services** — Catalogue filtrable par categorie avec tableau de prix
-3. **Reservation** — Formulaire multi-etapes avec calendrier et paiement
-4. **Galerie** — Grille masonry + filtres tags + avant/apres interactif
-5. **Profil** (ex-« Plus ») — carte d'identite (nom du dernier rendez-vous, « Visiteuse » sinon), cartes photo Prendre rendez-vous / Nos realisations, carte large Devis sur photo, puis Equipe, Articles, Videos, Avis, Formations, Contact
+1. **Accueil** — Logo, accroche, recherche, categories, tendances, prestations, inspirations, equipe, conseils
+2. **Prestations** — Catalogue filtrable, cartes avec bouton « Choisir »
+3. **Reserver** — Tunnel en 3 etapes
+4. **Favoris** — Prestations et inspirations, conservees sur l'appareil
+5. **Profil** (« Mon espace ») — Prochain rendez-vous, acces rapides, salon, rubriques (Galerie, Devis, Equipe, Articles, Videos, Avis, Formations)
 
-### Profil et pastille « acompte 50 % » (2026-10-06)
+### Profil et pastille « acompte 50 % »
 
-Voir `docs/PROFIL_ET_PASTILLE.md`. Pastille flottante « Reservez avec 50 % d'acompte » sur l'accueil → pop-up (navigateur racine) « Payez 50 % en ligne pour confirmer votre rendez-vous, le reste se regle au salon ».
+Voir `docs/PROFIL_ET_PASTILLE.md` pour la pastille de l'accueil, toujours en place.
+La carte d'identite et les cartes photo de ce document ont ete remplacees par « Mon espace ».
 
-### Flux de reservation (4 etapes)
+### Flux de reservation (3 etapes)
 
-1. **Service** : Selection du service souhaite (avec prix affiche)
-2. **Coiffeuse** : Selection de la coiffeuse (avec disponibilites)
-3. **Date & Heure** : Calendrier personnalise (jours fermes grises, creneaux disponibles calcules selon duree du service et disponibilite de la coiffeuse)
-4. **Informations client** : Nom, telephone, email, notes + choix paiement depot 50%
+1. **Prestation** : prestation et expert·e
+2. **Creneau** : date, creneau, note, total estime
+3. **Confirmation** : recapitulatif, informations client, moyen de paiement (acompte 50 %)
 
-### Calendrier de reservation
+### Mes rendez-vous
 
-- Grille 42 cellules (6 semaines), navigation mois par mois
-- Jours fermes (dimanche) grises et non-cliquables
-- Creneaux bases sur les intervalles (pas juste l'heure de debut), selon la duree du service
-- Respect des disponibilites de la coiffeuse par jour de la semaine
-- Navigation clavier + WAI-ARIA (accessibilite)
+Liste locale a l'appareil (`services/appointments.dart`), sans compte. L'etat vient du back-office
+via `GET /bookings/{id}/status`. Actions : payer l'acompte, annuler.
+
+### Selection de la date
+
+- Bandeau horizontal de 60 jours, dimanche grise et non cliquable
+- Creneaux calcules par l'API selon la duree de la prestation et les reservations de l'expert·e
+- Aujourd'hui, les heures passees sont retirees cote application
 
 ### Horaires d'ouverture
 
@@ -182,6 +166,7 @@ Voir `docs/PROFIL_ET_PASTILLE.md`. Pastille flottante « Reservez avec 50 % d'ac
 | `GET /api/v1/team` | Liste des coiffeuses |
 | `GET /api/v1/team/{id}` | Detail d'une coiffeuse |
 | `GET /api/v1/bookings/available-slots?service_id=&team_member_id=&date=` | Creneaux disponibles |
+| `GET /api/v1/bookings/{id}/status` | Etat decide par le salon (sans donnee personnelle) |
 | `GET /api/v1/gallery` | Galerie photos |
 | `GET /api/v1/articles?page=` | Articles (pagines) |
 | `GET /api/v1/articles/{slug}` | Detail d'un article |
@@ -193,6 +178,7 @@ Voir `docs/PROFIL_ET_PASTILLE.md`. Pastille flottante « Reservez avec 50 % d'ac
 | Endpoint | Usage |
 |----------|-------|
 | `POST /api/v1/bookings` | Creer une reservation |
+| `POST /api/v1/bookings/{id}/cancel` | Annuler (si acompte non paye) |
 | `POST /api/v1/reviews` | Soumettre un avis |
 | `POST /api/v1/contact` | Envoyer un message |
 | `POST /api/v1/quotes` | Envoyer une demande de devis (multipart — photo) |
@@ -203,27 +189,28 @@ Voir `docs/PROFIL_ET_PASTILLE.md`. Pastille flottante « Reservez avec 50 % d'ac
 |----------|-------|
 | `GET /api/v1/payments/config` | Configuration paiement |
 | `POST /api/v1/payments/init` | Initier un paiement |
-| `GET /api/v1/payments/status/{ref}` | Statut du paiement |
-| `POST /api/v1/payments/retry/{ref}` | Reessayer avec autre operateur |
-| `POST /api/v1/payments/cancel/{ref}` | Annuler |
+| `GET /api/v1/payments/{ref}` | Statut du paiement |
+| `POST /api/v1/payments/{ref}/retry` | Reessayer avec autre operateur |
+| `POST /api/v1/payments/{ref}/cancel` | Annuler |
+| `POST /api/v1/payments/{ref}/push` | Renvoyer la demande Mobile Money |
 
 ## Integration paiement GeniusPay
 
 ### Flux
 
-1. Reservation creee avec `deposit_status: pending`
-2. Client choisit operateur (Wave, Orange Money, MTN)
-3. `POST /payments/init` -> retourne `checkout_url`
-4. **Wave** : Ouvrir lien dans navigateur externe
-5. **Orange/MTN** : Notification USSD push -> ecran d'attente avec compte a rebours (180 secondes)
-6. Poll `GET /payments/status/{ref}` toutes les 3-4 secondes
-7. Succes -> confirmation | Echec -> option reessai autre operateur (max 10 tentatives par reservation)
+1. `POST /bookings` avec `payment_method: "Payement electronique"` (c'est ce qui fait expirer une demande non payee)
+2. La cliente choisit un moyen parmi ceux de `GET /payments/config`
+3. `POST /payments/init` renvoie `payment_url`
+4. **Wave et carte** : ouvrir `payment_url` dans le navigateur externe (exigence de Wave : jamais de webview)
+5. **Orange et MTN** : demande de validation poussee par le serveur, ecran d'attente
+6. Poll `GET /payments/{ref}` toutes les 3 s. Succes = statut `succeeded`
+7. L'ecran de resultat relit l'etat reel. Echec : relance, avec changement de moyen possible
 
 ### Validation telephone
 
-- **Orange** : Prefixe `07`
-- **MTN** : Prefixe `05`
-- Format international `+225XXXXXXXXXX`
+- Dix chiffres, comme `phone_error` du backend
+- **Pas de controle de prefixe** : la portabilite existe en Cote d'Ivoire
+- Format envoye : `+225XXXXXXXXXX`
 
 ### Montant
 
@@ -248,7 +235,7 @@ Voir `docs/PROFIL_ET_PASTILLE.md`. Pastille flottante « Reservez avec 50 % d'ac
 
 ## Regles metier
 
-- **Pas de compte utilisateur** — reservations par nom/telephone/email
+- **Pas de compte utilisateur** — reservations par nom/telephone/email ; favoris et rendez-vous conserves sur l'appareil
 - **Depot 50%** obligatoire pour les reservations en ligne
 - **3 types de prix** : fixe, fourchette (min-max), "a partir de"
 - **Avis moderes** : Validation admin avant publication
@@ -295,22 +282,22 @@ dev_dependencies:
 ```
 BottomNavigationBar
   |-- Accueil (HomeScreen)
-  |-- Services (ServicesScreen)
-  |     |-- ServiceDetailScreen
-  |-- Reservation (BookingScreen - 4 etapes)
-  |     |-- CalendarScreen
-  |     |-- PaymentMethodPicker
-  |     |-- PaymentWaitScreen
-  |     |-- PaymentResultScreen
-  |-- Galerie (GalleryScreen)
-  |     |-- LightboxModal
-  |     |-- BeforeAfterSlider
-  |-- Plus (MoreScreen)
-        |-- TeamScreen
-        |-- ArticlesScreen -> ArticleDetailScreen
-        |-- VideosScreen
-        |-- ReviewsScreen (consultation + soumission)
-        |-- QuoteScreen (devis photo)
-        |-- TrainingScreen
-        |-- ContactScreen
+  |-- Prestations (ServicesScreen)
+  |-- Reserver (BookingScreen - 3 etapes)
+  |-- Favoris (FavoritesScreen)
+  |-- Profil (MoreScreen)
+Hors onglets
+  |-- ServiceDetailScreen, GalleryScreen, AppointmentsScreen
+  |-- PaymentWaitScreen, PaymentResultScreen
+  |-- TeamScreen, ArticlesScreen, ArticleDetailScreen, VideosScreen
+  |-- ReviewsScreen, QuoteScreen, TrainingScreen, ContactScreen
 ```
+
+## Sortie d'une version
+
+1. `version:` dans `pubspec.yaml` et `ApiConfig.appSource` alignes (un test le verifie)
+2. `flutter test`
+3. Construire depuis `C:\FH-build\client` : le « é » de « ainé » dans le chemin du projet fait echouer
+   `gen_snapshot` et `impellerc`. Synchroniser par `robocopy <projet> C:\FH-build\client /MIR /XD build .dart_tool .gradle .kotlin /XF app-release.apk *.iml`,
+   puis `flutter build apk --release` dans cette copie
+4. Verifier la version de l'APK (`aapt dump badging`), puis le copier vers `flora_hair_mobile/app-release.apk` et `Application Flora Hair/FloraHair-release.apk` (ignores par git)

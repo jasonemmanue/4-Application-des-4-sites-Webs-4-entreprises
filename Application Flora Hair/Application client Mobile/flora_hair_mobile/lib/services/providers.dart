@@ -46,3 +46,14 @@ final articleDetailProvider =
     FutureProvider.family<Article, String>((ref, slug) async {
   return ref.watch(apiClientProvider).fetchArticleBySlug(slug);
 });
+
+/// Catégorie filtrée sur l'écran Prestations — posée aussi depuis l'accueil.
+final selectedCategoryProvider = StateProvider<String?>((_) => null);
+
+/// Note moyenne réelle du salon, sur les avis approuvés dans l'administration.
+final salonRatingProvider = Provider<({double average, int count})?>((ref) {
+  final reviews = ref.watch(reviewsProvider).valueOrNull ?? const <Review>[];
+  if (reviews.isEmpty) return null;
+  final total = reviews.fold<int>(0, (sum, r) => sum + r.rating);
+  return (average: total / reviews.length, count: reviews.length);
+});

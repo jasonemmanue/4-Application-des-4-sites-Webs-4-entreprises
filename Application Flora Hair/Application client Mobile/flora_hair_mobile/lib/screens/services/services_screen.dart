@@ -4,12 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../config/theme.dart';
 import '../../models/category.dart';
-// ignore: unused_import  (Category est utilisée dans le type de la liste)
+import '../../models/service.dart';
 import '../../services/providers.dart';
-import '../../widgets/service_card.dart';
+import '../../widgets/flora_ui.dart';
+import '../../widgets/search_bar_pill.dart';
 import '../../widgets/state_widgets.dart';
-
-final _selectedCategoryProvider = StateProvider<String?>((_) => null);
+import '../booking/booking_state.dart';
 
 class ServicesScreen extends ConsumerWidget {
   const ServicesScreen({super.key});
@@ -18,7 +18,7 @@ class ServicesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final categoriesAsync = ref.watch(categoriesProvider);
     final servicesAsync = ref.watch(servicesProvider);
-    final selected = ref.watch(_selectedCategoryProvider);
+    final selected = ref.watch(selectedCategoryProvider);
     final categorySlugToId = <String, String>{
       for (final c in categoriesAsync.valueOrNull ?? const <Category>[])
         c.slug: c.id,
@@ -26,23 +26,56 @@ class ServicesScreen extends ConsumerWidget {
     final selectedCategoryId =
         selected == null ? null : categorySlugToId[selected];
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Nos prestations')),
-      body: Column(
+    return SafeArea(
+      bottom: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          SizedBox(
-            height: 52,
-            child: categoriesAsync.when(
-              data: (cats) => _CategoryFilter(
-                categories: cats,
-                selected: selected,
-                onSelect: (slug) =>
-                    ref.read(_selectedCategoryProvider.notifier).state = slug,
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 16, 20, 2),
+            child: Text(
+              'Nos prestations',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.4,
+                color: FloraColors.textPrimary,
               ),
-              loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
             ),
           ),
+          const SearchBarPill(),
+          SizedBox(
+            height: 42,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: FloraFilterChip(
+                    label: 'Tout',
+                    active: selected == null,
+                    onTap: () => ref
+                        .read(selectedCategoryProvider.notifier)
+                        .state = null,
+                  ),
+                ),
+                for (final c in categoriesAsync.valueOrNull ??
+                    const <Category>[])
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: FloraFilterChip(
+                      label: c.name,
+                      active: selected == c.slug,
+                      onTap: () => ref
+                          .read(selectedCategoryProvider.notifier)
+                          .state = c.slug,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
           Expanded(
             child: servicesAsync.when(
               data: (list) {
@@ -58,17 +91,11 @@ class ServicesScreen extends ConsumerWidget {
                 return RefreshIndicator(
                   onRefresh: () async => ref.refresh(servicesProvider.future),
                   child: ListView.separated(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
                     itemCount: filtered.length,
-                    separatorBuilder: (context, _) => Divider(
-                      height: 1,
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
-                    itemBuilder: (context, i) => ServiceCard(
-                      service: filtered[i],
-                      onTap: () =>
-                          context.go('/services/${filtered[i].slug}'),
-                    ),
+                    separatorBuilder: (_, __) => const SizedBox(height: 14),
+                    itemBuilder: (context, i) =>
+                        _ServiceRow(service: filtered[i]),
                   ),
                 );
               },
@@ -85,79 +112,83 @@ class ServicesScreen extends ConsumerWidget {
   }
 }
 
-/// Rangée de pastilles de catégorie style « catalogue » : bordure fine,
-/// bordure sombre + fond crème contrasté sur la pastille active. Tout
-/// vient du `Theme.of(context)` — pas de couleur en dur, l'écran est
-/// lisible dans les deux modes.
-class _CategoryFilter extends StatelessWidget {
-  const _CategoryFilter({
-    required this.categories,
-    required this.selected,
-    required this.onSelect,
-  });
-
-  final List<Category> categories;
-  final String? selected;
-  final ValueChanged<String?> onSelect;
+class _ServiceRow extends ConsumerWidget {
+  const _ServiceRow({required this.service});
+  final Service service;
 
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return ListView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      children: <Widget>[
-        _pill(
-          context,
-          label: 'Tout',
-          active: selected == null,
-          onTap: () => onSelect(null),
-          scheme: scheme,
-        ),
-        ...categories.map((c) => _pill(
-              context,
-              label: c.name,
-              active: selected == c.slug,
-              onTap: () => onSelect(c.slug),
-              scheme: scheme,
-            )),
-      ],
-    );
-  }
-
-  Widget _pill(
-    BuildContext context, {
-    required String label,
-    required bool active,
-    required VoidCallback onTap,
-    required ColorScheme scheme,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: active ? scheme.onSurface : scheme.surface,
-            borderRadius: BorderRadius.circular(FloraTheme.pillRadius),
-            border: Border.all(
-              color: active ? scheme.onSurface : scheme.outline,
-              width: active ? 1.5 : 1,
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FloraCard(
+      padding: const EdgeInsets.all(10),
+      onTap: () => context.push('/services/${service.slug}'),
+      child: Row(
+        children: <Widget>[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: SizedBox(
+              width: 112,
+              height: 122,
+              child: FloraImage(url: service.imageUrl, label: service.name),
             ),
           ),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-                color: active ? scheme.surface : scheme.onSurface,
-              ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  service.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    height: 1.15,
+                    color: FloraColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: <Widget>[
+                    const Icon(Icons.schedule_rounded,
+                        size: 15, color: FloraColors.textSecondary),
+                    const SizedBox(width: 4),
+                    Text(
+                      service.formattedDuration,
+                      style: const TextStyle(
+                          fontSize: 13, color: FloraColors.textSecondary),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  service.formattedPrice(),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: FloraColors.burgundy,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                FilledButton(
+                  onPressed: () {
+                    startBookingWith(ref, service);
+                    context.go('/booking');
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: FloraColors.burgundy,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(0, 36),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    textStyle: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w700),
+                  ),
+                  child: const Text('Choisir  →'),
+                ),
+              ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }

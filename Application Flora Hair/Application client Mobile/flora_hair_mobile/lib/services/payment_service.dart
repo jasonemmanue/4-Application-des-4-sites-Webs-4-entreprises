@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -15,9 +14,10 @@ class PaymentService {
 
   bool _initInProgress = false;
 
-  Future<Map<String, dynamic>> fetchConfig() async {
-    final res = await _api.dio.get('/payments/config');
-    return (res.data as Map<String, dynamic>?) ?? <String, dynamic>{};
+  /// Moyens ouverts par le back-office : c'est lui qui décide, pas l'application.
+  Future<PaymentConfig> fetchConfig() async {
+    final res = await _api.get('/payments/config');
+    return PaymentConfig.fromJson(res.data as Map<String, dynamic>);
   }
 
   /// Initialise un paiement pour la reservation donnee.
@@ -42,9 +42,8 @@ class PaymentService {
       if (phone != null && phone.isNotEmpty) {
         data['phone'] = phone;
       }
-      final res = await _api.dio.post('/payments/init',
-          data: data,
-          options: Options(headers: {'X-Cle-Demande': idempotencyKey}));
+      final res = await _api.post('/payments/init',
+          data: data, headers: {'X-Cle-Demande': idempotencyKey});
       return PaymentInit.fromJson(res.data as Map<String, dynamic>);
     } finally {
       _initInProgress = false;
@@ -53,7 +52,7 @@ class PaymentService {
 
   /// `GET /payments/{transaction_id}`
   Future<PaymentStatusResponse> checkStatus(String reference) async {
-    final res = await _api.dio.get('/payments/$reference');
+    final res = await _api.get('/payments/$reference');
     return PaymentStatusResponse.fromJson(res.data as Map<String, dynamic>);
   }
 
@@ -70,17 +69,23 @@ class PaymentService {
     if (phone != null && phone.isNotEmpty) {
       data['phone'] = phone;
     }
-    final res = await _api.dio.post(
+    final res = await _api.post(
       '/payments/$reference/retry',
       data: data,
-      options: Options(headers: {'X-Cle-Demande': idempotencyKey}),
+      headers: {'X-Cle-Demande': idempotencyKey},
     );
     return PaymentInit.fromJson(res.data as Map<String, dynamic>);
   }
 
   /// `POST /payments/{transaction_id}/cancel`
   Future<void> cancel(String reference) async {
-    await _api.dio.post('/payments/$reference/cancel');
+    await _api.post('/payments/$reference/cancel');
+  }
+
+  /// `POST /payments/{transaction_id}/push` — renvoie la demande de validation
+  /// Mobile Money sur le téléphone.
+  Future<void> resendPush(String reference) async {
+    await _api.post('/payments/$reference/push');
   }
 
   /// Polling toutes les [interval] secondes, jusqu'a un etat final ou timeout.
@@ -96,12 +101,7 @@ class PaymentService {
       try {
         final status = await checkStatus(reference);
         yield status;
-        if (status.status == PaymentStatus.success ||
-            status.status == PaymentStatus.failed ||
-            status.status == PaymentStatus.cancelled ||
-            status.status == PaymentStatus.expired) {
-          return;
-        }
+        if (status.status.isFinal) return;
       } catch (_) {
         // ignore et re-essaie
       }
@@ -114,30 +114,35 @@ class PaymentService {
     );
   }
 
-  /// Valide le numero selon l'operateur.
-  static String? validatePhoneForOperator(
-      String phone, PaymentOperator operator) {
-    final digits = phone.replaceAll(RegExp(r'\D'), '');
-    if (digits.length < 8) return 'Numero trop court';
-    final local =
-        digits.length >= 10 ? digits.substring(digits.length - 10) : digits;
-    final prefix = operator.expectedPrefix;
-    if (prefix != null && !local.startsWith(prefix)) {
-      return 'Le numero ${operator.label} doit commencer par $prefix';
+  /// Même règle que `phone_error` côté backend : dix chiffres, rien de plus.
+  ///
+  /// Le préfixe n'est pas contrôlé : la portabilité existe en Côte d'Ivoire, et
+  /// refuser un `01` sur MTN bloquerait un paiement légitime.
+  static String? validatePhone(String phone) {
+    var digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.startsWith('00225')) {
+      digits = digits.substring(5);
+    } else if (digits.startsWith('225')) {
+      digits = digits.substring(3);
     }
-    return null;
+    return digits.length == 10
+        ? null
+        : 'Saisissez un numéro ivoirien à dix chiffres.';
   }
 
   /// Formate en international +225XXXXXXXXXX.
   static String toInternational(String phone) {
     final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.startsWith('00225')) return '+${digits.substring(2)}';
     if (digits.startsWith('225')) return '+$digits';
-    if (digits.length == 10) return '+225$digits';
-    if (digits.length == 8) return '+225$digits';
-    return '+$digits';
+    return '+225$digits';
   }
 }
 
 final paymentServiceProvider = Provider<PaymentService>(
   (ref) => PaymentService(ref.watch(apiClientProvider)),
+);
+
+final paymentConfigProvider = FutureProvider<PaymentConfig>(
+  (ref) => ref.watch(paymentServiceProvider).fetchConfig(),
 );

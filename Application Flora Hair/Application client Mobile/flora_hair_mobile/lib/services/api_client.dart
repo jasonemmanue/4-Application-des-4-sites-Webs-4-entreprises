@@ -66,15 +66,21 @@ class ApiClient {
     }
   }
 
+  /// Accès des services voisins (paiement) : mêmes messages d'erreur.
+  Future<Response<dynamic>> get(String path) => _get(path);
+  Future<Response<dynamic>> post(String path,
+          {dynamic data, Map<String, dynamic>? headers}) =>
+      _post(path, data: data, headers: headers);
+
   Future<Response<dynamic>> _post(String path,
-      {dynamic data, FormData? form}) async {
+      {dynamic data, FormData? form, Map<String, dynamic>? headers}) async {
     try {
       return await _dio.post(
         path,
         data: form ?? data,
         options: form != null
             ? Options(contentType: 'multipart/form-data')
-            : null,
+            : Options(headers: headers),
       );
     } on DioException catch (e) {
       throw _wrap(e);
@@ -99,7 +105,7 @@ class ApiClient {
 
     // Messages metier du serveur : on les affiche seulement s'ils ne
     // contiennent pas de trace technique.
-    String message = 'Une erreur est survenue.';
+    String message = _genericError;
     if (data is Map<String, dynamic>) {
       final raw = (data['detail'] ?? data['message'])?.toString();
       if (raw != null && raw.length < 200 && !_looksInternal(raw)) {
@@ -111,12 +117,19 @@ class ApiClient {
     if (status == 401) return ApiException('Session expiree. Reconnectez-vous.', status);
     if (status == 403) return ApiException('Acces refuse.', status);
     if (status == 404) return ApiException('Ressource introuvable.', status);
+    // 502 et 503 portent un message écrit pour la cliente (paiement non activé,
+    // refus de la passerelle) : on le garde s'il a passé le filtre ci-dessus.
+    if ((status == 502 || status == 503) && message != _genericError) {
+      return ApiException(message, status);
+    }
     if (status != null && status >= 500) {
       return ApiException('Erreur serveur. Reessayez plus tard.', status);
     }
 
     return ApiException(message, status);
   }
+
+  static const _genericError = 'Une erreur est survenue.';
 
   static bool _looksInternal(String msg) {
     final lower = msg.toLowerCase();
@@ -225,6 +238,13 @@ class ApiClient {
   Future<Booking> cancelBooking(String bookingId) async {
     final res = await _post('/bookings/$bookingId/cancel');
     return Booking.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  /// `GET /bookings/{id}/status` — l'état décidé par le salon dans
+  /// l'administration (confirmé, annulé, terminé), sans donnée personnelle.
+  Future<Map<String, dynamic>> fetchBookingStatus(String bookingId) async {
+    final res = await _get('/bookings/$bookingId/status');
+    return res.data as Map<String, dynamic>;
   }
 
   // ─── Galerie, articles, vidéos ──────────────────────────────────────────

@@ -101,6 +101,7 @@ Toutes préfixées par `/api/v1`. Ce que le mobile appelle, où c'est appelé.
 | GET  | `/bookings/available-slots` | `ApiClient.fetchAvailableSlots` | Requiert `service_id`, `team_member_id`, `date` |
 | POST | `/bookings`                 | `ApiClient.createBooking` | Corps `BookingCreate` |
 | POST | `/bookings/{id}/cancel`     | `ApiClient.cancelBooking` | Refus 409 si acompte payé |
+| GET  | `/bookings/{id}/status`     | `ApiClient.fetchBookingStatus` | État décidé dans l'admin, sans donnée personnelle |
 | GET  | `/gallery`                  | `ApiClient.fetchGallery` | |
 | GET  | `/articles?page=&per_page=` | `ApiClient.fetchArticles` | Publiés uniquement |
 | GET  | `/articles/{slug}`          | `ApiClient.fetchArticleBySlug` | 404 si brouillon |
@@ -110,7 +111,7 @@ Toutes préfixées par `/api/v1`. Ce que le mobile appelle, où c'est appelé.
 | POST | `/contact`                  | `ApiClient.sendContactMessage` | |
 | POST | `/quotes`                   | `ApiClient.submitQuoteRequest` | **Multipart**, photo obligatoire |
 
-### Paiement (GeniusPay — Wave, Orange Money, MTN, Moov)
+### Paiement (GeniusPay — Wave, Orange Money, MTN, carte)
 
 | Méthode | Route | Client Dart | Notes |
 |---------|-------|-------------|-------|
@@ -119,8 +120,16 @@ Toutes préfixées par `/api/v1`. Ce que le mobile appelle, où c'est appelé.
 | GET  | `/payments/{transaction_id}`  | `PaymentService.checkStatus` | Polling toutes les 3 s |
 | POST | `/payments/{tx}/retry`        | `PaymentService.retry` | Changement d'opérateur possible |
 | POST | `/payments/{tx}/cancel`       | `PaymentService.cancel` | Vérifie d'abord auprès de GeniusPay |
+| POST | `/payments/{tx}/push`         | `PaymentService.resendPush` | Renvoie la demande Mobile Money |
 
-`method` accepte : `wave`, `orange_money`, `mtn_money`, `moov_money`.
+`method` accepte : `wave`, `orange_money`, `mtn_money`, `card`. La liste affichée
+vient de `/payments/config`. Moov n'est pas routé par la passerelle en Côte d'Ivoire.
+
+Statuts de transaction : `initiated`, `pending`, `succeeded`, `failed`, `cancelled`,
+`expired`, `refunded`. **Le succès s'écrit `succeeded`.**
+
+`POST /bookings` doit porter `payment_method` (`Payement electronique` ou `Espèce`) :
+sans lui, une demande abandonnée n'expire jamais et bloque le créneau.
 
 ## Contrat des données
 
@@ -158,13 +167,13 @@ mobile ne remonte que ceux dont `available == true`.
 Chaque requête sortante de l'application est marquée par un en-tête HTTP :
 
 ```
-X-App-Source: android/1.0.0+1
+X-App-Source: android/1.1.0+2
 ```
 
 La valeur est définie par [`ApiConfig.appSource`](../lib/config/api_config.dart)
 et posée en dur dans le `BaseOptions` de Dio ([api_client.dart](../lib/services/api_client.dart)).
-Elle doit rester **alignée sur `pubspec.yaml`** (`version: 1.0.0+1`) à chaque
-sortie : c'est ce qui apparaîtra dans l'administration à côté des demandes.
+Elle doit rester **alignée sur `pubspec.yaml`** (`version: 1.1.0+2`, vérifié par
+`test/payment_contract_test.dart`) à chaque sortie : c'est ce qui apparaîtra dans l'administration à côté des demandes.
 
 Côté backend :
 - Une dépendance `get_client_source` (dans
@@ -180,7 +189,7 @@ Côté backend :
 Côté administration Next.js :
 - Un composant partagé `<SourceBadge source={…} />` (dans
   `admin/components/SourceBadge.tsx`) rend une pastille compacte :
-  - **📱 Android v1.0.0+1** (or, discret) si la valeur commence par
+  - **📱 Android v1.1.0+2** (or, discret) si la valeur commence par
     `android/` ou `ios/`
   - **🌐 Site** (gris) si `source` est vide (demandes issues du site web)
 - Une colonne « Canal » est ajoutée en tête des listes *Réservations*,
@@ -198,9 +207,15 @@ change son `X-App-Source`, le badge le rendra automatiquement.
 
 ## Déployer les changements en ligne de commande
 
-Le projet salon-coiffure est branché sur Railway via son dépôt GitHub :
-tout push sur `main` déclenche un redéploiement automatique des services
-`api`, `admin` et `frontend`. Depuis le dépôt du site :
+Le projet salon-coiffure est branché sur Railway via son dépôt GitHub : un push
+sur `main` redéploie `admin` et `frontend`.
+
+⚠️ **Pas le service `api`** : sa connexion GitHub ne déclenche plus de déploiement
+(constaté le 2026-10-31, dernier déploiement du 10 octobre). Il faut lancer
+`railway up --service api` depuis le dépôt du site, puis vérifier que la route
+modifiée répond en production.
+
+Depuis le dépôt du site :
 
 ```bash
 cd "C:/Users/hp/StudioProjects/Sites WEB Prestations de Services/salon-coiffure"
@@ -269,7 +284,7 @@ jeton à envoyer, et ne devrait jamais tenter d'appeler ces routes.
 | `Connection refused` sur émulateur | `API_BASE_URL` non défini, ou pointant `localhost` au lieu de `10.0.2.2` |
 | `Connection refused` sur appareil physique | IP du poste changé, ou pare-feu Windows qui bloque le port 8000 |
 | Réservation créée mais planning vide côté admin | Rafraîchir : le seed a peut-être ignoré vos services (`slug` déjà pris) |
-| `/payments/init` renvoie 503 | `GENIUSPAY_*` non renseignés dans `.env` — normal en dev, l'app doit basculer sur « acompte à régler sur place » |
+| `/payments/init` renvoie 503 | `GENIUSPAY_*` non renseignés dans `.env` — normal en dev : `/payments/config` renvoie `configured: false` et l'app enregistre le rendez-vous avec « acompte à régler sur place » |
 | CORS bloqué… | Dio n'utilise pas CORS. Si le message vient du navigateur (tests web Flutter), ajouter l'origine à `CORS_ORIGINS` dans `.env` du backend |
 | Créneaux tous marqués `available: false` | `service.duration_minutes` supérieur à la plage d'ouverture, ou coiffeuse en congé — vérifier `team_availability` |
 

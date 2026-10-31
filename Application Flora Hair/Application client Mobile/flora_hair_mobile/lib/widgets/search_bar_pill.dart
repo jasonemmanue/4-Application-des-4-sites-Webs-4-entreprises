@@ -33,7 +33,7 @@ class _Suggestion {
 /// reste minimaliste, la recherche prend toute la place au moment où on
 /// tape.
 class SearchBarPill extends ConsumerWidget {
-  const SearchBarPill({super.key, this.placeholder = 'Rechercher une prestation, un article…'});
+  const SearchBarPill({super.key, this.placeholder = 'Quelle prestation recherchez-vous ?'});
 
   final String placeholder;
 
@@ -43,7 +43,7 @@ class SearchBarPill extends ConsumerWidget {
       onTap: () => _openSearch(context, ref),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
         decoration: BoxDecoration(
           color: FloraColors.surface,
           borderRadius: BorderRadius.circular(FloraTheme.pillRadius),
@@ -58,7 +58,7 @@ class SearchBarPill extends ConsumerWidget {
         ),
         child: Row(
           children: <Widget>[
-            const Icon(Icons.search, size: 22, color: FloraColors.textPrimary),
+            const Icon(Icons.search, size: 20, color: FloraColors.burgundy),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -300,7 +300,7 @@ class _SearchSheetState extends State<_SearchSheet> {
               color: FloraColors.textSecondary, size: 18),
           onTap: () {
             Navigator.of(context).pop();
-            context.go(s.route);
+            context.push(s.route);
           },
         );
       },

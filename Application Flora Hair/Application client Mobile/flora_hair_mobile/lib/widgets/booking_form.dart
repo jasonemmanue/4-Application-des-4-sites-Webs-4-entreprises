@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../config/theme.dart';
-
 class BookingCustomerForm extends StatelessWidget {
   const BookingCustomerForm({
     super.key,
@@ -9,14 +7,16 @@ class BookingCustomerForm extends StatelessWidget {
     required this.name,
     required this.phone,
     required this.email,
-    required this.notes,
   });
 
   final GlobalKey<FormState> formKey;
   final TextEditingController name;
   final TextEditingController phone;
   final TextEditingController email;
-  final TextEditingController notes;
+
+  // Le backend valide l'adresse (`EmailStr`) : mieux vaut le dire au champ
+  // qu'afficher une erreur générique après coup.
+  static final _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +31,8 @@ class BookingCustomerForm extends StatelessWidget {
           TextFormField(
             controller: name,
             textInputAction: TextInputAction.next,
+            textCapitalization: TextCapitalization.words,
+            autofillHints: const <String>[AutofillHints.name],
             maxLength: 80,
             decoration: const InputDecoration(
               labelText: 'Nom complet',
@@ -44,58 +46,34 @@ class BookingCustomerForm extends StatelessWidget {
             controller: phone,
             keyboardType: TextInputType.phone,
             textInputAction: TextInputAction.next,
+            autofillHints: const <String>[AutofillHints.telephoneNumber],
             maxLength: 20,
             decoration: const InputDecoration(
-              labelText: 'Telephone',
+              labelText: 'Téléphone (WhatsApp)',
               counterText: '',
             ),
             validator: (v) {
               final digits = (v ?? '').replaceAll(RegExp(r'\D'), '');
-              return digits.length < 8 ? 'Telephone invalide' : null;
+              return digits.length < 8 ? 'Téléphone invalide' : null;
             },
           ),
           const SizedBox(height: 12),
           TextFormField(
             controller: email,
             keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.next,
+            textInputAction: TextInputAction.done,
+            autofillHints: const <String>[AutofillHints.email],
             maxLength: 120,
             decoration: const InputDecoration(
               labelText: 'Email (facultatif)',
               counterText: '',
             ),
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: notes,
-            maxLines: 3,
-            maxLength: 500,
-            decoration: const InputDecoration(
-              labelText: 'Notes / demandes speciales',
-              counterText: '',
-            ),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: FloraColors.darkLight,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: FloraColors.grayWarm),
-            ),
-            child: const Row(
-              children: <Widget>[
-                Icon(Icons.info_outline, color: FloraColors.lime),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Un depot de 50 % est demande pour confirmer la reservation. '
-                    'Le solde se paie au salon.',
-                    style: TextStyle(color: FloraColors.cream),
-                  ),
-                ),
-              ],
-            ),
+            validator: (v) {
+              final value = (v ?? '').trim();
+              return value.isEmpty || _emailPattern.hasMatch(value)
+                  ? null
+                  : 'Adresse email invalide';
+            },
           ),
         ],
       ),
