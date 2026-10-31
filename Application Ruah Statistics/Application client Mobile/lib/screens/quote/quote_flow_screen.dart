@@ -43,7 +43,7 @@ class _QuoteFlowScreenState extends ConsumerState<QuoteFlowScreen> {
   Future<void> _next() async {
     if (_step == 0 && _mission == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selectionnez un type de mission')),
+        const SnackBar(content: Text('Sélectionnez un type de mission')),
       );
       return;
     }
@@ -142,7 +142,7 @@ class _QuoteFlowScreenState extends ConsumerState<QuoteFlowScreen> {
           Text('Type de mission',
               style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: AppSpacing.sm),
-          const Text('Selectionnez la nature de votre besoin.'),
+          const Text('Sélectionnez la nature de votre besoin.'),
           const SizedBox(height: AppSpacing.lg),
           for (final m in MissionType.values)
             Padding(
@@ -165,7 +165,7 @@ class _QuoteFlowScreenState extends ConsumerState<QuoteFlowScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Details du projet',
+            Text('Détails du projet',
                 style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: AppSpacing.md),
             TextFormField(
@@ -180,7 +180,7 @@ class _QuoteFlowScreenState extends ConsumerState<QuoteFlowScreen> {
             TextFormField(
               controller: _timeline,
               maxLength: 100,
-              decoration: const InputDecoration(labelText: 'Delais souhaites'),
+              decoration: const InputDecoration(labelText: 'Délais souhaités'),
               validator: (v) => InputSanitizer.validateOptionalText(v, max: 100),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -227,7 +227,7 @@ class _QuoteFlowScreenState extends ConsumerState<QuoteFlowScreen> {
               keyboardType: TextInputType.phone,
               maxLength: 20,
               decoration: const InputDecoration(
-                labelText: 'Numero WhatsApp *',
+                labelText: 'Numéro WhatsApp *',
                 hintText: '+225 ...',
               ),
               validator: InputSanitizer.validatePhone,
@@ -250,12 +250,12 @@ class _QuoteFlowScreenState extends ConsumerState<QuoteFlowScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Recapitulatif',
+          Text('Récapitulatif',
               style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: AppSpacing.md),
           _summaryRow('Mission', _mission?.label ?? '-'),
           _summaryRow('Budget', _budget?.label ?? '-'),
-          _summaryRow('Delais',
+          _summaryRow('Délais',
               _timeline.text.trim().isEmpty ? '-' : _timeline.text.trim()),
           _summaryRow('Description', _description.text.trim()),
           const Divider(height: 32),

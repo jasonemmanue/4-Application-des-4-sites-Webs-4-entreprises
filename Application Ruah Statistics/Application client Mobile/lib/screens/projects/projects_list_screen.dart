@@ -5,11 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../config/routes.dart';
 import '../../config/theme.dart';
 import '../../providers/providers.dart';
+import '../../services/input_sanitizer.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_state.dart';
 import '../../widgets/loading_state.dart';
 import '../../widgets/project_card.dart';
-import '../../services/input_sanitizer.dart';
+import '../../widgets/ruah_ui.dart';
 
 class ProjectsListScreen extends ConsumerWidget {
   const ProjectsListScreen({super.key});
@@ -19,45 +20,61 @@ class ProjectsListScreen extends ConsumerWidget {
     final filter = ref.watch(projectFilterProvider);
     final projects = ref.watch(projectsProvider(filter));
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Realisations'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.tune),
-            onPressed: () => _showFilters(context, ref),
-          ),
-        ],
-      ),
-      body: projects.when(
-        loading: () => const LoadingState(),
-        error: (e, _) => ErrorState(
-          message: InputSanitizer.safeErrorMessage(e),
-          onRetry: () => ref.invalidate(projectsProvider),
-        ),
-        data: (page) {
-          if (page.items.isEmpty) {
-            return const EmptyState(
-              title: 'Aucune realisation ne correspond',
-              subtitle: 'Essayez de retirer les filtres',
-              icon: Icons.folder_open,
-            );
-          }
-          return RefreshIndicator(
-            onRefresh: () async => ref.invalidate(projectsProvider),
-            child: ListView.separated(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              itemCount: page.items.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: AppSpacing.md),
-              itemBuilder: (_, i) => ProjectCard(
-                project: page.items[i],
-                onTap: () =>
-                    context.push('${AppRoutes.projects}/${page.items[i].slug}'),
-              ),
+    return SafeArea(
+      bottom: false,
+      child: RefreshIndicator(
+        onRefresh: () async => ref.invalidate(projectsProvider),
+        child: ListView(
+          padding: const EdgeInsets.only(bottom: AppSpacing.xl),
+          children: [
+            RuahHeader(
+              actions: [
+                RoundAction(
+                  icon: Icons.tune_rounded,
+                  tooltip: 'Filtrer les réalisations',
+                  onTap: () => _showFilters(context, ref),
+                ),
+              ],
             ),
-          );
-        },
+            const PageTitle(
+              title: 'Nos réalisations',
+              subtitle: 'Des missions menées en Afrique et à l\'international',
+            ),
+            const SizedBox(height: AppSpacing.md),
+            projects.when(
+              loading: () =>
+                  const SizedBox(height: 420, child: LoadingState()),
+              error: (e, _) => ErrorState(
+                message: InputSanitizer.safeErrorMessage(e),
+                onRetry: () => ref.invalidate(projectsProvider),
+              ),
+              data: (page) {
+                if (page.items.isEmpty) {
+                  return const EmptyState(
+                    title: 'Aucune réalisation ne correspond',
+                    subtitle: 'Essayez de retirer les filtres',
+                    icon: Icons.folder_open,
+                  );
+                }
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    children: [
+                      for (final p in page.items) ...[
+                        ProjectCard(
+                          project: p,
+                          onTap: () =>
+                              context.push('${AppRoutes.projects}/${p.slug}'),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -74,6 +91,7 @@ class ProjectsListScreen extends ConsumerWidget {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
       builder: (ctx) => Padding(
         padding: EdgeInsets.only(
           left: AppSpacing.lg,
@@ -85,7 +103,7 @@ class ProjectsListScreen extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Filtrer les realisations',
+            Text('Filtrer les réalisations',
                 style: Theme.of(ctx).textTheme.headlineSmall),
             const SizedBox(height: AppSpacing.md),
             TextField(
@@ -100,7 +118,7 @@ class ProjectsListScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.md),
             TextField(
               controller: year,
-              decoration: const InputDecoration(labelText: 'Annee'),
+              decoration: const InputDecoration(labelText: 'Année'),
               keyboardType: TextInputType.number,
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -113,7 +131,7 @@ class ProjectsListScreen extends ConsumerWidget {
                           const ProjectFilter();
                       Navigator.of(ctx).pop();
                     },
-                    child: const Text('Reinitialiser'),
+                    child: const Text('Réinitialiser'),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),

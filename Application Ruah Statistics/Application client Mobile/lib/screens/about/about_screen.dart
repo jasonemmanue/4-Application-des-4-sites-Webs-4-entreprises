@@ -14,7 +14,7 @@ class AboutScreen extends ConsumerWidget {
     final partners = ref.watch(partnersProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('A propos')),
+      appBar: AppBar(title: const Text('À propos')),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [

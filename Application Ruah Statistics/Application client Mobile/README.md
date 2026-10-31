@@ -33,8 +33,8 @@ L'administration (gestion des services, realisations, publications, temoignages,
 
 ## Design
 
-- **Palette** : Cyan (`#00BCD4`) / Charcoal (`#1A1A2E`) / Ambre accent
-- **Typographie** : Playfair Display (titres) + Inter (corps)
+- **Palette** : Sarcelle (`#0E8784`) / Bleu nuit (`#0B2340`) / Crème (`#FBF6EC`) / Ambre accent, voir `docs/REFONTE_UI_1.1.md`
+- **Typographie** : Plus Jakarta Sans
 - **Style** : Premium, professionnel, mode sombre par defaut
 - **Inspiration** : Site web existant adapte pour mobile
 

@@ -5,14 +5,15 @@ import 'package:go_router/go_router.dart';
 import '../../config/api_config.dart';
 import '../../config/routes.dart';
 import '../../config/theme.dart';
+import '../../providers/providers.dart';
 import '../../services/client_profile.dart';
 import '../../services/whatsapp_service.dart';
 
 const _whatsapp = WhatsAppService();
 
-/// Profil — style Airbnb, palette cyan / charcoal de Ruah : carte
-/// d'identité, deux cartes illustrées, une carte photo large, puis les
-/// rubriques (icône + chevron).
+/// Profil, ouvert depuis l'en-tête de l'accueil : carte d'identité, deux
+/// cartes illustrées, une carte photo large, puis les rubriques (icône +
+/// chevron) et le choix du thème.
 ///
 /// Il n'y a pas de compte : le nom affiché est celui de la dernière
 /// demande de devis envoyée depuis l'appareil, « Visiteur » sinon.
@@ -33,16 +34,14 @@ class MoreScreen extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(20, 12, 20, AppSpacing.xl),
           children: [
             Align(
-              alignment: Alignment.centerRight,
+              alignment: Alignment.centerLeft,
               child: _RoundIconButton(
                 palette: p,
-                icon: Icons.notifications_none_rounded,
-                tooltip: 'Notifications',
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Le cabinet vous répond sur WhatsApp.'),
-                  ),
-                ),
+                icon: Icons.arrow_back_rounded,
+                tooltip: 'Retour',
+                onTap: () => context.canPop()
+                    ? context.pop()
+                    : context.go(AppRoutes.home),
               ),
             ),
             Text(
@@ -93,6 +92,12 @@ class MoreScreen extends ConsumerWidget {
             Divider(color: p.border, height: 1),
             _Tile(
               palette: p,
+              icon: Icons.menu_book_outlined,
+              label: 'Publications',
+              onTap: () => context.push(AppRoutes.publications),
+            ),
+            _Tile(
+              palette: p,
               icon: Icons.groups_outlined,
               label: 'Notre équipe',
               onTap: () => context.push(AppRoutes.team),
@@ -118,8 +123,23 @@ class MoreScreen extends ConsumerWidget {
             _Tile(
               palette: p,
               icon: Icons.mail_outline,
-              label: 'Contacter le cabinet',
-              onTap: () => context.push(AppRoutes.contact),
+              label: 'Écrire au cabinet',
+              onTap: () => context.push(AppRoutes.message),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              secondary: Icon(Icons.dark_mode_outlined, color: p.fg),
+              title: Text(
+                'Mode sombre',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: p.fg,
+                ),
+              ),
+              value: isDark,
+              onChanged: (on) => ref.read(themeModeProvider.notifier).state =
+                  on ? ThemeMode.dark : ThemeMode.light,
             ),
             Divider(color: p.border, height: 1),
             const SizedBox(height: AppSpacing.xl),
@@ -159,7 +179,7 @@ class _Palette {
   Color get sunken => isDark ? AppColors.charcoal700 : const Color(0xFFEEF0F4);
   Color get fg => isDark ? Colors.white : AppColors.charcoal900;
   Color get muted => isDark ? Colors.white70 : Colors.black54;
-  Color get border => isDark ? AppColors.charcoal700 : const Color(0xFFE5E7EB);
+  Color get border => isDark ? AppColors.charcoal700 : AppColors.lightBorder;
 
   /// Grand rayon + ombre douce. En sombre l'ombre se perd sur le charcoal :
   /// un contour fin prend le relais.
@@ -234,8 +254,7 @@ class _RoundIconButton extends StatelessWidget {
   }
 }
 
-/// Avatar cyan pâle + nom. Le cyan remplace le vert d'Airbnb : c'est la
-/// couleur de la marque.
+/// Avatar sarcelle pâle + nom.
 class _IdentityCard extends StatelessWidget {
   const _IdentityCard({required this.palette, required this.profile});
   final _Palette palette;
@@ -306,7 +325,7 @@ class _IdentityCard extends StatelessWidget {
 }
 
 /// Carte illustrée : le site du cabinet n'a qu'une photo, les deux petites
-/// cartes portent donc une vignette en dégradé cyan de la marque.
+/// cartes portent donc une vignette en dégradé de la marque.
 class _TileCard extends StatelessWidget {
   const _TileCard({
     required this.palette,

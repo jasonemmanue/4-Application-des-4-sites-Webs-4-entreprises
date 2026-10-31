@@ -108,7 +108,7 @@ class PaymentResultScreen extends StatelessWidget {
             if (!success)
               OutlinedButton(
                 onPressed: () => context.go(AppRoutes.payment),
-                child: const Text('Reessayer'),
+                child: const Text('Réessayer'),
               )
             else
               OutlinedButton(

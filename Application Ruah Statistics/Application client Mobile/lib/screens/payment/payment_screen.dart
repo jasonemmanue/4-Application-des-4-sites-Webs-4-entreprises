@@ -277,7 +277,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   controller: _descCtrl,
                   maxLength: 200,
                   decoration: const InputDecoration(
-                    hintText: 'Ex: Etude de marche - Ref DV2024-042',
+                    hintText: 'Ex : Étude de marché - Réf DV2024-042',
                     prefixIcon: Icon(Icons.description_outlined),
                   ),
                   validator: InputSanitizer.validateOptionalText,

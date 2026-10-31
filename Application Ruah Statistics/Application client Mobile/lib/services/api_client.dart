@@ -87,17 +87,17 @@ class ApiClient {
       if (raw != null && raw.length < 200 && !_looksInternal(raw)) return raw;
     }
 
-    if (code == 429) return 'Trop de requetes. Reessayez dans quelques instants.';
-    if (code == 401) return 'Session expiree.';
-    if (code == 403) return 'Acces refuse.';
+    if (code == 429) return 'Trop de requêtes. Réessayez dans quelques instants.';
+    if (code == 401) return 'Session expirée.';
+    if (code == 403) return 'Accès refusé.';
     if (code == 404) return 'Ressource introuvable.';
-    if (code == 422) return 'Donnees invalides. Verifiez votre saisie.';
-    if (code != null && code >= 500) return 'Erreur serveur. Reessayez plus tard.';
+    if (code == 422) return 'Données invalides. Vérifiez votre saisie.';
+    if (code != null && code >= 500) return 'Erreur serveur. Réessayez plus tard.';
 
     if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout ||
         e.type == DioExceptionType.sendTimeout) {
-      return 'Delai depasse. Verifiez votre connexion.';
+      return 'Délai dépassé. Vérifiez votre connexion.';
     }
     if (e.type == DioExceptionType.connectionError) {
       return 'Impossible de joindre le serveur.';
@@ -178,8 +178,8 @@ class ApiClient {
       '/articles',
       query: {
         'page': page,
-        if (type == ArticleType.whitepaper) 'article_type': 'whitepaper',
-        if (type == ArticleType.article) 'article_type': 'article',
+        if (type == ArticleType.whitepaper) 'type': 'whitepaper',
+        if (type == ArticleType.article) 'type': 'article',
       },
     );
     return _extractPage(data, Article.fromJson);

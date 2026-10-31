@@ -52,7 +52,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
       _resetForm();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Message envoye. Nous vous repondrons vite.')),
+        const SnackBar(content: Text('Message envoyé. Nous vous répondrons vite.')),
       );
     } catch (e) {
       if (!mounted) return;
@@ -71,7 +71,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Confirmer via WhatsApp ?'),
         content: const Text(
-          "Nous pouvons ouvrir WhatsApp avec un recapitulatif "
+          "Nous pouvons ouvrir WhatsApp avec un récapitulatif "
           "pour une reponse plus rapide.",
         ),
         actions: [
@@ -104,7 +104,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
   Widget build(BuildContext context) {
     final ws = ref.watch(whatsAppServiceProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Nous contacter')),
+      appBar: AppBar(title: const Text('Écrire au cabinet')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
@@ -150,7 +150,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                     keyboardType: TextInputType.phone,
                     maxLength: 20,
                     decoration: const InputDecoration(
-                      labelText: 'Numero WhatsApp *',
+                      labelText: 'Numéro WhatsApp *',
                       hintText: '+225 ...',
                     ),
                     validator: InputSanitizer.validatePhone,

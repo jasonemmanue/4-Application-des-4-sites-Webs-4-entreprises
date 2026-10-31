@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +6,7 @@ import '../../providers/providers.dart';
 import '../../widgets/error_state.dart';
 import '../../services/input_sanitizer.dart';
 import '../../widgets/loading_state.dart';
+import '../../widgets/ruah_ui.dart';
 
 class ConsultantDetailScreen extends ConsumerWidget {
   final String id;
@@ -38,17 +38,7 @@ class ConsultantDetailScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Center(
-                child: CircleAvatar(
-                  radius: 60,
-                  backgroundColor: AppColors.charcoal700,
-                  backgroundImage: m.photo != null
-                      ? CachedNetworkImageProvider(m.photo!)
-                      : null,
-                  child: m.photo == null
-                      ? const Icon(Icons.person,
-                          color: Colors.white70, size: 60)
-                      : null,
-                ),
+                child: RemoteAvatar(url: m.photo, name: m.name, radius: 60),
               ),
               const SizedBox(height: AppSpacing.md),
               Center(

@@ -2,26 +2,33 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
-  static const Color brand400 = Color(0xFF26C6DA);
-  static const Color brand500 = Color(0xFF00BCD4);
-  static const Color brand600 = Color(0xFF00ACC1);
-  static const Color brand700 = Color(0xFF0097A7);
-  static const Color brand800 = Color(0xFF00838F);
+  static const Color brand400 = Color(0xFF12908C);
+  static const Color brand500 = Color(0xFF0E8784);
+  static const Color brand600 = Color(0xFF0B7A77);
+  static const Color brand700 = Color(0xFF096B69);
+  static const Color brand800 = Color(0xFF07595A);
+  static const Color brandTint = Color(0xFFDDF0EE);
 
-  static const Color charcoal900 = Color(0xFF0F0F1A);
-  static const Color charcoal800 = Color(0xFF1A1A2E);
-  static const Color charcoal700 = Color(0xFF272B45);
-  static const Color charcoal600 = Color(0xFF3B3F5A);
+  static const Color navy = Color(0xFF0C2B4B);
 
-  static const Color accent500 = Color(0xFFFFB300);
+  // Les noms « charcoal » restent : tous les écrans les emploient. Ce sont
+  // désormais les bleus nuit de la charte.
+  static const Color charcoal900 = Color(0xFF0B2340);
+  static const Color charcoal800 = Color(0xFF12304F);
+  static const Color charcoal700 = Color(0xFF1D3E60);
+  static const Color charcoal600 = Color(0xFF2C4F72);
 
-  static const Color lightBg = Color(0xFFF7F8FB);
+  static const Color accent500 = Color(0xFFF39C1F);
+
+  static const Color lightBg = Color(0xFFFBF6EC);
   static const Color lightSurface = Colors.white;
+  static const Color lightBorder = Color(0xFFEDE6D8);
+  static const Color lightMuted = Color(0xFF52606D);
 
   static const LinearGradient heroGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF0A0A15), charcoal800, charcoal700, brand800],
+    colors: [charcoal900, charcoal800, charcoal700, brand800],
   );
 
   static const LinearGradient ctaGradient = LinearGradient(
@@ -50,37 +57,37 @@ class AppTheme {
     final Color base =
         brightness == Brightness.dark ? Colors.white : AppColors.charcoal900;
     final Color muted =
-        brightness == Brightness.dark ? Colors.white70 : Colors.black54;
+        brightness == Brightness.dark ? Colors.white70 : AppColors.lightMuted;
 
-    final TextTheme playfair = GoogleFonts.playfairDisplayTextTheme();
-    final TextTheme inter = GoogleFonts.interTextTheme();
+    final TextTheme headings = GoogleFonts.plusJakartaSansTextTheme();
+    final TextTheme inter = GoogleFonts.plusJakartaSansTextTheme();
 
     return TextTheme(
-      displayLarge: playfair.displayLarge?.copyWith(
+      displayLarge: headings.displayLarge?.copyWith(
         color: base,
         fontWeight: FontWeight.w700,
       ),
-      displayMedium: playfair.displayMedium?.copyWith(
+      displayMedium: headings.displayMedium?.copyWith(
         color: base,
         fontWeight: FontWeight.w700,
       ),
-      displaySmall: playfair.displaySmall?.copyWith(
+      displaySmall: headings.displaySmall?.copyWith(
         color: base,
         fontWeight: FontWeight.w700,
       ),
-      headlineLarge: playfair.headlineLarge?.copyWith(
+      headlineLarge: headings.headlineLarge?.copyWith(
         color: base,
         fontWeight: FontWeight.w700,
       ),
-      headlineMedium: playfair.headlineMedium?.copyWith(
+      headlineMedium: headings.headlineMedium?.copyWith(
         color: base,
         fontWeight: FontWeight.w600,
       ),
-      headlineSmall: playfair.headlineSmall?.copyWith(
+      headlineSmall: headings.headlineSmall?.copyWith(
         color: base,
         fontWeight: FontWeight.w600,
       ),
-      titleLarge: playfair.titleLarge?.copyWith(
+      titleLarge: headings.titleLarge?.copyWith(
         color: base,
         fontWeight: FontWeight.w600,
       ),
@@ -190,7 +197,7 @@ class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.card),
-          side: const BorderSide(color: Color(0xFFE5E7EB)),
+          side: const BorderSide(color: AppColors.lightBorder),
         ),
         margin: EdgeInsets.zero,
       ),
@@ -201,13 +208,13 @@ class AppTheme {
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: AppColors.lightSurface,
         selectedItemColor: AppColors.brand600,
-        unselectedItemColor: Colors.black54,
+        unselectedItemColor: AppColors.lightMuted,
         type: BottomNavigationBarType.fixed,
         showUnselectedLabels: true,
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: const Color(0xFFEEF2F5),
-        selectedColor: AppColors.brand500,
+        backgroundColor: AppColors.brandTint,
+        selectedColor: AppColors.brandTint,
         labelStyle: text.labelMedium!,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(999),
@@ -215,7 +222,7 @@ class AppTheme {
         side: BorderSide.none,
       ),
       dividerTheme: const DividerThemeData(
-        color: Color(0xFFE5E7EB),
+        color: AppColors.lightBorder,
         space: 1,
         thickness: 1,
       ),
@@ -228,7 +235,7 @@ class AppTheme {
         : Colors.white;
     final Color border = brightness == Brightness.dark
         ? AppColors.charcoal700
-        : const Color(0xFFE5E7EB);
+        : AppColors.lightBorder;
     return InputDecorationTheme(
       filled: true,
       fillColor: fill,
@@ -247,7 +254,7 @@ class AppTheme {
         borderSide: const BorderSide(color: AppColors.brand500, width: 1.5),
       ),
       labelStyle: TextStyle(
-        color: brightness == Brightness.dark ? Colors.white70 : Colors.black54,
+        color: brightness == Brightness.dark ? Colors.white70 : AppColors.lightMuted,
       ),
     );
   }

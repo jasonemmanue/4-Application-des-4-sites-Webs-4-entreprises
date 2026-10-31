@@ -29,7 +29,7 @@ class ErrorState extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Reessayer'),
+                label: const Text('Réessayer'),
               ),
             ],
           ],

@@ -1,8 +1,8 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../config/theme.dart';
 import '../models/testimonial.dart';
+import 'ruah_ui.dart';
 
 class TestimonialCard extends StatelessWidget {
   final Testimonial testimonial;
@@ -30,19 +30,10 @@ class TestimonialCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             Row(
               children: [
-                Semantics(
-                  label: 'Photo de ${testimonial.author}',
-                  child: CircleAvatar(
-                    radius: 20,
-                    backgroundColor: AppColors.charcoal700,
-                    backgroundImage: testimonial.photo != null
-                        ? CachedNetworkImageProvider(testimonial.photo!)
-                        : null,
-                    child: testimonial.photo == null
-                        ? const Icon(Icons.person,
-                            color: Colors.white70, size: 18)
-                        : null,
-                  ),
+                RemoteAvatar(
+                  url: testimonial.photo,
+                  name: testimonial.author,
+                  radius: 20,
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(

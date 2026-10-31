@@ -64,18 +64,13 @@ class _Body extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (service.summary != null) ...[
-                  Text(service.summary!,
-                      style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: AppSpacing.md),
-                ],
                 if (service.description != null) ...[
                   Text(service.description!,
                       style: Theme.of(context).textTheme.bodyMedium),
                   const SizedBox(height: AppSpacing.lg),
                 ],
                 if (service.methodology != null) ...[
-                  Text('Methodologie',
+                  Text('Méthodologie',
                       style: Theme.of(context).textTheme.headlineSmall),
                   const SizedBox(height: AppSpacing.sm),
                   Text(service.methodology!,

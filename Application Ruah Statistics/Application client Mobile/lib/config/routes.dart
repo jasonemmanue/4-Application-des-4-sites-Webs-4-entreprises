@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../screens/about/about_screen.dart';
+import '../screens/contact/contact_hub_screen.dart';
 import '../screens/contact/contact_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/home/search_screen.dart';
@@ -37,7 +38,8 @@ class AppRoutes {
   static const String about = '/more/about';
   static const String videos = '/more/videos';
   static const String testimonials = '/more/testimonials';
-  static const String contact = '/more/contact';
+  static const String contact = '/contact';
+  static const String message = '/more/message';
   static const String quote = '/more/quote';
   static const String quoteConfirmation = '/more/quote/confirmation';
   static const String payment = '/more/payment';
@@ -108,6 +110,11 @@ final GoRouter appRouter = GoRouter(
           ],
         ),
         GoRoute(
+          path: AppRoutes.contact,
+          pageBuilder: (context, state) =>
+              const NoTransitionPage(child: ContactHubScreen()),
+        ),
+        GoRoute(
           path: AppRoutes.more,
           pageBuilder: (context, state) =>
               const NoTransitionPage(child: MoreScreen()),
@@ -142,7 +149,7 @@ final GoRouter appRouter = GoRouter(
               builder: (context, state) => const TestimonialsScreen(),
             ),
             GoRoute(
-              path: 'contact',
+              path: 'message',
               parentNavigatorKey: rootNavigatorKey,
               builder: (context, state) => const ContactScreen(),
             ),

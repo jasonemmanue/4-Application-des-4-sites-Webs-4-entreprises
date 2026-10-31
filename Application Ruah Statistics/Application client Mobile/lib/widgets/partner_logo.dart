@@ -18,7 +18,7 @@ class PartnerLogo extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(AppRadius.small),
-        border: Border.all(color: AppColors.charcoal700),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       alignment: Alignment.center,
       child: Semantics(

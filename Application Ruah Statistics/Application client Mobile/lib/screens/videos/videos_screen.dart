@@ -18,7 +18,7 @@ class VideosScreen extends ConsumerWidget {
     final ws = ref.watch(whatsAppServiceProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Videos')),
+      appBar: AppBar(title: const Text('Vidéos')),
       body: videos.when(
         loading: () => const LoadingState(),
         error: (e, _) => ErrorState(
@@ -28,7 +28,7 @@ class VideosScreen extends ConsumerWidget {
         data: (items) {
           if (items.isEmpty) {
             return const EmptyState(
-              title: 'Aucune video',
+              title: 'Aucune vidéo',
               icon: Icons.play_circle_outline,
             );
           }

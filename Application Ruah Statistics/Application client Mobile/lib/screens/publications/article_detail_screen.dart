@@ -133,7 +133,7 @@ class _Body extends StatelessWidget {
                       onPressed: () =>
                           DownloadModal.show(context, article),
                       icon: const Icon(Icons.download),
-                      label: const Text('Telecharger le livre blanc'),
+                      label: const Text('Télécharger le livre blanc'),
                     ),
                   ),
                 ],

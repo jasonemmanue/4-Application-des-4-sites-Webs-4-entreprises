@@ -16,7 +16,7 @@ final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
 final whatsAppServiceProvider =
     Provider<WhatsAppService>((ref) => const WhatsAppService());
 
-final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.dark);
+final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.light);
 
 final servicesProvider = FutureProvider<List<Service>>((ref) async {
   return ref.watch(apiClientProvider).fetchServices();

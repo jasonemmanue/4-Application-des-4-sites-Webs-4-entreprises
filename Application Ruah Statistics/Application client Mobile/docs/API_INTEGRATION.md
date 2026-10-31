@@ -42,6 +42,9 @@ aux tables `contacts`, `testimonials` et `article_downloads`.
 
 ## 1. Endpoints testés — statut
 
+Dernière vérification en production : 2026-10-31, voir
+`test/api_contract_live_test.dart`.
+
 | Endpoint | Méthode | Statut | Notes |
 |---|---|---|---|
 | `/services` | GET | ✅ 200 | 5 services seedés |
@@ -55,7 +58,7 @@ aux tables `contacts`, `testimonials` et `article_downloads`.
 | `/testimonials/submit` | POST | ✅ | Schéma `TestimonialSubmit` |
 | `/partners` | GET | ✅ 200 | 6 partenaires |
 | `/videos` | GET | ✅ 200 | 2 vidéos |
-| `/articles` | GET | ✅ 200 | Wrapper `{items:[...]}` |
+| `/articles` | GET | ✅ 200 | Wrapper `{items:[...]}`. Filtre : `type=article\|whitepaper` |
 | `/articles/{slug}` | GET | ✅ 200 | — |
 | `/articles/{id}/download` | POST | ✅ | Schéma `DownloadRequest` (WhatsApp) |
 | `/leads/quote-request` | POST | ✅ | Schéma `QuoteRequest` (WhatsApp) |
@@ -101,6 +104,24 @@ modèles Dart pour éviter de casser les widgets.
 - Écran **Devis** (étape 3) : champs Email et Téléphone supprimés, remplacés par un unique « Numéro WhatsApp * »
 - Écran **Témoignages** (bottom sheet de soumission) : ajout du champ « Numéro WhatsApp * »
 - Modal **Téléchargement livre blanc** : champ Email remplacé par « Numéro WhatsApp * » ; nom devient optionnel
+
+### 2.4 Images et back-office
+
+L'admin (`admin.ruah-statistics.com`) et l'app lisent la même base. Un contenu
+modifié dans l'admin apparaît dans l'app au rechargement suivant : les routes
+publiques ne passent pas par un cache.
+
+| Donnée | Champ | Sans valeur, l'app affiche |
+|---|---|---|
+| Service | `image_url` | Dégradé + icône |
+| Réalisation | `images[0]`, sinon `client_logo_url` | Dégradé + icône |
+| Article | `cover_image_url` | Pas d'image |
+| Consultant, témoignage | `photo_url`, `client_photo_url` | Initiales |
+| Partenaire | `logo_url` | Nom du partenaire |
+| Vidéo | `thumbnail_url`, sinon miniature YouTube | Fond uni + bouton lecture |
+
+`backend/patch_media.py` remplit au démarrage de l'API les images vides des
+services, réalisations et articles, sans jamais écraser une image de l'admin.
 
 ## 3. Configuration Docker
 

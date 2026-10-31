@@ -10,7 +10,7 @@ extension MissionTypeX on MissionType {
       };
 
   String get label => switch (this) {
-        MissionType.study => 'Etude',
+        MissionType.study => 'Étude',
         MissionType.consulting => 'Conseil',
         MissionType.training => 'Formation',
         MissionType.audit => 'Audit',
@@ -19,11 +19,11 @@ extension MissionTypeX on MissionType {
 
   String get description => switch (this) {
         MissionType.study =>
-          "Etude quantitative, qualitative, sectorielle, de marche",
+          "Étude quantitative, qualitative, sectorielle, de marché",
         MissionType.consulting =>
-          "Accompagnement strategique, organisationnel, operationnel",
-        MissionType.training => "Renforcement de capacites, seminaires, coaching",
-        MissionType.audit => "Audit institutionnel, evaluation de programmes",
+          "Accompagnement stratégique, organisationnel, opérationnel",
+        MissionType.training => "Renforcement de capacités, séminaires, coaching",
+        MissionType.audit => "Audit institutionnel, évaluation de programmes",
         MissionType.other => "Autre besoin d'expertise",
       };
 }

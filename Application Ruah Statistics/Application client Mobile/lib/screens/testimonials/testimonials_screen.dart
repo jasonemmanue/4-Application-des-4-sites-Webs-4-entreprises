@@ -22,7 +22,7 @@ class TestimonialsScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showSubmitSheet(context, ref),
         icon: const Icon(Icons.rate_review_outlined),
-        label: const Text('Laisser un temoignage'),
+        label: const Text('Laisser un témoignage'),
         backgroundColor: AppColors.brand500,
         foregroundColor: Colors.white,
       ),
@@ -84,7 +84,7 @@ class TestimonialsScreen extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Votre temoignage',
+                  Text('Votre témoignage',
                       style: Theme.of(ctx).textTheme.headlineSmall),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
@@ -103,10 +103,10 @@ class TestimonialsScreen extends ConsumerWidget {
                     controller: whatsapp,
                     keyboardType: TextInputType.phone,
                     decoration: const InputDecoration(
-                        labelText: 'Numero WhatsApp *',
+                        labelText: 'Numéro WhatsApp *',
                         hintText: '+225 ...'),
                     validator: (v) => (v == null || v.trim().length < 8)
-                        ? 'Numero invalide'
+                        ? 'Numéro invalide'
                         : null,
                   ),
                   const SizedBox(height: AppSpacing.sm),
@@ -178,7 +178,7 @@ class TestimonialsScreen extends ConsumerWidget {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text(
-                                        'Merci ! Votre temoignage est en cours de moderation.'),
+                                        'Merci ! Votre témoignage est en cours de modération.'),
                                   ),
                                 );
                               } catch (e) {

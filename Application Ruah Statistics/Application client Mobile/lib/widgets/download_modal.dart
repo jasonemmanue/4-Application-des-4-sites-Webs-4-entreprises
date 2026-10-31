@@ -111,7 +111,7 @@ class _DownloadModalState extends ConsumerState<DownloadModal> {
                   ),
                 ),
               ),
-              Text('Telecharger le livre blanc',
+              Text('Télécharger le livre blanc',
                   style: Theme.of(context).textTheme.headlineSmall),
               const SizedBox(height: AppSpacing.xs),
               Text(
@@ -131,7 +131,7 @@ class _DownloadModalState extends ConsumerState<DownloadModal> {
                 keyboardType: TextInputType.phone,
                 maxLength: 20,
                 decoration: const InputDecoration(
-                  labelText: 'Numero WhatsApp *',
+                  labelText: 'Numéro WhatsApp *',
                   hintText: '+225 ...',
                 ),
                 validator: InputSanitizer.validatePhone,

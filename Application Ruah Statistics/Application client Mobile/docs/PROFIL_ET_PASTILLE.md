@@ -1,5 +1,8 @@
 # Profil et pastille « Devis sans engagement » — Ruah Statistics
 
+> Version 1.1 : la pastille est retirée et le Profil s'ouvre depuis l'accueil.
+> Voir `REFONTE_UI_1.1.md`. Ce document garde l'historique.
+
 Refonte : 2026-10-06. Reprise de trois écrans d'Airbnb (Profil, accueil avec
 pastille flottante, pop-up d'information), adaptés au cabinet : cyan /
 charcoal, thèmes clair et sombre, aucune transaction en ligne.

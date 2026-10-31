@@ -25,7 +25,7 @@ class VideoCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Semantics(
-              label: 'Miniature de la video ${video.title}',
+              label: 'Miniature de la vidéo ${video.title}',
               child: AspectRatio(
                 aspectRatio: 16 / 9,
                 child: Stack(

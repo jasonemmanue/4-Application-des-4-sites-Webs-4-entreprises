@@ -78,32 +78,35 @@ ruah_statistics_mobile/
 
 ### Palette de couleurs (heritee du site web)
 
+Refonte 1.1 : voir `docs/REFONTE_UI_1.1.md`.
+
 | Token | Hex | Usage |
 |-------|-----|-------|
-| brand-500 | `#00BCD4` | Couleur primaire (cyan) |
-| brand-400 | `#26C6DA` | Variante claire |
-| brand-600 | `#00ACC1` | Variante foncee |
-| brand-700 | `#0097A7` | Boutons presses |
-| brand-800 | `#00838F` | Gradients |
-| charcoal-900 | `#0F0F1A` | Fond principal (mode sombre) |
-| charcoal-800 | `#1A1A2E` | Fond cartes (mode sombre) |
-| charcoal-700 | `#272B45` | Fond eleve (mode sombre) |
-| accent-500 | `#FFB300` | Accent ambre (usage modere) |
+| brand-500 | `#0E8784` | Couleur primaire (sarcelle) |
+| brand-400 | `#12908C` | Variante claire |
+| brand-600 | `#0B7A77` | Variante foncee, onglet actif |
+| brand-700 | `#096B69` | Boutons presses |
+| brand-800 | `#07595A` | Gradients |
+| brandTint | `#DDF0EE` | Pastilles d'icones |
+| charcoal-900 | `#0B2340` | Titres, fond principal (mode sombre) |
+| charcoal-800 | `#12304F` | Fond cartes (mode sombre) |
+| charcoal-700 | `#1D3E60` | Fond eleve (mode sombre) |
+| lightBg | `#FBF6EC` | Fond creme (mode clair) |
+| accent-500 | `#F39C1F` | Accent ambre (usage modere) |
 
 ### Gradients
 
-- **Hero** : `#0A0A15 -> #1A1A2E -> #272B45 -> #00838F` (diagonal 135deg)
-- **CTA** : `#00838F -> #00BCD4 -> #26C6DA` (diagonal 135deg)
+- **Hero** : `#0B2340 -> #12304F -> #1D3E60 -> #07595A` (diagonal 135deg)
+- **CTA** : `#07595A -> #0E8784 -> #12908C` (diagonal 135deg)
 
 ### Typographie
 
-- **Titres** : Playfair Display (serif, elegance professionnelle)
-- **Corps** : Inter (sans-serif, lisibilite)
+- **Titres et corps** : Plus Jakarta Sans
 
 ### Principes UI
 
 - **Style** : Premium, professionnel, sobre — adapte a un cabinet de conseil
-- **Mode sombre par defaut** avec option mode clair
+- **Mode clair par defaut** avec option mode sombre dans Profil
 - **Glassmorphism** pour les cartes sur fonds sombres
 - **Animations** : Transitions fluides, compteurs animes au scroll, apparitions progressives
 - **Coins arrondis** : 12-16px pour les cartes
@@ -111,17 +114,18 @@ ruah_statistics_mobile/
 
 ## Ecrans et navigation
 
-### Bottom Navigation Bar (5 onglets)
+### Bottom Navigation Bar (4 onglets)
 
-1. **Accueil** — Chiffres cles animes, services vedettes, realisations recentes, temoignages
+1. **Accueil** — Logo en haut a gauche, recherche, filtres, expertises, projet a la une, chiffres cles, Explorer (Publications, Temoignages, Equipe, Videos)
 2. **Services** — Catalogue des domaines d'expertise avec fiches detaillees
-3. **Realisations** — Portfolio de projets filtrable (secteur, pays, annee)
-4. **Publications** — Articles et livres blancs avec telechargement (capture email)
-5. **Profil** (ex-« Plus ») — carte d'identite (nom + entreprise de la derniere demande de devis, « Visiteur » sinon), cartes Demander un devis / Nos realisations, carte large Parler a un consultant (WhatsApp), puis Equipe, A propos, Videos, Temoignages, Contact
+3. **Projets** — Portfolio de projets filtrable (secteur, pays, annee)
+4. **Contact** — Demande de devis sur une page (`POST /leads/quote-request`), WhatsApp
+
+**Profil** s'ouvre depuis l'en-tete de l'accueil — carte d'identite (nom + entreprise de la derniere demande de devis, « Visiteur » sinon), cartes Demander un devis / Nos realisations, carte large Parler a un consultant (WhatsApp), puis Equipe, A propos, Videos, Temoignages, Contact
 
 ### Profil et pastille « Devis sans engagement » (2026-10-06)
 
-Voir `docs/PROFIL_ET_PASTILLE.md`. Pastille flottante → pop-up (navigateur racine) qui mene au devis. Elle remplace « Consultation gratuite », que le site ne promet nulle part.
+Voir `docs/PROFIL_ET_PASTILLE.md`. La pastille a ete retiree par la refonte 1.1 : l'onglet Contact joue ce role. Ne pas reintroduire « Consultation gratuite », que le site ne promet nulle part.
 
 ### Ecrans detailles
 
@@ -154,7 +158,7 @@ Tous les endpoints GET publics du backend existant :
 | `GET /api/v1/projects?page=&sector=&country=&year=` | Realisations (paginees, filtrees) |
 | `GET /api/v1/projects/{slug}` | Detail d'une realisation |
 | `GET /api/v1/team` | Liste des consultants |
-| `GET /api/v1/articles?page=&type=` | Articles et livres blancs |
+| `GET /api/v1/articles?page=&type=` | Articles et livres blancs (`type`, pas `article_type`) |
 | `GET /api/v1/articles/{slug}` | Detail d'un article |
 | `POST /api/v1/articles/{id}/download` | Telechargement livre blanc (email requis) |
 | `GET /api/v1/videos` | Videos |
@@ -164,7 +168,6 @@ Tous les endpoints GET publics du backend existant :
 | `GET /api/v1/key-figures` | Chiffres cles |
 | `POST /api/v1/leads/quote-request` | Envoi de demande de devis |
 | `POST /api/v1/contact` | Envoi de message de contact |
-| `GET /api/v1/settings` | Parametres de l'entreprise |
 
 ## Notifications
 
@@ -225,22 +228,18 @@ dev_dependencies:
 ## Structure de navigation
 
 ```
-BottomNavigationBar
+Barre basse (MainScaffold)
   |-- Accueil (HomeScreen)
+  |     |-- PublicationsScreen -> ArticleDetailScreen, DownloadModal
+  |     |-- TestimonialsScreen, TeamScreen -> ConsultantDetailScreen, VideosScreen
+  |     |-- Profil (MoreScreen)
+  |           |-- AboutScreen, PaymentScreen
+  |           |-- QuoteFlowScreen (4 etapes) -> QuoteConfirmationScreen
+  |           |-- ContactScreen (message simple)
   |-- Services (ServicesListScreen)
   |     |-- ServiceDetailScreen
-  |-- Realisations (ProjectsListScreen)
+  |-- Projets (ProjectsListScreen)
   |     |-- ProjectDetailScreen
-  |-- Publications (PublicationsScreen)
-  |     |-- ArticleDetailScreen
-  |     |-- DownloadModal (livres blancs)
-  |-- Plus (MoreScreen)
-        |-- EquipeScreen
-        |     |-- ConsultantDetailScreen
-        |-- AProposScreen
-        |-- VideosScreen
-        |-- TemoignagesScreen
-        |-- ContactScreen
-        |-- DevisScreen (4 etapes)
-              |-- DevisConfirmationScreen
+  |-- Contact (ContactHubScreen)
+        |-- QuoteConfirmationScreen, ContactScreen
 ```

@@ -7,7 +7,7 @@ class TeamMember {
   final String? photoUrl;
   final List<String> specialties;
   final int? experienceYears;
-  final String? education;
+  final List<String> education;
   final String? linkedinUrl;
   final String? bio;
   final int? order;
@@ -20,7 +20,7 @@ class TeamMember {
     this.photoUrl,
     this.specialties = const [],
     this.experienceYears,
-    this.education,
+    this.education = const [],
     this.linkedinUrl,
     this.bio,
     this.order,
@@ -42,7 +42,11 @@ class TeamMember {
           (json['specialties'] as List?)?.map((e) => e.toString()).toList() ??
               const [],
       experienceYears: json['experience_years'] as int?,
-      education: json['education'] as String?,
+      education: switch (json['education']) {
+        final List list => list.map((e) => e.toString()).toList(),
+        final String text when text.isNotEmpty => [text],
+        _ => const [],
+      },
       linkedinUrl: json['linkedin_url'] as String?,
       bio: json['bio'] as String?,
       order: json['order'] as int?,

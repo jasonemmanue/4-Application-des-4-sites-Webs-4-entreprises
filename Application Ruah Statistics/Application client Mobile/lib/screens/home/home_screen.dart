@@ -1,27 +1,46 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../config/routes.dart';
 import '../../config/theme.dart';
+import '../../models/key_figure.dart';
 import '../../models/project.dart';
 import '../../models/service.dart';
 import '../../providers/providers.dart';
-import '../../services/api_client.dart' show PagedResult;
+import '../../services/client_profile.dart';
 import '../../services/input_sanitizer.dart';
+import '../../widgets/animated_counter.dart';
 import '../../widgets/error_state.dart';
 import '../../widgets/loading_state.dart';
-import '../../widgets/quote_notice.dart';
+import '../../widgets/ruah_ui.dart';
 
-/// Categorie active dans les chips « Tout / Services / Realisations » — pilote
-/// ce qui est visible dans le feed d'accueil (Airbnb-like).
-enum _HomeCategory { all, services, projects }
+class _Category {
+  const _Category(this.label, this.icon, this.keyword);
+  final String label;
+  final IconData? icon;
 
-/// Ecran d'accueil, refondu facon Airbnb : barre pill de recherche en tete,
-/// chips categories, sections « Titre → » avec grille horizontale de cartes
-/// carrees, pill flottante d'appel a l'action, tout en gardant la palette
-/// cyan / charcoal de la marque Ruah.
+  /// Fragment recherché dans le titre du service, sans accent.
+  final String? keyword;
+}
+
+const List<_Category> _categories = [
+  _Category('Tout', null, null),
+  _Category('Études', Icons.school_outlined, 'etude'),
+  _Category('Stratégie', Icons.show_chart_rounded, 'strateg'),
+  _Category('Impact', Icons.public_rounded, 'impact'),
+  _Category('Audit', Icons.balance_rounded, 'audit'),
+  _Category('Formation', Icons.groups_outlined, 'formation'),
+];
+
+String _plain(String s) => s
+    .toLowerCase()
+    .replaceAll(RegExp('[éèêë]'), 'e')
+    .replaceAll(RegExp('[àâ]'), 'a')
+    .replaceAll(RegExp('[îï]'), 'i')
+    .replaceAll(RegExp('[ôö]'), 'o')
+    .replaceAll(RegExp('[ùûü]'), 'u');
+
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -30,185 +49,170 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  _HomeCategory _category = _HomeCategory.all;
+  _Category _category = _categories.first;
 
   @override
   Widget build(BuildContext context) {
     final services = ref.watch(servicesProvider);
     final projects = ref.watch(projectsProvider(const ProjectFilter()));
-    final themeMode = ref.watch(themeModeProvider);
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color bg = isDark ? AppColors.charcoal900 : AppColors.lightBg;
+    final figures = ref.watch(keyFiguresProvider);
+    final String? name = ref.watch(clientProfileProvider).name;
+    final String? firstName = name?.split(RegExp(r'\s+')).first;
 
-    return Scaffold(
-      backgroundColor: bg,
-      body: Stack(
-        children: [
-          RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(servicesProvider);
-              ref.invalidate(projectsProvider);
-              ref.invalidate(keyFiguresProvider);
-              ref.invalidate(testimonialsProvider);
-            },
-            child: CustomScrollView(
-              slivers: [
-                _SearchAppBar(
-                  isDark: isDark,
-                  themeMode: themeMode,
-                  onToggleTheme: () =>
-                      ref.read(themeModeProvider.notifier).state =
-                          themeMode == ThemeMode.dark
-                              ? ThemeMode.light
-                              : ThemeMode.dark,
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-                    child: _CategoryChips(
-                      current: _category,
-                      onChanged: (c) => setState(() => _category = c),
+    return SafeArea(
+      bottom: false,
+      child: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(servicesProvider);
+          ref.invalidate(projectsProvider);
+          ref.invalidate(keyFiguresProvider);
+        },
+        child: ListView(
+          padding: const EdgeInsets.only(bottom: AppSpacing.xl),
+          children: [
+            RuahHeader(
+              actions: [
+                RoundAction(
+                  icon: Icons.notifications_none_rounded,
+                  tooltip: 'Notifications',
+                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Le cabinet vous répond sur WhatsApp.'),
                     ),
                   ),
                 ),
-                if (_category != _HomeCategory.projects)
-                  SliverToBoxAdapter(
-                    child: _ServicesSection(
-                      isDark: isDark,
-                      services: services,
-                    ),
-                  ),
-                if (_category != _HomeCategory.services)
-                  SliverToBoxAdapter(
-                    child: _ProjectsSection(
-                      isDark: isDark,
-                      projects: projects,
-                    ),
-                  ),
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: 96),
+                RoundAction(
+                  icon: Icons.person_outline_rounded,
+                  tooltip: 'Profil',
+                  onTap: () => context.push(AppRoutes.more),
                 ),
               ],
             ),
-          ),
-          // Pastille flottante — pendant du « Les prix comprennent tous les
-          // frais » d'Airbnb. Un tap ouvre le pop-up explicatif, qui mène au
-          // devis : le principal levier de conversion d'un site vitrine.
-          const Positioned(
-            left: AppSpacing.md,
-            right: AppSpacing.md,
-            bottom: AppSpacing.md,
-            child: Center(child: QuoteNoticePill()),
-          ),
-        ],
+            PageTitle(
+              title: firstName == null ? 'Bonjour 👋' : 'Bonjour $firstName 👋',
+              subtitle: 'Ensemble, donnons de la valeur à vos projets.',
+              accent: false,
+            ),
+            const SizedBox(height: 16),
+            const _SearchPill(),
+            const SizedBox(height: 14),
+            _CategoryChips(
+              current: _category,
+              onChanged: (c) => setState(() => _category = c),
+            ),
+            SectionHeading(
+              title: 'Nos expertises',
+              onSeeAll: () => context.go(AppRoutes.services),
+            ),
+            services.when(
+              loading: () => const SizedBox(
+                  height: 170, child: LoadingState(itemCount: 1)),
+              error: (e, _) => ErrorState(
+                message: InputSanitizer.safeErrorMessage(e),
+                onRetry: () => ref.invalidate(servicesProvider),
+              ),
+              data: _expertises,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            projects.when(
+              loading: () => const SizedBox(
+                  height: 280, child: LoadingState(itemCount: 1)),
+              error: (e, _) => ErrorState(
+                message: InputSanitizer.safeErrorMessage(e),
+                onRetry: () => ref.invalidate(projectsProvider),
+              ),
+              data: (page) {
+                if (page.items.isEmpty) return const SizedBox.shrink();
+                final Project featured = page.items.firstWhere(
+                  (p) => p.isFeatured,
+                  orElse: () => page.items.first,
+                );
+                return _FeaturedProject(project: featured);
+              },
+            ),
+            figures.maybeWhen(
+              data: (items) => items.isEmpty
+                  ? const SizedBox.shrink()
+                  : _KeyFigures(items: items),
+              orElse: () => const SizedBox.shrink(),
+            ),
+            const SectionHeading(title: 'Explorer'),
+            const _ExploreGrid(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _expertises(List<Service> items) {
+    final String? keyword = _category.keyword;
+    final List<Service> visible = keyword == null
+        ? items.take(4).toList()
+        : items.where((s) => _plain(s.title).contains(keyword)).toList();
+    if (visible.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Text('Aucune expertise dans cette catégorie.',
+            style: TextStyle(color: mutedOf(context))),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: LayoutBuilder(
+        builder: (context, box) {
+          final double width = (box.maxWidth - 12) / 2;
+          return Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              for (final s in visible)
+                SizedBox(width: width, child: _ExpertiseTile(service: s)),
+            ],
+          );
+        },
       ),
     );
   }
 }
 
-class _SearchAppBar extends StatelessWidget {
-  final bool isDark;
-  final ThemeMode themeMode;
-  final VoidCallback onToggleTheme;
-
-  const _SearchAppBar({
-    required this.isDark,
-    required this.themeMode,
-    required this.onToggleTheme,
-  });
+class _SearchPill extends StatelessWidget {
+  const _SearchPill();
 
   @override
   Widget build(BuildContext context) {
-    final Color bg = isDark ? AppColors.charcoal900 : AppColors.lightBg;
-    final Color pillBg = isDark ? AppColors.charcoal800 : Colors.white;
-    final Color pillFg = isDark ? Colors.white : AppColors.charcoal900;
-    final Color hint = isDark ? Colors.white54 : Colors.black45;
-
-    return SliverAppBar(
-      pinned: true,
-      floating: true,
-      snap: false,
-      backgroundColor: bg,
-      elevation: 0,
-      scrolledUnderElevation: 0,
-      surfaceTintColor: Colors.transparent,
-      toolbarHeight: 78,
-      automaticallyImplyLeading: false,
-      titleSpacing: 0,
-      title: Padding(
-        padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md, AppSpacing.sm, AppSpacing.sm, AppSpacing.sm),
-        child: Row(
-          children: [
-            Expanded(
-              child: Material(
-                color: pillBg,
-                borderRadius: BorderRadius.circular(999),
-                elevation: 0,
-                shadowColor: Colors.black26,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(999),
-                  onTap: () => context.push(AppRoutes.search),
-                  child: Container(
-                    height: 56,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(999),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 14,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Semantics(
+        button: true,
+        label: 'Rechercher un accompagnement',
+        child: Material(
+          color: Colors.transparent,
+          child: Ink(
+            decoration: softCard(context, radius: 16),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => context.push(AppRoutes.search),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+                child: Row(
+                  children: [
+                    Icon(Icons.search_rounded, color: fgOf(context)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'De quel accompagnement avez-vous besoin ?',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 14, color: mutedOf(context)),
+                      ),
                     ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.search, color: pillFg, size: 20),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'Que recherchez-vous ?',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: pillFg,
-                                ),
-                              ),
-                              Text(
-                                'Services, realisations, publications',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: hint,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(width: AppSpacing.xs),
-            IconButton(
-              icon: Icon(
-                themeMode == ThemeMode.dark
-                    ? Icons.light_mode_outlined
-                    : Icons.dark_mode_outlined,
-                color: pillFg,
-              ),
-              onPressed: onToggleTheme,
-              tooltip: 'Basculer le theme',
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -216,91 +220,108 @@ class _SearchAppBar extends StatelessWidget {
 }
 
 class _CategoryChips extends StatelessWidget {
-  final _HomeCategory current;
-  final ValueChanged<_HomeCategory> onChanged;
-
   const _CategoryChips({required this.current, required this.onChanged});
+  final _Category current;
+  final ValueChanged<_Category> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _Chip(
-          label: 'Tout',
-          emoji: '🌍',
-          active: current == _HomeCategory.all,
-          onTap: () => onChanged(_HomeCategory.all),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        _Chip(
-          label: 'Services',
-          emoji: '🎯',
-          active: current == _HomeCategory.services,
-          onTap: () => onChanged(_HomeCategory.services),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        _Chip(
-          label: 'Realisations',
-          emoji: '📊',
-          active: current == _HomeCategory.projects,
-          onTap: () => onChanged(_HomeCategory.projects),
-        ),
-      ],
+    final bool dark = isDarkOf(context);
+    return SizedBox(
+      height: 42,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: _categories.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (_, i) {
+          final _Category c = _categories[i];
+          final bool active = c == current;
+          final Color fg = active ? Colors.white : fgOf(context);
+          return Semantics(
+            button: true,
+            selected: active,
+            child: Material(
+              color: active
+                  ? AppColors.brand500
+                  : (dark ? AppColors.charcoal800 : Colors.white),
+              borderRadius: BorderRadius.circular(99),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(99),
+                onTap: () => onChanged(c),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 15),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(99),
+                    border: Border.all(
+                      color: active
+                          ? AppColors.brand500
+                          : (dark
+                              ? AppColors.charcoal700
+                              : AppColors.lightBorder),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      if (c.icon != null) ...[
+                        Icon(c.icon, size: 16, color: fg),
+                        const SizedBox(width: 6),
+                      ],
+                      Text(
+                        c.label,
+                        style: TextStyle(
+                          color: fg,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }
 
-class _Chip extends StatelessWidget {
-  final String label;
-  final String emoji;
-  final bool active;
-  final VoidCallback onTap;
-
-  const _Chip({
-    required this.label,
-    required this.emoji,
-    required this.active,
-    required this.onTap,
-  });
+class _ExpertiseTile extends StatelessWidget {
+  const _ExpertiseTile({required this.service});
+  final Service service;
 
   @override
   Widget build(BuildContext context) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color bg = active
-        ? (isDark ? Colors.white : AppColors.charcoal900)
-        : (isDark ? AppColors.charcoal800 : Colors.white);
-    final Color fg = active
-        ? (isDark ? AppColors.charcoal900 : Colors.white)
-        : (isDark ? Colors.white : AppColors.charcoal900);
-    final Color border = active
-        ? bg
-        : (isDark ? AppColors.charcoal700 : const Color(0xFFE5E7EB));
-
     return Material(
-      color: bg,
-      borderRadius: BorderRadius.circular(999),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(999),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: border),
-          ),
-          child: Row(
-            children: [
-              Text(emoji, style: const TextStyle(fontSize: 16)),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: TextStyle(
-                  color: fg,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
+      color: Colors.transparent,
+      child: Ink(
+        height: 78,
+        decoration: softCard(context),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () => context.push('${AppRoutes.services}/${service.slug}'),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                ExpertiseBadge(title: service.title, size: 42),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    service.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.2,
+                      fontWeight: FontWeight.w700,
+                      color: fgOf(context),
+                    ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -308,328 +329,102 @@ class _Chip extends StatelessWidget {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  final String title;
-  final String? subtitle;
-  final VoidCallback onSeeAll;
-  final bool isDark;
-
-  const _SectionTitle({
-    required this.title,
-    this.subtitle,
-    required this.onSeeAll,
-    required this.isDark,
-  });
+class _FeaturedProject extends StatelessWidget {
+  const _FeaturedProject({required this.project});
+  final Project project;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-          AppSpacing.md, AppSpacing.lg, AppSpacing.md, AppSpacing.md),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: isDark ? Colors.white : AppColors.charcoal900,
-                    height: 1.2,
-                  ),
-                ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    subtitle!,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isDark ? Colors.white70 : Colors.black54,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Material(
-            color: isDark ? AppColors.charcoal800 : Colors.white,
-            shape: const CircleBorder(),
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: onSeeAll,
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: isDark
-                        ? AppColors.charcoal700
-                        : const Color(0xFFE5E7EB),
-                  ),
-                ),
-                child: Icon(
-                  Icons.arrow_forward,
-                  size: 18,
-                  color: isDark ? Colors.white : AppColors.charcoal900,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ServicesSection extends StatelessWidget {
-  final bool isDark;
-  final AsyncValue<List<Service>> services;
-
-  const _ServicesSection({required this.isDark, required this.services});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionTitle(
-          title: 'Nos services phares',
-          subtitle:
-              'Etudes, conseil, formation, audit — savoir-faire de reference.',
-          onSeeAll: () => context.go(AppRoutes.services),
-          isDark: isDark,
-        ),
-        services.when(
-          loading: () => const LoadingState(itemCount: 1),
-          error: (e, _) => ErrorState(message: InputSanitizer.safeErrorMessage(e), onRetry: () {}),
-          data: (items) {
-            if (items.isEmpty) return const SizedBox.shrink();
-            return SizedBox(
-              height: 300,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                itemCount: items.length,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(width: AppSpacing.md),
-                itemBuilder: (_, i) {
-                  final s = items[i];
-                  return _AirbnbCard(
-                    isDark: isDark,
-                    imageUrl: s.coverImage,
-                    badge: i == 0 ? "Coup de coeur" : null,
-                    title: s.title,
-                    subtitle: (s.description ?? '').split('.').first.trim(),
-                    onTap: () =>
-                        context.push('${AppRoutes.services}/${s.slug}'),
-                  );
-                },
-              ),
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _ProjectsSection extends StatelessWidget {
-  final bool isDark;
-  final AsyncValue<PagedResult<Project>> projects;
-
-  const _ProjectsSection({required this.isDark, required this.projects});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionTitle(
-          title: 'Realisations recentes',
-          subtitle: 'Projets menes en Afrique de l\'Ouest et du Centre.',
-          onSeeAll: () => context.go(AppRoutes.projects),
-          isDark: isDark,
-        ),
-        projects.when(
-          loading: () => const LoadingState(itemCount: 1),
-          error: (e, _) => ErrorState(message: InputSanitizer.safeErrorMessage(e), onRetry: () {}),
-          data: (page) {
-            if (page.items.isEmpty) return const SizedBox.shrink();
-            return SizedBox(
-              height: 300,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                itemCount: page.items.length,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(width: AppSpacing.md),
-                itemBuilder: (_, i) {
-                  final p = page.items[i];
-                  return _AirbnbCard(
-                    isDark: isDark,
-                    imageUrl: p.coverImage,
-                    badge: p.isFeatured ? "A la une" : null,
-                    title: p.title,
-                    subtitle: <String>[
-                      p.sector ?? '',
-                      p.country ?? '',
-                      if (p.year != null) '${p.year}',
-                    ].where((s) => s.isNotEmpty).join(' · '),
-                    onTap: () =>
-                        context.push('${AppRoutes.projects}/${p.slug}'),
-                  );
-                },
-              ),
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
-
-/// Carte carree coins 24 px, cover en haut, badge coin haut-gauche, cœur
-/// favori en haut-droite, titre gras + sous-titre gris en bas. C'est la
-/// brique visuelle de reprise du feed Airbnb, adaptee au cabinet.
-class _AirbnbCard extends StatefulWidget {
-  final bool isDark;
-  final String? imageUrl;
-  final String? badge;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  const _AirbnbCard({
-    required this.isDark,
-    required this.imageUrl,
-    required this.badge,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  @override
-  State<_AirbnbCard> createState() => _AirbnbCardState();
-}
-
-class _AirbnbCardState extends State<_AirbnbCard> {
-  bool _fav = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color cardBg = widget.isDark ? AppColors.charcoal800 : Colors.white;
-    final Color titleFg = widget.isDark ? Colors.white : AppColors.charcoal900;
-    final Color subFg = widget.isDark ? Colors.white70 : Colors.black54;
-
-    return SizedBox(
-      width: 240,
-      child: Material(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(AppRadius.large),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.large),
-          onTap: widget.onTap,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: Semantics(
+        button: true,
+        label: 'Projet à la une : ${project.title}',
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => context.push('${AppRoutes.projects}/${project.slug}'),
+          child: Stack(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: _cover(),
-                      ),
-                      if (widget.badge != null)
-                        Positioned(
-                          top: 10,
-                          left: 10,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(999),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.15),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Text(
-                              widget.badge!,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.charcoal900,
-                              ),
-                            ),
-                          ),
-                        ),
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: InkWell(
-                          onTap: () => setState(() => _fav = !_fav),
-                          customBorder: const CircleBorder(),
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            child: Icon(
-                              _fav ? Icons.favorite : Icons.favorite_border,
-                              color: _fav ? AppColors.brand400 : Colors.white,
-                              size: 26,
-                              shadows: const [
-                                Shadow(color: Colors.black45, blurRadius: 6),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                padding: const EdgeInsets.only(bottom: 70),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(22),
+                  child: AspectRatio(
+                    aspectRatio: 16 / 10,
+                    child: RemoteImage(
+                      url: project.coverImage,
+                      semanticLabel: project.title,
+                      fallbackIcon: Icons.folder_special_rounded,
+                    ),
                   ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: titleFg,
-                        height: 1.2,
-                      ),
+              Positioned(
+                top: 14,
+                left: 14,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.accent500,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: const Text(
+                    'Projet à la une',
+                    style: TextStyle(
+                      color: AppColors.charcoal900,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
                     ),
-                    if (widget.subtitle.isNotEmpty) ...[
-                      const SizedBox(height: 4),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 8,
+                right: 8,
+                bottom: 0,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 13, 16, 13),
+                  decoration: softCard(context),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        widget.subtitle,
+                        project.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 13,
-                          color: subFg,
-                          height: 1.3,
+                          fontSize: 16,
+                          height: 1.25,
+                          fontWeight: FontWeight.w800,
+                          color: fgOf(context),
                         ),
                       ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Text(
+                            'Voir le projet',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: isDarkOf(context)
+                                  ? Colors.white
+                                  : AppColors.brand600,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 18,
+                            color: isDarkOf(context)
+                                ? Colors.white
+                                : AppColors.brand600,
+                          ),
+                        ],
+                      ),
                     ],
-                  ],
+                  ),
                 ),
               ),
             ],
@@ -638,30 +433,117 @@ class _AirbnbCardState extends State<_AirbnbCard> {
       ),
     );
   }
+}
 
-  Widget _cover() {
-    if (widget.imageUrl != null && widget.imageUrl!.isNotEmpty) {
-      return Semantics(
-        label: widget.title,
-        child: CachedNetworkImage(
-          imageUrl: widget.imageUrl!,
-          fit: BoxFit.cover,
-          placeholder: (_, __) => _fallback(),
-          errorWidget: (_, __, ___) => _fallback(),
+class _KeyFigures extends StatelessWidget {
+  const _KeyFigures({required this.items});
+  final List<KeyFigure> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 8),
+        decoration: BoxDecoration(
+          gradient: AppColors.heroGradient,
+          borderRadius: BorderRadius.circular(20),
         ),
-      );
-    }
-    return _fallback();
-  }
-
-  Widget _fallback() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: AppColors.ctaGradient,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final f in items.take(4))
+              Expanded(
+                child: Column(
+                  children: [
+                    AnimatedCounter(
+                      end: f.value,
+                      suffix: f.suffix,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      f.label,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                        height: 1.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
       ),
-      alignment: Alignment.center,
-      child:
-          const Icon(Icons.insights_outlined, color: Colors.white70, size: 42),
+    );
+  }
+}
+
+class _ExploreGrid extends StatelessWidget {
+  const _ExploreGrid();
+
+  @override
+  Widget build(BuildContext context) {
+    final List<(IconData, String, String)> entries = [
+      (Icons.menu_book_rounded, 'Publications', AppRoutes.publications),
+      (Icons.rate_review_rounded, 'Témoignages', AppRoutes.testimonials),
+      (Icons.groups_rounded, 'Notre équipe', AppRoutes.team),
+      (Icons.play_circle_rounded, 'Vidéos', AppRoutes.videos),
+    ];
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: GridView.count(
+        crossAxisCount: 2,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 2.9,
+        children: [
+          for (final (icon, label, route) in entries)
+            Material(
+              color: Colors.transparent,
+              child: Ink(
+                decoration: softCard(context, radius: 14),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () => context.push(route),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      children: [
+                        Icon(icon,
+                            size: 22,
+                            color: isDarkOf(context)
+                                ? Colors.white
+                                : AppColors.brand600),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              color: fgOf(context),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
