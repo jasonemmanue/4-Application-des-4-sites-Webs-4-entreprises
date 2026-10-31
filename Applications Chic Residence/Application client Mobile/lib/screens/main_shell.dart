@@ -3,17 +3,11 @@ import 'package:go_router/go_router.dart';
 
 import '../config/theme.dart';
 
-/// Barre de navigation basse — style Airbnb.
+/// Barre de navigation basse de la maquette : Accueil, Explorer, Favoris,
+/// Réservations, Profil.
 ///
-/// 5 onglets, icônes fines, actif en rouge de marque. Pas de pastille de fond
-/// derrière l'icône : la couleur du glyphe et la graisse du label suffisent.
-///
-/// Deux détails de mise en page :
-///  - police 10.5 pt et `MediaQuery.withNoTextScaling` pour que
-///    « Réservations » tienne sur une ligne quelle que soit la taille de
-///    police système choisie par l'utilisateur ;
-///  - fond et bordure pris sur `context.tokens`, sinon la barre restait
-///    blanche en mode sombre.
+/// Police 10.5 pt et `MediaQuery.withNoTextScaling` pour que « Réservations »
+/// tienne sur une ligne quelle que soit la taille de police système.
 class MainShell extends StatelessWidget {
   const MainShell({super.key, required this.child, required this.location});
 
@@ -21,18 +15,18 @@ class MainShell extends StatelessWidget {
   final String location;
 
   static const _tabs = <_TabInfo>[
-    _TabInfo('/', Icons.search_rounded, Icons.search_rounded, 'Explorer'),
-    _TabInfo('/favorites', Icons.favorite_border, Icons.favorite, 'Favoris'),
+    _TabInfo('/', Icons.home_outlined, Icons.home_rounded, 'Accueil'),
+    _TabInfo('/explore', Icons.search_rounded, Icons.search_rounded, 'Explorer'),
+    _TabInfo('/favorites', Icons.favorite_border_rounded,
+        Icons.favorite_rounded, 'Favoris'),
     _TabInfo('/bookings', Icons.calendar_month_outlined,
         Icons.calendar_month_rounded, 'Réservations'),
-    _TabInfo('/contact', Icons.chat_bubble_outline, Icons.chat_bubble_rounded,
-        'Messages'),
     _TabInfo('/profile', Icons.person_outline_rounded, Icons.person_rounded,
         'Profil'),
   ];
 
   int _indexFromLocation() {
-    for (var i = _tabs.length - 1; i >= 0; i--) {
+    for (var i = _tabs.length - 1; i > 0; i--) {
       if (location == _tabs[i].path ||
           location.startsWith('${_tabs[i].path}/')) {
         return i;
@@ -53,12 +47,18 @@ class MainShell extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: t.navBg,
-            border: Border(top: BorderSide(color: t.border, width: 0.5)),
+            boxShadow: [
+              BoxShadow(
+                color: t.shadow,
+                blurRadius: 12,
+                offset: const Offset(0, -2),
+              ),
+            ],
           ),
           child: SafeArea(
             top: false,
             child: SizedBox(
-              height: 64,
+              height: kBottomNavHeight,
               child: Row(
                 children: [
                   for (var i = 0; i < _tabs.length; i++)
@@ -93,7 +93,7 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
-    final color = selected ? t.brand : t.textSecondary;
+    final color = selected ? t.brand : t.textPrimary;
     return InkWell(
       onTap: onTap,
       child: Column(
@@ -109,7 +109,7 @@ class _NavItem extends StatelessWidget {
             style: TextStyle(
               fontSize: 10.5,
               height: 1.0,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
               color: color,
             ),
           ),

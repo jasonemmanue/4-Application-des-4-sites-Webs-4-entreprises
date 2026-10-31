@@ -3,13 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/other_models.dart';
+import '../models/payment.dart';
 import '../models/residence.dart';
 import '../services/api_client.dart';
+import '../services/booking_history.dart';
 import '../services/booking_service.dart';
 import '../services/favorites_service.dart';
 import '../services/payment_service.dart';
 import '../services/residence_service.dart';
 import '../services/session_service.dart';
+import '../services/whatsapp_service.dart';
 
 final sessionServiceProvider = Provider<SessionService>((ref) {
   throw UnimplementedError(
@@ -52,6 +55,81 @@ final residencesProvider =
   final svc = ref.watch(residenceServiceProvider);
   final filters = ref.watch(filtersProvider);
   return svc.list(filters);
+});
+
+/// Tout le catalogue, sans les filtres de l'onglet Explorer : l'accueil, les
+/// catégories et les favoris ne doivent pas changer quand on y filtre.
+final allResidencesProvider = FutureProvider<List<Residence>>((ref) async {
+  return ref.watch(residenceServiceProvider).list();
+});
+
+/// Dates et invités choisis sur l'accueil, repris par le tunnel de réservation.
+class StayDraft {
+  final DateTime? checkIn;
+  final DateTime? checkOut;
+  final int guests;
+
+  const StayDraft({this.checkIn, this.checkOut, this.guests = 1});
+
+  bool get hasDates => checkIn != null && checkOut != null;
+}
+
+final stayDraftProvider = StateProvider<StayDraft>((ref) => const StayDraft());
+
+/// Coordonnées saisies dans « Paramètres » de l'administration : les modifier
+/// là-bas change aussi l'application, sans nouvelle version.
+class PublicInfo {
+  final String phone;
+  final String address;
+  final String about;
+
+  const PublicInfo({this.phone = '', this.address = '', this.about = ''});
+}
+
+final publicInfoProvider = FutureProvider<PublicInfo>((ref) async {
+  final res = await ref.watch(apiClientProvider).dio.get('/settings/public');
+  final m = (res.data as Map).cast<String, dynamic>();
+  final phone = m['company_phone']?.toString() ?? '';
+  WhatsAppService.configure(
+    whatsapp: m['whatsapp_number']?.toString() ?? '',
+    phone: phone,
+  );
+  return PublicInfo(
+    phone: phone,
+    address: m['company_address']?.toString() ?? '',
+    about: m['company_about']?.toString() ?? '',
+  );
+});
+
+/// Moyens de paiement réellement ouverts, lus sur l'API.
+final paymentOptionsProvider =
+    FutureProvider.autoDispose<PaymentOptions>((ref) async {
+  return ref.watch(paymentServiceProvider).options();
+});
+
+/// Réservations faites depuis cet appareil (pas de compte client).
+final bookingHistoryProvider =
+    StateNotifierProvider<BookingHistoryNotifier, List<BookingRecord>>(
+        (ref) => BookingHistoryNotifier());
+
+/// Jours déjà pris sur un an : un séjour peut chevaucher deux mois, et une date
+/// prise ne doit pas être cliquable.
+final blockedDaysProvider =
+    FutureProvider.autoDispose.family<Set<DateTime>, String>((ref, id) async {
+  final now = DateTime.now();
+  final days = await ref
+      .watch(residenceServiceProvider)
+      .availabilityRange(id, now, now.add(const Duration(days: 365)));
+  return days
+      .where((d) => !d.available)
+      .map((d) => DateTime(d.date.year, d.date.month, d.date.day))
+      .toSet();
+});
+
+/// Avis publiés d'un logement.
+final residenceReviewsProvider =
+    FutureProvider.autoDispose.family<List<Review>, String>((ref, id) async {
+  return ref.watch(residenceServiceProvider).reviews(id);
 });
 
 /// Detail d'une residence (id UUID ou slug).

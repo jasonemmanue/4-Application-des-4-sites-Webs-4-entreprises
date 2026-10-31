@@ -28,7 +28,7 @@ class ApiClient {
       },
       onError: (e, handler) {
         final code = e.response?.statusCode;
-        if (code == 401) {
+        if (code == 401 && !e.requestOptions.path.endsWith('/login')) {
           onSessionExpired?.call();
         }
         final msg = _extract(e);
@@ -59,6 +59,15 @@ class ApiClient {
   static String _extract(DioException e) {
     final code = e.response?.statusCode;
     final data = e.response?.data;
+
+    if (data is Map && data['detail'] is List) {
+      final first = (data['detail'] as List).isEmpty
+          ? null
+          : (data['detail'] as List).first;
+      if (first is Map && first['msg'] != null) {
+        return first['msg'].toString().replaceFirst('Value error, ', '');
+      }
+    }
 
     if (data is Map) {
       final raw = (data['detail'] ?? data['message'])?.toString();

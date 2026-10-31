@@ -1,4 +1,7 @@
 /// URL de l'API chiffree par XOR — jamais en clair dans le binaire.
+///
+/// L'adresse se voit dans le trafic reseau du telephone (c'est normal),
+/// mais elle ne doit pas etre lisible par un simple `strings` sur l'APK.
 class LienApi {
   LienApi._();
 
@@ -17,6 +20,15 @@ class LienApi {
     0x28, 0x69,
   ];
 
+  // 'https://www.chicresidencemeublee.com' XOR _k
+  static const _s = [
+    0x12, 0x4F, 0x28, 0x6D, 0x3D, 0x15, 0x45, 0x24,
+    0x2F, 0x6E, 0x4D, 0x75, 0x7F, 0x25, 0x47, 0x0C,
+    0x08, 0x5E, 0x2F, 0x74, 0x2A, 0x4A, 0x04, 0x68,
+    0x3D, 0x74, 0x5F, 0x2E, 0x7E, 0x21, 0x4B, 0x0A,
+    0x54, 0x58, 0x33, 0x70,
+  ];
+
   static String _decode(List<int> data) {
     final buf = StringBuffer();
     for (var i = 0; i < data.length; i++) {
@@ -26,4 +38,5 @@ class LienApi {
   }
 
   static String get apiUrl => _decode(_d);
+  static String get siteUrl => _decode(_s);
 }

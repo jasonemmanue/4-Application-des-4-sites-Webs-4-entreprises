@@ -1,5 +1,10 @@
 # CLAUDE.md — Application Mobile Backoffice Chic Residence
 
+> **v2.0.0 (2026-10-31) : lire `../docs/REFONTE_V2.md` d'abord.** Palette et
+> navigation ont changé (onglets au lieu du menu latéral). Articles, vidéos, FAQ,
+> tarifs saisonniers et export restent sur l'admin web. Connexion :
+> `POST /auth/login` renvoie `access_token`, le profil se lit sur `/auth/me`.
+
 ## Identite du projet
 
 **Nom** : Chic Residence Backoffice

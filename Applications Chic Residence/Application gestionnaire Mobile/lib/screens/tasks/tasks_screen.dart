@@ -2,105 +2,90 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../config/theme.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
 import '../../widgets/task_card.dart';
+import '../../widgets/ui.dart';
 
 class TasksScreen extends ConsumerWidget {
   const TasksScreen({super.key});
 
+  static const _filters = <TaskStatus?>[
+    null,
+    TaskStatus.pending,
+    TaskStatus.inProgress,
+    TaskStatus.cleaned,
+    TaskStatus.validated,
+  ];
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final filter = ref.watch(tasksFilterProvider);
-    final async = ref.watch(tasksProvider);
+    final async = ref.watch(myTasksProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mes taches'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(56),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
+      appBar: AppBar(title: const Text('Tâches')),
+      body: Column(
+        children: [
+          SizedBox(
+            height: 46,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
-                _FilterChip(
-                    label: 'Tous',
-                    selected: filter == null,
-                    onTap: () =>
-                        ref.read(tasksFilterProvider.notifier).state = null),
-                for (final s in TaskStatus.values)
-                  _FilterChip(
-                    label: s.label,
-                    selected: filter == s,
-                    onTap: () =>
-                        ref.read(tasksFilterProvider.notifier).state = s,
+                for (final f in _filters)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(
+                        f == null ? 'Toutes' : f.label,
+                        style: TextStyle(
+                          color: filter == f ? Colors.white : null,
+                        ),
+                      ),
+                      selected: filter == f,
+                      showCheckmark: false,
+                      onSelected: (_) =>
+                          ref.read(tasksFilterProvider.notifier).state = f,
+                    ),
                   ),
               ],
             ),
           ),
-        ),
-      ),
-      body: async.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(e.toString())),
-        data: (list) {
-          if (list.isEmpty) {
-            return const Center(child: Text('Aucune tache dans cette liste'));
-          }
-          return RefreshIndicator(
-            onRefresh: () async => ref.invalidate(tasksProvider),
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: list.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (context, i) => TaskCard(
-                task: list[i],
-                onTap: () => context.push('/tasks/${list[i].id}'),
+          const SizedBox(height: 4),
+          Expanded(
+            child: async.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => ErrorState(
+                error: e,
+                onRetry: () => ref.invalidate(myTasksProvider),
               ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: selected ? AppColors.primary : Colors.transparent,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: selected ? AppColors.primary : AppColors.border,
+              data: (all) {
+                final list = filter == null
+                    ? all
+                    : all.where((t) => t.status == filter).toList();
+                if (list.isEmpty) {
+                  return const EmptyState(
+                    icon: Icons.task_alt_rounded,
+                    title: 'Aucune tâche',
+                  );
+                }
+                return RefreshIndicator(
+                  onRefresh: () async => ref.invalidate(myTasksProvider),
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+                    itemCount: list.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (_, i) => TaskCard(
+                      task: list[i],
+                      onTap: () => context.push('/tasks/${list[i].id}'),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: selected ? Colors.white : AppColors.text,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
+        ],
       ),
     );
   }

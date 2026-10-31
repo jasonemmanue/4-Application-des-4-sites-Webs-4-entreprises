@@ -66,6 +66,9 @@ class BookingPriceBreakdown {
 }
 
 class Booking {
+  /// Figé à la création : c'est ce qui sera demandé au paiement.
+  int get deposit => depositAmount > 0 ? depositAmount : price.depositAmount;
+  final int depositAmount;
   final String id;
   final String reference;
   final String residenceId;
@@ -89,6 +92,7 @@ class Booking {
     required this.guestPhone,
     required this.status,
     required this.price,
+    this.depositAmount = 0,
     this.notes,
   });
 
@@ -104,6 +108,7 @@ class Booking {
         guestPhone: json['guest_phone']?.toString() ?? '',
         notes: json['notes']?.toString(),
         status: BookingStatusX.parse(json['status']?.toString()),
+        depositAmount: _toInt(json['deposit_amount']),
         price: BookingPriceBreakdown.fromJson(
           (json['price'] as Map?)?.cast<String, dynamic>() ?? json,
         ),

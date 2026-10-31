@@ -26,6 +26,8 @@ class ResidenceFilters {
   });
 
   Map<String, dynamic> toQuery() => {
+        // Plafond de l'API. Par défaut elle n'en renvoie que 12 sur 21 logements.
+        'limit': 100,
         if (query != null && query!.isNotEmpty) 'search': query,
         if (type != null) 'residence_type': type!.apiValue,
         if (city != null && city!.isNotEmpty) 'city': city,
@@ -42,7 +44,9 @@ class ResidenceFilters {
     ResidenceType? type,
     bool clearType = false,
     String? city,
+    bool clearCity = false,
     int? capacity,
+    bool clearCapacity = false,
     int? priceMin,
     int? priceMax,
     List<String>? amenities,
@@ -52,8 +56,8 @@ class ResidenceFilters {
       ResidenceFilters(
         query: query ?? this.query,
         type: clearType ? null : (type ?? this.type),
-        city: city ?? this.city,
-        capacity: capacity ?? this.capacity,
+        city: clearCity ? null : (city ?? this.city),
+        capacity: clearCapacity ? null : (capacity ?? this.capacity),
         priceMin: priceMin ?? this.priceMin,
         priceMax: priceMax ?? this.priceMax,
         amenities: amenities ?? this.amenities,
@@ -87,7 +91,7 @@ class ResidenceService {
   Future<List<String>> suggestions(String q) async {
     if (q.trim().isEmpty) return const [];
     final res = await _api.dio
-        .get('/residences/suggestions', queryParameters: {'q': q});
+        .get('/residences/suggestions', queryParameters: {'q': q.trim()});
     final data = res.data;
     final items = (data is Map ? data['items'] : data) as List? ?? [];
     return items
@@ -127,6 +131,22 @@ class ResidenceService {
         .map((e) =>
             AvailabilityDay.fromJson((e as Map).cast<String, dynamic>()))
         .toList();
+  }
+
+  /// L'avis part en modération : il n'apparaît qu'une fois approuvé dans
+  /// l'administration (web ou backoffice mobile).
+  Future<void> submitReview({
+    required String residenceId,
+    required String author,
+    required int rating,
+    required String comment,
+  }) async {
+    await _api.dio.post('/reviews', data: {
+      'residence_id': residenceId,
+      'author_name': author,
+      'rating': rating,
+      'comment': comment,
+    });
   }
 
   Future<List<Review>> reviews(String residenceId) async {

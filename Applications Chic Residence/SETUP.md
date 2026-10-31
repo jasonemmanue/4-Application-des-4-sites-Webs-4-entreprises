@@ -411,23 +411,14 @@ et `default_notification_color`.
 
 ---
 
-## 8. Endpoints backend a ajouter (gestionnaire et backoffice)
+## 8. Endpoints staff et backoffice
 
-Les endpoints staff n'existent pas encore dans le backend :
+Ils existent en production depuis le commit `2104e17` du backend, et les 3 apps
+v2.0.0 les consomment : voir `docs/REFONTE_V2.md`.
 
-| Endpoint | Usage | Statut |
-|---|---|---|
-| `POST /api/v1/staff/login` | Authentification telephone + PIN | A creer |
-| `GET /api/v1/cleaning-tasks` | Liste des taches de nettoyage | A creer |
-| `PUT /api/v1/cleaning-tasks/{id}/status` | Changer le statut d'une tache | A creer |
-| `POST /api/v1/cleaning-tasks/{id}/photos` | Upload photo avant/apres | A creer |
-| `GET /api/v1/staff/stats` | Statistiques du personnel | A creer |
-| `PUT /api/v1/staff/me/fcm-token` | Enregistrer le jeton FCM staff | A creer |
-| `GET /api/v1/admin/dashboard` | KPIs admin | A creer |
-| `GET /api/v1/admin/staff` | Liste du personnel | A creer |
-
-Les apps gestionnaire et backoffice sont construites et installables, mais
-fonctionneront pleinement une fois ces endpoints ajoutes au backend FastAPI.
+Le backoffice mobile se connecte avec **le compte de l'admin web** (email + mot
+de passe). Les comptes du personnel (téléphone + PIN) se créent dans
+Backoffice > Plus > Personnel.
 
 ---
 
@@ -509,6 +500,6 @@ Necessite un `android/key.properties` configurant le keystore de release.
 
 ### Backend
 
-- [ ] Endpoints staff crees (pour gestionnaire et backoffice)
+- [x] Endpoints staff crees (pour gestionnaire et backoffice)
 - [ ] Variables de production posees sur Railway
 - [ ] `.env` de production NON versionne

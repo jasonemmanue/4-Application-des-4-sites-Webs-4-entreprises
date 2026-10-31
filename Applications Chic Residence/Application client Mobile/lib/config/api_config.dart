@@ -45,6 +45,9 @@ class ApiConfig {
     return '$siteBaseUrl/${u.replaceFirst(RegExp(r'^/'), '')}';
   }
 
+  /// Version affichée sur le Profil (à garder alignée sur pubspec.yaml).
+  static const String appVersion = '2.0.0';
+
   /// Timeout par defaut
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 20);
@@ -76,6 +79,8 @@ class ApiConfig {
 
   /// Poll paiement (Wave, Orange, MTN)
   static const Duration paymentPollInterval = Duration(seconds: 4);
-  static const Duration paymentTimeout = Duration(seconds: 90);
+  // Comme le site : 5 minutes. Un décompte plus court abandonnait la tentative
+  // pendant que le client était encore dans le menu *133#.
+  static const Duration paymentTimeout = Duration(minutes: 5);
   static const int maxPaymentRetries = 10;
 }

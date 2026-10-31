@@ -1,5 +1,9 @@
 # CLAUDE.md — Application Mobile Client Chic Residence
 
+> **v2.0.0 (2026-10-31) : lire `../docs/REFONTE_V2.md` d'abord.** Palette, police
+> (Poppins), onglets (Accueil, Explorer, Favoris, Réservations, Profil) et tunnel
+> ont changé. Pas d'email client : le tunnel ne le demande plus.
+
 ## Identite du projet
 
 **Nom** : Chic Residence Mobile

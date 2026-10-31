@@ -26,7 +26,7 @@ class ApiClient {
     dio.interceptors.add(InterceptorsWrapper(
       onError: (e, handler) {
         final code = e.response?.statusCode;
-        if (code == 401) {
+        if (code == 401 && !e.requestOptions.path.endsWith('/login')) {
           onSessionExpired?.call();
         }
         final msg = _extract(e);

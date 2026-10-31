@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../config/api_config.dart';
 import '../../config/theme.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
+import '../../widgets/ui.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -13,55 +15,78 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Profil')),
-      body: ListView(
-        children: [
-          const SizedBox(height: 16),
-          Center(
-            child: CircleAvatar(
-              radius: 40,
-              backgroundColor: AppColors.primary,
-              child: Text(
-                (user?.firstName.isNotEmpty ?? false)
-                    ? user!.firstName[0].toUpperCase()
-                    : '?',
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 30,
-                    fontWeight: FontWeight.w700),
+      body: SafeArea(
+        bottom: false,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 34,
+                  backgroundColor: AppColors.primaryLight,
+                  child: Text(
+                    (user?.fullName.isNotEmpty ?? false)
+                        ? user!.fullName.characters.first.toUpperCase()
+                        : '?',
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        user?.fullName ?? '',
+                        style: const TextStyle(
+                            fontSize: 19, fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        user?.role.label ?? '',
+                        style: const TextStyle(
+                            fontSize: 13, color: AppColors.textMuted),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Panel(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.call_outlined),
+                    title: const Text('Téléphone'),
+                    subtitle: Text(user?.phone ?? ''),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.info_outline_rounded),
+                    title: const Text('Version'),
+                    subtitle: const Text(ApiConfig.appVersion),
+                  ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Center(
-            child: Text(user?.fullName ?? '',
-                style: Theme.of(context).textTheme.titleLarge),
-          ),
-          Center(
-            child: Text(user?.role.label ?? '',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: AppColors.textMuted)),
-          ),
-          const SizedBox(height: 24),
-          ListTile(
-            leading: const Icon(Icons.phone_outlined),
-            title: const Text('Telephone'),
-            subtitle: Text(user?.phone ?? ''),
-          ),
-          const Divider(height: 1),
-          ListTile(
-            leading: const Icon(Icons.logout_rounded,
-                color: AppColors.rejected),
-            title: const Text('Se deconnecter'),
-            onTap: () async {
-              await ref.read(authServiceProvider).logout();
-              ref.read(currentUserProvider.notifier).state = null;
-              if (context.mounted) context.go('/login');
-            },
-          ),
-        ],
+            const SizedBox(height: 20),
+            OutlinedButton.icon(
+              onPressed: () async {
+                await ref.read(authServiceProvider).logout();
+                ref.read(currentUserProvider.notifier).state = null;
+                if (context.mounted) context.go('/login');
+              },
+              icon: const Icon(Icons.logout_rounded),
+              label: const Text('Déconnexion'),
+            ),
+          ],
+        ),
       ),
     );
   }

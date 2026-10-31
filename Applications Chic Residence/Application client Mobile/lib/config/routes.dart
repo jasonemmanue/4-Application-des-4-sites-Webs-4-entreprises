@@ -4,8 +4,8 @@ import '../screens/booking/booking_tunnel.dart';
 import '../screens/booking/bookings_screen.dart';
 import '../screens/contact/contact_screen.dart';
 import '../screens/favorites/favorites_screen.dart';
+import '../screens/home/explore_screen.dart';
 import '../screens/home/home_screen.dart';
-import '../screens/home/search_screen.dart';
 import '../screens/main_shell.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/residences/residence_detail_screen.dart';
@@ -25,6 +25,11 @@ GoRouter buildRouter() => GoRouter(
                   const NoTransitionPage(child: HomeScreen()),
             ),
             GoRoute(
+              path: '/explore',
+              pageBuilder: (context, state) =>
+                  const NoTransitionPage(child: ExploreScreen()),
+            ),
+            GoRoute(
               path: '/favorites',
               pageBuilder: (context, state) =>
                   const NoTransitionPage(child: FavoritesScreen()),
@@ -35,11 +40,6 @@ GoRouter buildRouter() => GoRouter(
                   const NoTransitionPage(child: BookingsScreen()),
             ),
             GoRoute(
-              path: '/contact',
-              pageBuilder: (context, state) =>
-                  const NoTransitionPage(child: ContactScreen()),
-            ),
-            GoRoute(
               path: '/profile',
               pageBuilder: (context, state) =>
                   const NoTransitionPage(child: ProfileScreen()),
@@ -47,8 +47,8 @@ GoRouter buildRouter() => GoRouter(
           ],
         ),
         GoRoute(
-          path: '/search',
-          builder: (context, state) => const SearchScreen(),
+          path: '/contact',
+          builder: (context, state) => const ContactScreen(),
         ),
         GoRoute(
           path: '/residence/:slug',

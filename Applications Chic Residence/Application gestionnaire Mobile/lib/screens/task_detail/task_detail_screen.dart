@@ -1,394 +1,404 @@
-import 'dart:async';
-import 'dart:io';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 
+import '../../config/api_config.dart';
 import '../../config/theme.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
 import '../../widgets/task_card.dart';
+import '../../widgets/ui.dart';
 
-/// Detail d'une tache : les actions varient selon le role (agent / controleur).
 class TaskDetailScreen extends ConsumerStatefulWidget {
   const TaskDetailScreen({super.key, required this.taskId});
-
-  final int taskId;
+  final String taskId;
 
   @override
   ConsumerState<TaskDetailScreen> createState() => _TaskDetailScreenState();
 }
 
 class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
-  CleaningTask? _task;
-  bool _loading = true;
-  String? _error;
-  bool _acting = false;
-  Timer? _timer;
-  Duration _elapsed = Duration.zero;
-  final _picker = ImagePicker();
+  bool _busy = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  Future<void> _run(Future<void> Function() action, {String? done}) async {
+    setState(() => _busy = true);
     try {
-      final t = await ref.read(taskServiceProvider).detail(widget.taskId);
-      if (!mounted) return;
-      setState(() => _task = t);
-      _ensureTimer();
+      await action();
+      ref.invalidate(taskDetailProvider(widget.taskId));
+      ref.invalidate(myTasksProvider);
+      ref.invalidate(myStatsProvider);
+      if (done != null && mounted) showMessage(context, done);
     } catch (e) {
-      if (!mounted) return;
-      setState(() => _error = e.toString());
+      if (mounted) showMessage(context, readableError(e));
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() => _busy = false);
     }
   }
 
-  void _ensureTimer() {
-    _timer?.cancel();
-    if (_task?.status == TaskStatus.inProgress && _task?.startedAt != null) {
-      _elapsed = DateTime.now().difference(_task!.startedAt!);
-      _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-        if (!mounted) return;
-        setState(() =>
-            _elapsed = DateTime.now().difference(_task!.startedAt!));
-      });
-    }
-  }
-
-  Future<void> _act(Future<CleaningTask> Function() action) async {
-    setState(() => _acting = true);
-    try {
-      final t = await action();
-      setState(() => _task = t);
-      _ensureTimer();
-    } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.toString())));
-    } finally {
-      if (mounted) setState(() => _acting = false);
-    }
-  }
-
-  Future<void> _uploadPhoto(String phase) async {
-    final file = await _picker.pickImage(
-        source: ImageSource.camera, imageQuality: 80);
-    if (file == null) return;
-    setState(() => _acting = true);
-    try {
-      await ref
-          .read(taskServiceProvider)
-          .uploadPhoto(widget.taskId, File(file.path), phase: phase);
-      await _load();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
-      }
-    } finally {
-      if (mounted) setState(() => _acting = false);
-    }
-  }
-
-  Future<void> _rejectDialog() async {
-    final ctrl = TextEditingController();
-    final reason = await showDialog<String>(
+  Future<void> _addPhoto(String label) async {
+    final source = await showModalBottomSheet<ImageSource>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Rejeter le nettoyage'),
-        content: Column(
+      builder: (ctx) => SafeArea(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Precisez ce qui doit etre refait. Le commentaire est obligatoire.',
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Prendre une photo'),
+              onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: ctrl,
-              maxLines: 4,
-              decoration: const InputDecoration(
-                hintText: 'Ex : Salle de bain non nettoyee, poubelle a vider...',
-              ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choisir dans la galerie'),
+              onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Annuler'),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (ctrl.text.trim().length < 5) return;
-              Navigator.of(context).pop(ctrl.text.trim());
-            },
-            child: const Text('Rejeter'),
-          ),
-        ],
       ),
     );
-    if (reason != null) {
-      await _act(
-          () => ref.read(taskServiceProvider).reject(widget.taskId, reason));
+    if (source == null) return;
+    XFile? file;
+    try {
+      file = await ImagePicker().pickImage(
+        source: source,
+        imageQuality: 70,
+        maxWidth: 1600,
+      );
+    } on PlatformException {
+      if (mounted) {
+        showMessage(context, 'Autorisez l\'accès à l\'appareil photo.');
+      }
+      return;
     }
+    if (file == null) return;
+    final picked = file;
+    await _run(
+      () => ref
+          .read(taskServiceProvider)
+          .uploadPhoto(widget.taskId, picked, label: label),
+      done: 'Photo ajoutée.',
+    );
+  }
+
+  Future<void> _reject() async {
+    final reason = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setD) => AlertDialog(
+          title: const Text('Rejeter le nettoyage'),
+          content: TextField(
+            controller: reason,
+            maxLines: 4,
+            autofocus: true,
+            onChanged: (_) => setD(() {}),
+            decoration: const InputDecoration(
+              hintText: 'Ce qui doit être refait (obligatoire)',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Annuler'),
+            ),
+            TextButton(
+              onPressed: reason.text.trim().length < 3
+                  ? null
+                  : () => Navigator.of(ctx).pop(true),
+              child: const Text('Rejeter'),
+            ),
+          ],
+        ),
+      ),
+    );
+    final text = reason.text.trim();
+    reason.dispose();
+    if (ok != true) return;
+    await _run(
+      () => ref.read(taskServiceProvider).reject(widget.taskId, text),
+      done: 'Tâche renvoyée à l\'agent.',
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-    if (_error != null || _task == null) {
-      return Scaffold(
-        appBar: AppBar(),
-        body: Center(child: Text(_error ?? 'Introuvable')),
-      );
-    }
-    final t = _task!;
-    final me = ref.watch(currentUserProvider);
-    final isController = me?.role == StaffRole.controller;
-    final beforePhotos = t.photos.where((p) => p.phase == 'before').toList();
-    final afterPhotos = t.photos.where((p) => p.phase == 'after').toList();
-
+    final async = ref.watch(taskDetailProvider(widget.taskId));
+    final user = ref.watch(currentUserProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(t.residence.name)),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(t.residence.name,
-                            style: Theme.of(context).textTheme.titleMedium),
-                      ),
-                      StatusBadge(status: t.status),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(t.residence.address,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textMuted,
-                          )),
-                  const SizedBox(height: 6),
-                  Text(
-                      '${t.residence.type} • ${t.residence.capacity} personne(s)'),
-                ],
+      appBar: AppBar(title: const Text('Détail de la tâche')),
+      body: async.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => ErrorState(
+          error: e,
+          onRetry: () => ref.invalidate(taskDetailProvider(widget.taskId)),
+        ),
+        data: (task) => Column(
+          children: [
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () async =>
+                    ref.invalidate(taskDetailProvider(widget.taskId)),
+                child: _details(task, user),
               ),
             ),
-          ),
-          if (t.status == TaskStatus.inProgress) ...[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.inProgress.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.inProgress.withOpacity(0.3)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.timer, color: AppColors.inProgress),
-                  const SizedBox(width: 8),
-                  Text('Temps ecoule : ${_fmt(_elapsed)}',
-                      style: Theme.of(context).textTheme.titleMedium),
-                ],
-              ),
-            ),
+            _actions(task, user),
           ],
-          if (t.rejectionReason != null) ...[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.rejected.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.rejected.withOpacity(0.3)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Motif de rejet',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 4),
-                  Text(t.rejectionReason!),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: 16),
-          _PhotoSection(
-            label: 'Photos avant',
-            photos: beforePhotos,
-            canAdd: !isController && t.status == TaskStatus.inProgress,
-            onAdd: () => _uploadPhoto('before'),
-          ),
-          const SizedBox(height: 12),
-          _PhotoSection(
-            label: 'Photos apres',
-            photos: afterPhotos,
-            canAdd: !isController &&
-                (t.status == TaskStatus.inProgress ||
-                    t.status == TaskStatus.cleaned),
-            onAdd: () => _uploadPhoto('after'),
-          ),
-          const SizedBox(height: 24),
-          _buildActions(t, isController, afterPhotos.isNotEmpty),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildActions(
-      CleaningTask t, bool isController, bool hasAfterPhotos) {
-    if (isController) {
-      if (t.status == TaskStatus.cleaned) {
-        return Column(
-          children: [
-            FilledButton.icon(
-              onPressed: _acting
-                  ? null
-                  : () => _act(() =>
-                      ref.read(taskServiceProvider).validate(widget.taskId)),
-              icon: const Icon(Icons.check_circle_outline),
-              label: const Text('Valider le controle'),
+  Widget _details(CleaningTask t, StaffUser? user) {
+    final df = DateFormat('d MMM à HH:mm', 'fr_FR');
+    final r = t.residence;
+    final isAgent = user?.role == StaffRole.agent;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+      children: [
+        Panel(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      t.residenceTitle,
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  StatusPill(
+                      label: t.status.label, color: taskColor(t.status)),
+                ],
+              ),
+              if (r != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  [r.typeLabel, r.city, if (r.address.isNotEmpty) r.address]
+                      .join(' · '),
+                  style: const TextStyle(
+                      fontSize: 13, color: AppColors.textMuted),
+                ),
+              ],
+              const SizedBox(height: 10),
+              if (t.nextCheckIn != null)
+                _Line(
+                  Icons.event_rounded,
+                  'Prochaine arrivée : '
+                  '${DateFormat('EEEE d MMMM', 'fr_FR').format(t.nextCheckIn!)}',
+                ),
+              if (t.agentName != null)
+                _Line(Icons.person_outline_rounded, 'Agent : ${t.agentName}'),
+              if (t.controllerName != null)
+                _Line(Icons.verified_user_outlined,
+                    'Contrôleur : ${t.controllerName}'),
+              if (t.startedAt != null)
+                _Line(Icons.play_circle_outline_rounded,
+                    'Commencé le ${df.format(t.startedAt!.toLocal())}'),
+              if (t.completedAt != null)
+                _Line(Icons.check_circle_outline_rounded,
+                    'Terminé le ${df.format(t.completedAt!.toLocal())}'),
+              if (t.validatedAt != null)
+                _Line(Icons.verified_rounded,
+                    'Validé le ${df.format(t.validatedAt!.toLocal())}'),
+            ],
+          ),
+        ),
+        if (t.wasRejected) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.error.withValues(alpha: 0.09),
+              borderRadius: BorderRadius.circular(16),
             ),
-            const SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: _acting ? null : _rejectDialog,
-              icon: const Icon(Icons.close_rounded),
-              label: const Text('Rejeter'),
-            ),
-          ],
-        );
-      }
-      return const Center(child: Text('Aucune action disponible'));
-    }
-
-    switch (t.status) {
-      case TaskStatus.pending:
-      case TaskStatus.rejected:
-        return FilledButton.icon(
-          onPressed: _acting
-              ? null
-              : () => _act(
-                  () => ref.read(taskServiceProvider).start(widget.taskId)),
-          icon: const Icon(Icons.play_arrow_rounded),
-          label: const Text('Commencer'),
-        );
-      case TaskStatus.inProgress:
-        return FilledButton.icon(
-          onPressed: !hasAfterPhotos || _acting
-              ? null
-              : () => _act(
-                  () => ref.read(taskServiceProvider).complete(widget.taskId)),
-          icon: const Icon(Icons.done_rounded),
-          label: Text(hasAfterPhotos
-              ? 'Terminer le nettoyage'
-              : 'Ajoutez au moins 1 photo apres'),
-        );
-      default:
-        return const Center(child: Text('Nettoyage termine.'));
-    }
+            child: Text('À refaire : ${t.rejectionReason}',
+                style: const TextStyle(color: AppColors.error)),
+          ),
+        ],
+        if (t.notes.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Panel(child: Text(t.notes)),
+        ],
+        const SizedBox(height: 18),
+        _PhotoSection(
+          title: 'Photos avant',
+          photos: t.photos.where((p) => p.label == 'before').toList(),
+          onAdd: isAgent && t.status == TaskStatus.inProgress && !_busy
+              ? () => _addPhoto('before')
+              : null,
+        ),
+        const SizedBox(height: 14),
+        _PhotoSection(
+          title: 'Photos après (au moins une)',
+          photos: t.photos.where((p) => p.label == 'after').toList(),
+          onAdd: isAgent && t.status == TaskStatus.inProgress && !_busy
+              ? () => _addPhoto('after')
+              : null,
+        ),
+        if (t.hasPhoto('rejection') || !isAgent) ...[
+          const SizedBox(height: 14),
+          _PhotoSection(
+            title: 'Photos du contrôle',
+            photos: t.photos.where((p) => p.label == 'rejection').toList(),
+            onAdd: !isAgent &&
+                    t.status == TaskStatus.cleaned &&
+                    t.controllerId == user?.id &&
+                    !_busy
+                ? () => _addPhoto('rejection')
+                : null,
+          ),
+        ],
+      ],
+    );
   }
 
-  String _fmt(Duration d) {
-    final h = d.inHours;
-    final m = d.inMinutes % 60;
-    final s = d.inSeconds % 60;
-    if (h > 0) {
-      return '${h}h ${m.toString().padLeft(2, '0')}m';
+  Widget _actions(CleaningTask t, StaffUser? user) {
+    final svc = ref.read(taskServiceProvider);
+    final buttons = <Widget>[];
+    if (user?.role == StaffRole.agent) {
+      if (t.status == TaskStatus.pending) {
+        buttons.add(FilledButton.icon(
+          onPressed:
+              _busy ? null : () => _run(() => svc.start(t.id), done: 'C\'est parti !'),
+          icon: const Icon(Icons.play_arrow_rounded),
+          label: const Text('Commencer le nettoyage'),
+        ));
+      } else if (t.status == TaskStatus.inProgress) {
+        buttons.add(FilledButton.icon(
+          onPressed: _busy || !t.hasPhoto('after')
+              ? null
+              : () => _run(() => svc.complete(t.id),
+                  done: 'Envoyé au contrôle.'),
+          icon: const Icon(Icons.check_rounded),
+          label: Text(t.hasPhoto('after')
+              ? 'Terminer le nettoyage'
+              : 'Ajoutez une photo après'),
+        ));
+      }
+    } else if (t.status == TaskStatus.cleaned) {
+      buttons.add(FilledButton.icon(
+        onPressed: _busy
+            ? null
+            : () => _run(() => svc.validate(t.id), done: 'Logement validé.'),
+        icon: const Icon(Icons.verified_rounded),
+        label: const Text('Valider le contrôle'),
+      ));
+      buttons.add(const SizedBox(height: 8));
+      buttons.add(OutlinedButton.icon(
+        onPressed: _busy ? null : _reject,
+        icon: const Icon(Icons.close_rounded),
+        label: const Text('Rejeter'),
+      ));
     }
-    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    if (buttons.isEmpty) return const SizedBox.shrink();
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: buttons,
+        ),
+      ),
+    );
+  }
+}
+
+class _Line extends StatelessWidget {
+  const _Line(this.icon, this.text);
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 17, color: AppColors.textMuted),
+          const SizedBox(width: 7),
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 13))),
+        ],
+      ),
+    );
   }
 }
 
 class _PhotoSection extends StatelessWidget {
   const _PhotoSection({
-    required this.label,
+    required this.title,
     required this.photos,
-    required this.canAdd,
-    required this.onAdd,
+    this.onAdd,
   });
-  final String label;
+  final String title;
   final List<TaskPhoto> photos;
-  final bool canAdd;
-  final VoidCallback onAdd;
+  final VoidCallback? onAdd;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text('$label (${photos.length})',
-                  style: Theme.of(context).textTheme.titleMedium),
-            ),
-            if (canAdd)
-              IconButton.filled(
-                onPressed: onAdd,
-                icon: const Icon(Icons.add_a_photo_rounded),
-              ),
-          ],
-        ),
+        Text(title,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
-        if (photos.isEmpty)
-          Container(
-            height: 100,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: const Center(
-              child: Text('Aucune photo pour le moment',
-                  style: TextStyle(color: AppColors.textMuted)),
-            ),
-          )
-        else
-          SizedBox(
-            height: 100,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: photos.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, i) => ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: CachedNetworkImage(
-                  imageUrl: photos[i].url,
-                  width: 100,
-                  height: 100,
-                  fit: BoxFit.cover,
+        SizedBox(
+          height: 96,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              if (onAdd != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: InkWell(
+                    onTap: onAdd,
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      width: 96,
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryLight,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(Icons.add_a_photo_outlined,
+                          color: AppColors.primary),
+                    ),
+                  ),
                 ),
-              ),
-            ),
+              for (final p in photos)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: CachedNetworkImage(
+                      imageUrl: ApiConfig.resolve(p.url),
+                      width: 96,
+                      height: 96,
+                      fit: BoxFit.cover,
+                      errorWidget: (_, __, ___) => Container(
+                        width: 96,
+                        color: AppColors.surfaceAlt,
+                        child: const Icon(Icons.broken_image_outlined),
+                      ),
+                    ),
+                  ),
+                ),
+              if (photos.isEmpty && onAdd == null)
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Aucune photo',
+                      style: TextStyle(
+                          fontSize: 13, color: AppColors.textMuted)),
+                ),
+            ],
           ),
+        ),
       ],
     );
   }

@@ -31,10 +31,20 @@ class AppColors {
   // Rouge Chic Residence. Identique dans les deux thèmes : c'est la marque,
   // elle ne se dilue pas. Seule la variante *claire* sert en mode sombre,
   // pour garder un contraste suffisant sur fond noir.
-  static const primary500 = Color(0xFFEF4444);
-  static const primary600 = Color(0xFFDC2626);
-  static const primary700 = Color(0xFFB91C1C);
-  static const primary800 = Color(0xFF991B1B);
+  static const primary500 = Color(0xFFF4623F);
+  static const primary600 = Color(0xFFF04E2E);
+  static const primary700 = Color(0xFFD93D1F);
+  static const primary800 = Color(0xFFB02F16);
+
+  /// Bleu nuit des titres et de la navigation (maquette 2026-10-31).
+  static const navy = Color(0xFF12294B);
+
+  /// Étoiles de notation.
+  static const star = Color(0xFFF5A623);
+
+  /// Pastille verte « Confirmée ».
+  static const successSoft = Color(0xFFDDF5E6);
+  static const successDeep = Color(0xFF16804A);
 
   static const accent500 = Color(0xFFF97316);
   static const accent600 = Color(0xFFEA580C);
@@ -53,21 +63,22 @@ class AppColors {
 
   // ── Valeurs brutes, réservées à la construction des thèmes ──────────
   // Elles ne doivent pas être lues par les widgets : passer par les tokens.
-  static const _lightSurface = Color(0xFFFFFFFF);
-  static const _lightSurfaceAlt = Color(0xFFF2F2F2);
+  static const _lightSurface = Color(0xFFFFF9F2);
+  static const _lightCard = Color(0xFFFFFFFF);
+  static const _lightSurfaceAlt = Color(0xFFF7EFE4);
   // Contour volontairement dense : #EBEBEB puis #DDDDDD disparaissaient sur
   // fond blanc et les pilules semblaient flotter sans encerclement.
-  static const _lightBorder = Color(0xFFCFCFCF);
-  static const _lightText = Color(0xFF222222);
-  static const _lightMuted = Color(0xFF6A6A6A);
+  static const _lightBorder = Color(0xFFEDE3D6);
+  static const _lightText = Color(0xFF12294B);
+  static const _lightMuted = Color(0xFF66718A);
 
-  static const _darkSurface = Color(0xFF0F0F10);
-  static const _darkSurfaceAlt = Color(0xFF1C1C1E);
-  static const _darkSurfaceAlt2 = Color(0xFF323235);
+  static const _darkSurface = Color(0xFF0D1626);
+  static const _darkSurfaceAlt = Color(0xFF17233A);
+  static const _darkSurfaceAlt2 = Color(0xFF22304B);
   // Même raison côté sombre : un contour trop proche du fond ne se voit pas.
-  static const _darkBorder = Color(0xFF4A4A4E);
-  static const _darkText = Color(0xFFF7F7F7);
-  static const _darkMuted = Color(0xFFAEAEB2);
+  static const _darkBorder = Color(0xFF33435F);
+  static const _darkText = Color(0xFFF6F3EE);
+  static const _darkMuted = Color(0xFFA9B4C6);
 
   // ── Compatibilité descendante ────────────────────────────────────────
   // Conservés le temps de migrer tous les appels. Ils pointent sur les
@@ -176,27 +187,27 @@ class AppTokens extends ThemeExtension<AppTokens> {
   static const light = AppTokens(
     brightness: Brightness.light,
     surface: AppColors._lightSurface,
-    surfaceElevated: AppColors._lightSurface,
+    surfaceElevated: AppColors._lightCard,
     surfaceSunken: AppColors._lightSurfaceAlt,
     textPrimary: AppColors._lightText,
     textSecondary: AppColors._lightMuted,
     textOnPhoto: Colors.white,
     border: AppColors._lightBorder,
     borderStrong: AppColors._lightText,
-    chipBg: AppColors._lightSurface,
-    chipBgSelected: AppColors._lightSurfaceAlt,
-    navBg: AppColors._lightSurface,
-    pillBg: AppColors._lightSurface,
+    chipBg: AppColors._lightCard,
+    chipBgSelected: AppColors.navy,
+    navBg: AppColors._lightCard,
+    pillBg: AppColors._lightCard,
     pillText: AppColors._lightText,
-    ctaBg: AppColors._lightText,
+    ctaBg: AppColors.primary600,
     ctaFg: Colors.white,
     brand: AppColors.primary600,
     imagePlaceholder: AppColors.sand100,
     // Ombre plus marquée qu'un simple 0x1F : c'est elle qui détache les
     // pilules du fond blanc et complète l'encerclement.
-    shadow: Color(0x2E000000),
-    skeletonBase: Color(0xFFE8E8E8),
-    skeletonHighlight: Color(0xFFF5F5F5),
+    shadow: Color(0x1F12294B),
+    skeletonBase: Color(0xFFF1E8DB),
+    skeletonHighlight: Color(0xFFFBF6EE),
   );
 
   static const dark = AppTokens(
@@ -210,19 +221,18 @@ class AppTokens extends ThemeExtension<AppTokens> {
     border: AppColors._darkBorder,
     borderStrong: AppColors._darkText,
     chipBg: AppColors._darkSurfaceAlt,
-    chipBgSelected: AppColors._darkSurfaceAlt2,
-    navBg: Color(0xFF161618),
+    chipBgSelected: AppColors.primary600,
+    navBg: Color(0xFF131E33),
     pillBg: AppColors._darkSurfaceAlt,
     pillText: AppColors._darkText,
-    // CTA inversé : blanc sur fond sombre.
-    ctaBg: AppColors._darkText,
-    ctaFg: AppColors._darkSurface,
+    ctaBg: AppColors.primary600,
+    ctaFg: Colors.white,
     // primary500 plutôt que 600 : le rouge foncé manque de contraste sur noir.
     brand: AppColors.primary500,
-    imagePlaceholder: Color(0xFF232325),
+    imagePlaceholder: Color(0xFF22304B),
     shadow: Color(0x66000000),
-    skeletonBase: Color(0xFF1F1F21),
-    skeletonHighlight: Color(0xFF2A2A2D),
+    skeletonBase: Color(0xFF17233A),
+    skeletonHighlight: Color(0xFF22304B),
   );
 
   @override
@@ -458,7 +468,7 @@ class AppTheme {
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
-          side: BorderSide(color: t.border, width: 1.2),
+          side: BorderSide(color: t.border),
         ),
       ),
       listTileTheme: ListTileThemeData(
@@ -522,10 +532,10 @@ class AppTheme {
   }
 
   static TextTheme _textTheme(TextTheme base, AppTokens t) {
-    // Une seule famille — Inter — la hiérarchie vient de la graisse, comme
-    // chez Airbnb. Chaque style porte explicitement `t.textPrimary` : sans
+    // Une seule famille, Poppins (maquette 2026-10-31) : la hiérarchie vient
+    // de la graisse. Chaque style porte explicitement `t.textPrimary` : sans
     // ça, Material retombe sur le noir du thème clair.
-    final sans = GoogleFonts.interTextTheme(base);
+    final sans = GoogleFonts.poppinsTextTheme(base);
     final c = t.textPrimary;
     return base.copyWith(
       displayLarge: sans.displayLarge
@@ -563,16 +573,16 @@ class AppTheme {
       floatingLabelStyle: TextStyle(color: t.textPrimary),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(color: t.border),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(color: t.border),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: t.borderStrong, width: 1.5),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: t.brand, width: 1.5),
       ),
     );
   }
@@ -583,9 +593,9 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: t.ctaBg,
           foregroundColor: t.ctaFg,
-          minimumSize: const Size.fromHeight(56),
+          minimumSize: const Size.fromHeight(54),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: const StadiumBorder(),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
           elevation: 0,
         ),
@@ -595,8 +605,9 @@ class AppTheme {
         style: FilledButton.styleFrom(
           backgroundColor: t.brand,
           foregroundColor: Colors.white,
-          minimumSize: const Size.fromHeight(52),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          minimumSize: const Size.fromHeight(54),
+          shape: const StadiumBorder(),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
       );
 
@@ -605,8 +616,8 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: t.textPrimary,
           side: BorderSide(color: t.border),
-          minimumSize: const Size.fromHeight(52),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          minimumSize: const Size.fromHeight(54),
+          shape: const StadiumBorder(),
         ),
       );
 }

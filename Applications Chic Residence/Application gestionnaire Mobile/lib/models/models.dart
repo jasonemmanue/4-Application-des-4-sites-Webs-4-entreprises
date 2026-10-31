@@ -1,7 +1,12 @@
+// Modèles alignés sur `StaffOut`, `CleaningTaskOut`, `TaskPhotoOut` et
+// `StaffStatsOut` du backend. Les identifiants sont des UUID (texte), et le
+// statut final d'une tâche est `validated`.
+
 enum StaffRole { agent, controller }
 
 extension StaffRoleX on StaffRole {
-  String get label => this == StaffRole.agent ? 'Agent de nettoyage' : 'Controleur';
+  String get label =>
+      this == StaffRole.agent ? 'Agent de nettoyage' : 'Contrôleur';
   static StaffRole parse(String? v) =>
       (v ?? '').toLowerCase() == 'controller'
           ? StaffRole.controller
@@ -9,47 +14,46 @@ extension StaffRoleX on StaffRole {
 }
 
 class StaffUser {
-  final int id;
+  final String id;
   final String phone;
   final String fullName;
   final StaffRole role;
-  final bool active;
+  final bool isActive;
 
   const StaffUser({
     required this.id,
     required this.phone,
     required this.fullName,
     required this.role,
-    required this.active,
+    required this.isActive,
   });
 
   factory StaffUser.fromJson(Map<String, dynamic> json) => StaffUser(
-        id: (json['id'] as num).toInt(),
+        id: json['id'].toString(),
         phone: json['phone']?.toString() ?? '',
         fullName: json['full_name']?.toString() ?? '',
         role: StaffRoleX.parse(json['role']?.toString()),
-        active: json['active'] != false,
+        isActive: json['is_active'] != false,
       );
 
-  String get firstName =>
-      fullName.split(' ').isNotEmpty ? fullName.split(' ').first : fullName;
+  String get firstName => fullName.trim().split(' ').first;
 }
 
-enum TaskStatus { pending, inProgress, cleaned, controlled, rejected }
+enum TaskStatus { pending, inProgress, cleaned, validated, rejected }
 
 extension TaskStatusX on TaskStatus {
   String get label {
     switch (this) {
       case TaskStatus.pending:
-        return 'En attente';
+        return 'À faire';
       case TaskStatus.inProgress:
         return 'En cours';
       case TaskStatus.cleaned:
-        return 'Nettoye';
-      case TaskStatus.controlled:
-        return 'Controle';
+        return 'À contrôler';
+      case TaskStatus.validated:
+        return 'Validée';
       case TaskStatus.rejected:
-        return 'Rejete';
+        return 'Rejetée';
     }
   }
 
@@ -61,8 +65,8 @@ extension TaskStatusX on TaskStatus {
         return 'in_progress';
       case TaskStatus.cleaned:
         return 'cleaned';
-      case TaskStatus.controlled:
-        return 'controlled';
+      case TaskStatus.validated:
+        return 'validated';
       case TaskStatus.rejected:
         return 'rejected';
     }
@@ -71,17 +75,12 @@ extension TaskStatusX on TaskStatus {
   static TaskStatus parse(String? v) {
     switch ((v ?? '').toLowerCase()) {
       case 'in_progress':
-      case 'en_cours':
         return TaskStatus.inProgress;
       case 'cleaned':
-      case 'nettoye':
         return TaskStatus.cleaned;
-      case 'controlled':
-      case 'valide':
-      case 'controle':
-        return TaskStatus.controlled;
+      case 'validated':
+        return TaskStatus.validated;
       case 'rejected':
-      case 'rejete':
         return TaskStatus.rejected;
       default:
         return TaskStatus.pending;
@@ -89,137 +88,161 @@ extension TaskStatusX on TaskStatus {
   }
 }
 
-class ResidenceSummary {
-  final int id;
-  final String name;
+class ResidenceMini {
+  final String id;
+  final String title;
+  final String city;
   final String address;
   final String type;
-  final int capacity;
 
-  const ResidenceSummary({
+  const ResidenceMini({
     required this.id,
-    required this.name,
+    required this.title,
+    required this.city,
     required this.address,
     required this.type,
-    required this.capacity,
   });
 
-  factory ResidenceSummary.fromJson(Map<String, dynamic> json) =>
-      ResidenceSummary(
-        id: (json['id'] as num).toInt(),
-        name: json['name']?.toString() ?? '',
+  static const _types = {
+    'studio': 'Studio',
+    'apartment': 'Appartement',
+    'villa': 'Villa',
+    'duplex': 'Duplex',
+    'room': 'Chambre',
+  };
+
+  String get typeLabel => _types[type] ?? type;
+
+  factory ResidenceMini.fromJson(Map<String, dynamic> json) => ResidenceMini(
+        id: json['id'].toString(),
+        title: json['title']?.toString() ?? '',
+        city: json['city']?.toString() ?? '',
         address: json['address']?.toString() ?? '',
-        type: json['type']?.toString() ?? '',
-        capacity: (json['capacity'] as num?)?.toInt() ?? 2,
+        type: json['residence_type']?.toString() ?? '',
       );
 }
 
 class TaskPhoto {
-  final int id;
+  final String id;
   final String url;
-  final String phase;
-  final DateTime uploadedAt;
+  final String label; // before | after | rejection
+  final DateTime createdAt;
 
   const TaskPhoto({
     required this.id,
     required this.url,
-    required this.phase,
-    required this.uploadedAt,
+    required this.label,
+    required this.createdAt,
   });
 
   factory TaskPhoto.fromJson(Map<String, dynamic> json) => TaskPhoto(
-        id: (json['id'] as num).toInt(),
+        id: json['id'].toString(),
         url: json['url']?.toString() ?? '',
-        phase: json['phase']?.toString() ?? 'after',
-        uploadedAt: DateTime.tryParse(json['uploaded_at']?.toString() ?? '') ??
+        label: json['label']?.toString() ?? 'after',
+        createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
             DateTime.now(),
       );
 }
 
 class CleaningTask {
-  final int id;
-  final ResidenceSummary residence;
+  final String id;
+  final ResidenceMini? residence;
   final TaskStatus status;
-  final int? assignedToId;
-  final String? assignedToName;
-  final int? controllerId;
+  final String? agentId;
+  final String? agentName;
+  final String? controllerId;
   final String? controllerName;
   final DateTime? nextCheckIn;
   final DateTime? startedAt;
   final DateTime? completedAt;
-  final DateTime? controlledAt;
-  final String? rejectionReason;
+  final DateTime? validatedAt;
+  final String rejectionReason;
+  final String notes;
   final List<TaskPhoto> photos;
-  final int estimatedMinutes;
 
   const CleaningTask({
     required this.id,
-    required this.residence,
     required this.status,
     required this.photos,
-    required this.estimatedMinutes,
-    this.assignedToId,
-    this.assignedToName,
+    required this.rejectionReason,
+    required this.notes,
+    this.residence,
+    this.agentId,
+    this.agentName,
     this.controllerId,
     this.controllerName,
     this.nextCheckIn,
     this.startedAt,
     this.completedAt,
-    this.controlledAt,
-    this.rejectionReason,
+    this.validatedAt,
   });
 
-  factory CleaningTask.fromJson(Map<String, dynamic> json) => CleaningTask(
-        id: (json['id'] as num).toInt(),
-        residence: ResidenceSummary.fromJson(
-            (json['residence'] as Map).cast<String, dynamic>()),
-        status: TaskStatusX.parse(json['status']?.toString()),
-        assignedToId: (json['assigned_to_id'] as num?)?.toInt(),
-        assignedToName: json['assigned_to_name']?.toString(),
-        controllerId: (json['controller_id'] as num?)?.toInt(),
-        controllerName: json['controller_name']?.toString(),
-        nextCheckIn:
-            DateTime.tryParse(json['next_check_in']?.toString() ?? ''),
-        startedAt: DateTime.tryParse(json['started_at']?.toString() ?? ''),
-        completedAt: DateTime.tryParse(json['completed_at']?.toString() ?? ''),
-        controlledAt:
-            DateTime.tryParse(json['controlled_at']?.toString() ?? ''),
-        rejectionReason: json['rejection_reason']?.toString(),
-        estimatedMinutes:
-            (json['estimated_minutes'] as num?)?.toInt() ?? 90,
-        photos: ((json['photos'] as List?) ?? [])
-            .map((e) =>
-                TaskPhoto.fromJson((e as Map).cast<String, dynamic>()))
-            .toList(),
-      );
+  String get residenceTitle => residence?.title ?? 'Logement';
 
-  Duration? get workingDuration {
-    if (startedAt == null) return null;
-    final end = completedAt ?? DateTime.now();
-    return end.difference(startedAt!);
+  /// Un rejet remet la tâche « à faire » en gardant le motif.
+  bool get wasRejected =>
+      status == TaskStatus.pending && rejectionReason.isNotEmpty;
+
+  static DateTime? _date(dynamic v) =>
+      v == null ? null : DateTime.tryParse(v.toString());
+
+  factory CleaningTask.fromJson(Map<String, dynamic> json) {
+    Map<String, dynamic>? map(String k) =>
+        (json[k] as Map?)?.cast<String, dynamic>();
+    return CleaningTask(
+      id: json['id'].toString(),
+      residence: map('residence') == null
+          ? null
+          : ResidenceMini.fromJson(map('residence')!),
+      status: TaskStatusX.parse(json['status']?.toString()),
+      agentId: json['assigned_agent_id']?.toString(),
+      agentName: map('assigned_agent')?['full_name']?.toString(),
+      controllerId: json['assigned_controller_id']?.toString(),
+      controllerName: map('assigned_controller')?['full_name']?.toString(),
+      nextCheckIn: _date(json['next_checkin']),
+      startedAt: _date(json['started_at']),
+      completedAt: _date(json['completed_at']),
+      validatedAt: _date(json['validated_at']),
+      rejectionReason: json['rejection_reason']?.toString() ?? '',
+      notes: json['notes']?.toString() ?? '',
+      photos: ((json['photos'] as List?) ?? const [])
+          .map((e) => TaskPhoto.fromJson((e as Map).cast<String, dynamic>()))
+          .toList(),
+    );
   }
+
+  bool hasPhoto(String label) => photos.any((p) => p.label == label);
 }
 
 class StaffStats {
-  final int completedCount;
-  final int rejectedCount;
-  final Duration averageDuration;
-  final double validationRate; // 0..1
+  final int totalTasks;
+  final int completedTasks;
+  final int inProgressTasks;
+  final int validatedTasks;
+  final int rejectedTasks;
+  final double? averageMinutes;
+  final double? firstPassRate; // 0..1
 
   const StaffStats({
-    required this.completedCount,
-    required this.rejectedCount,
-    required this.averageDuration,
-    required this.validationRate,
+    required this.totalTasks,
+    required this.completedTasks,
+    required this.inProgressTasks,
+    required this.validatedTasks,
+    required this.rejectedTasks,
+    this.averageMinutes,
+    this.firstPassRate,
   });
 
-  factory StaffStats.fromJson(Map<String, dynamic> json) => StaffStats(
-        completedCount: (json['completed_count'] as num?)?.toInt() ?? 0,
-        rejectedCount: (json['rejected_count'] as num?)?.toInt() ?? 0,
-        averageDuration: Duration(
-          minutes: (json['average_duration_min'] as num?)?.toInt() ?? 0,
-        ),
-        validationRate:
-            (json['validation_rate'] as num?)?.toDouble() ?? 0,
-      );
+  factory StaffStats.fromJson(Map<String, dynamic> json) {
+    int n(String k) => (json[k] as num?)?.toInt() ?? 0;
+    return StaffStats(
+      totalTasks: n('total_tasks'),
+      completedTasks: n('completed_tasks'),
+      inProgressTasks: n('in_progress_tasks'),
+      validatedTasks: n('validated_tasks'),
+      rejectedTasks: n('rejected_tasks'),
+      averageMinutes: (json['average_duration_minutes'] as num?)?.toDouble(),
+      firstPassRate: (json['first_pass_rate'] as num?)?.toDouble(),
+    );
+  }
 }

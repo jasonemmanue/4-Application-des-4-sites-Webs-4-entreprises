@@ -6,6 +6,7 @@ import '../../config/theme.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
 import '../../widgets/task_card.dart';
+import '../../widgets/ui.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -13,142 +14,144 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
-    final async = ref.watch(tasksProvider);
+    final async = ref.watch(myTasksProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(user == null ? 'Chic Residence' : 'Salut ${user.firstName}'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.invalidate(tasksProvider),
-          ),
-        ],
-      ),
-      body: async.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(e.toString())),
-        data: (tasks) {
-          final today = DateTime.now();
-          final todays = tasks.where((t) {
-            final d = t.nextCheckIn ?? t.startedAt;
-            if (d == null) return t.status != TaskStatus.controlled;
-            return d.year == today.year &&
-                d.month == today.month &&
-                d.day == today.day;
-          }).toList();
-
-          final pending =
-              tasks.where((t) => t.status == TaskStatus.pending).length;
-          final inProgress =
-              tasks.where((t) => t.status == TaskStatus.inProgress).length;
-          final done = tasks
-              .where((t) =>
-                  t.status == TaskStatus.cleaned ||
-                  t.status == TaskStatus.controlled)
-              .length;
-
-          return RefreshIndicator(
-            onRefresh: () async => ref.invalidate(tasksProvider),
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                Text('Aujourd\'hui',
-                    style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _StatBox(
-                        label: 'En attente',
-                        count: pending,
-                        color: AppColors.pending,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _StatBox(
-                        label: 'En cours',
-                        count: inProgress,
-                        color: AppColors.inProgress,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _StatBox(
-                        label: 'Terminees',
-                        count: done,
-                        color: AppColors.completed,
-                      ),
-                    ),
-                  ],
+      body: SafeArea(
+        bottom: false,
+        child: RefreshIndicator(
+          onRefresh: () async => ref.invalidate(myTasksProvider),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+            children: [
+              Row(
+                children: [
+                  Image.asset('assets/branding/logo-full.png',
+                      height: 58, semanticLabel: 'Chic Résidence Meublée'),
+                  const Spacer(),
+                  if (user != null)
+                    StatusPill(label: user.role.label, color: AppColors.navy),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Bonjour ${user?.firstName ?? ''} !',
+                style:
+                    const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+              ),
+              Text(
+                user?.role == StaffRole.controller
+                    ? 'Voici les logements à contrôler'
+                    : 'Voici les logements à préparer',
+                style:
+                    const TextStyle(fontSize: 13.5, color: AppColors.textMuted),
+              ),
+              const SizedBox(height: 18),
+              async.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.all(40),
+                  child: Center(child: CircularProgressIndicator()),
                 ),
-                const SizedBox(height: 24),
-                Text('Prochaine tache',
-                    style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 12),
-                if (todays.isEmpty)
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: AppColors.card,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: const Center(
-                      child: Text('Aucune tache prevue aujourd\'hui'),
-                    ),
-                  )
-                else
-                  ...todays.take(3).map(
-                        (t) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: TaskCard(
-                            task: t,
-                            onTap: () => context.push('/tasks/${t.id}'),
-                          ),
-                        ),
-                      ),
-              ],
-            ),
-          );
-        },
+                error: (e, _) => ErrorState(
+                  error: e,
+                  onRetry: () => ref.invalidate(myTasksProvider),
+                ),
+                data: (tasks) => _Content(tasks: tasks, role: user?.role),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 
-class _StatBox extends StatelessWidget {
-  const _StatBox({
-    required this.label,
-    required this.count,
-    required this.color,
-  });
-  final String label;
-  final int count;
-  final Color color;
+class _Content extends StatelessWidget {
+  const _Content({required this.tasks, required this.role});
+  final List<CleaningTask> tasks;
+  final StaffRole? role;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.25)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('$count',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w800,
-                  )),
-          const SizedBox(height: 4),
-          Text(label, style: Theme.of(context).textTheme.bodySmall),
-        ],
-      ),
+    int count(TaskStatus s) => tasks.where((t) => t.status == s).length;
+    final open = tasks
+        .where((t) => role == StaffRole.controller
+            ? t.status == TaskStatus.cleaned
+            : t.status == TaskStatus.pending ||
+                t.status == TaskStatus.inProgress)
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TwoColumns(
+          children: role == StaffRole.controller
+              ? [
+                  StatTile(
+                    icon: Icons.rule_rounded,
+                    color: AppColors.primary,
+                    value: '${count(TaskStatus.cleaned)}',
+                    label: 'À contrôler',
+                  ),
+                  StatTile(
+                    icon: Icons.verified_rounded,
+                    color: AppColors.success,
+                    value: '${count(TaskStatus.validated)}',
+                    label: 'Validées',
+                  ),
+                ]
+              : [
+                  StatTile(
+                    icon: Icons.pending_actions_rounded,
+                    color: AppColors.warning,
+                    value: '${count(TaskStatus.pending)}',
+                    label: 'À faire',
+                  ),
+                  StatTile(
+                    icon: Icons.cleaning_services_rounded,
+                    color: AppColors.info,
+                    value: '${count(TaskStatus.inProgress)}',
+                    label: 'En cours',
+                  ),
+                  StatTile(
+                    icon: Icons.rule_rounded,
+                    color: AppColors.primary,
+                    value: '${count(TaskStatus.cleaned)}',
+                    label: 'En contrôle',
+                  ),
+                  StatTile(
+                    icon: Icons.verified_rounded,
+                    color: AppColors.success,
+                    value: '${count(TaskStatus.validated)}',
+                    label: 'Validées',
+                  ),
+                ],
+        ),
+        const SizedBox(height: 22),
+        SectionTitle(
+          'Prochaines tâches',
+          action: TextButton(
+            onPressed: () => context.go('/tasks'),
+            child: const Text('Voir tout'),
+          ),
+        ),
+        if (open.isEmpty)
+          const Panel(
+            child: EmptyState(
+              icon: Icons.task_alt_rounded,
+              title: 'Rien à faire pour le moment',
+            ),
+          )
+        else
+          for (final t in open.take(4))
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: TaskCard(
+                task: t,
+                onTap: () => context.push('/tasks/${t.id}'),
+              ),
+            ),
+      ],
     );
   }
 }

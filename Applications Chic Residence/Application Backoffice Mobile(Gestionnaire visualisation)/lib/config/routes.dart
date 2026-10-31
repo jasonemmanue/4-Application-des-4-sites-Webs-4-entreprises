@@ -1,14 +1,23 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers/providers.dart';
-import '../screens/cleaning/cleaning_overview_screen.dart';
-import '../screens/dashboard/dashboard_screen.dart';
+import '../screens/admin/bookings_screen.dart';
+import '../screens/admin/contacts_screen.dart';
+import '../screens/admin/dashboard_screen.dart';
+import '../screens/admin/more_screen.dart';
+import '../screens/admin/payments_screen.dart';
+import '../screens/admin/residences_screen.dart';
+import '../screens/admin/reviews_screen.dart';
+import '../screens/admin/settings_screen.dart';
+import '../screens/field/cleaning_screen.dart';
+import '../screens/field/performance_screen.dart';
+import '../screens/field/staff_screen.dart';
 import '../screens/login/login_screen.dart';
 import '../screens/main_scaffold.dart';
-import '../screens/performance/performance_screen.dart';
-import '../screens/placeholder_screens.dart';
-import '../screens/staff/staff_screen.dart';
+
+NoTransitionPage<void> _tab(Widget child) => NoTransitionPage(child: child);
 
 GoRouter buildRouter(WidgetRef ref) => GoRouter(
       initialLocation: '/',
@@ -24,77 +33,55 @@ GoRouter buildRouter(WidgetRef ref) => GoRouter(
           path: '/login',
           builder: (context, state) => const LoginScreen(),
         ),
-        GoRoute(
-          path: '/',
-          builder: (context, state) => MainScaffold(
-            title: 'Dashboard',
-            location: state.matchedLocation,
-            body: const DashboardScreen(),
-          ),
-        ),
-        GoRoute(
-          path: '/residences',
-          builder: (context, state) => MainScaffold(
-            title: 'Residences',
-            location: state.matchedLocation,
-            body: const ResidencesScreen(),
-          ),
-        ),
-        GoRoute(
-          path: '/bookings',
-          builder: (context, state) => MainScaffold(
-            title: 'Reservations',
-            location: state.matchedLocation,
-            body: const BookingsScreen(),
-          ),
+        ShellRoute(
+          builder: (context, state, child) =>
+              MainShell(location: state.matchedLocation, child: child),
+          routes: [
+            GoRoute(
+              path: '/',
+              pageBuilder: (_, __) => _tab(const DashboardScreen()),
+            ),
+            GoRoute(
+              path: '/residences',
+              pageBuilder: (_, __) => _tab(const ResidencesScreen()),
+            ),
+            GoRoute(
+              path: '/bookings',
+              pageBuilder: (_, __) => _tab(const BookingsScreen()),
+            ),
+            GoRoute(
+              path: '/cleaning',
+              pageBuilder: (_, __) => _tab(const CleaningScreen()),
+            ),
+            GoRoute(
+              path: '/more',
+              pageBuilder: (_, __) => _tab(const MoreScreen()),
+            ),
+          ],
         ),
         GoRoute(
           path: '/payments',
-          builder: (context, state) => MainScaffold(
-            title: 'Paiements',
-            location: state.matchedLocation,
-            body: const PaymentsScreen(),
-          ),
+          builder: (_, __) => const PaymentsScreen(),
         ),
         GoRoute(
           path: '/reviews',
-          builder: (context, state) => MainScaffold(
-            title: 'Avis',
-            location: state.matchedLocation,
-            body: const ReviewsScreen(),
-          ),
+          builder: (_, __) => const ReviewsScreen(),
         ),
         GoRoute(
-          path: '/settings',
-          builder: (context, state) => MainScaffold(
-            title: 'Parametres',
-            location: state.matchedLocation,
-            body: const SettingsScreen(),
-          ),
+          path: '/contacts',
+          builder: (_, __) => const ContactsScreen(),
         ),
         GoRoute(
           path: '/staff',
-          builder: (context, state) => MainScaffold(
-            title: 'Personnel',
-            location: state.matchedLocation,
-            body: const StaffScreen(),
-          ),
-        ),
-        GoRoute(
-          path: '/cleaning',
-          builder: (context, state) => MainScaffold(
-            title: 'Nettoyage & Controle',
-            location: state.matchedLocation,
-            body: const CleaningOverviewScreen(),
-          ),
+          builder: (_, __) => const StaffScreen(),
         ),
         GoRoute(
           path: '/performance',
-          builder: (context, state) => MainScaffold(
-            title: 'Performance',
-            location: state.matchedLocation,
-            body: const PerformanceScreen(),
-          ),
+          builder: (_, __) => const PerformanceScreen(),
+        ),
+        GoRoute(
+          path: '/settings',
+          builder: (_, __) => const SettingsScreen(),
         ),
       ],
     );

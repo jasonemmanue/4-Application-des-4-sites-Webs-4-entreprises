@@ -55,7 +55,7 @@ GoRouter buildRouter(WidgetRef ref) => GoRouter(
         GoRoute(
           path: '/tasks/:id',
           builder: (context, state) => TaskDetailScreen(
-            taskId: int.parse(state.pathParameters['id']!),
+            taskId: state.pathParameters['id']!,
           ),
         ),
       ],

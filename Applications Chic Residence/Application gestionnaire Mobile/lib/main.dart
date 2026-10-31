@@ -16,8 +16,7 @@ Future<void> main() async {
   await initializeDateFormatting('fr_FR');
 
   final container = ProviderContainer();
-  await container.read(authServiceProvider).restore();
-  final restoredUser = container.read(authServiceProvider).currentUser;
+  final restoredUser = await container.read(authServiceProvider).restore();
   container.read(currentUserProvider.notifier).state = restoredUser;
 
   runApp(

@@ -1,6 +1,5 @@
-import 'dart:io';
-
 import 'package:dio/dio.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../models/models.dart';
 import 'api_client.dart';
@@ -9,62 +8,47 @@ class TaskService {
   TaskService(this._api);
   final ApiClient _api;
 
-  Future<List<CleaningTask>> list({TaskStatus? status, int? assignedTo}) async {
-    final res = await _api.dio.get('/cleaning-tasks', queryParameters: {
-      if (status != null) 'status': status.apiValue,
-      if (assignedTo != null) 'assigned_to': assignedTo,
-    });
-    final items = (res.data as List?) ?? [];
-    return items
-        .map((e) =>
-            CleaningTask.fromJson((e as Map).cast<String, dynamic>()))
+  Future<List<CleaningTask>> all() async {
+    final res = await _api.dio.get('/cleaning-tasks');
+    return ((res.data as List?) ?? const [])
+        .map((e) => CleaningTask.fromJson((e as Map).cast<String, dynamic>()))
         .toList();
   }
 
-  Future<CleaningTask> detail(int id) async {
-    final res = await _api.dio.get('/cleaning-tasks/$id');
-    return CleaningTask.fromJson(
-        (res.data as Map).cast<String, dynamic>());
-  }
+  CleaningTask _one(Response<dynamic> res) =>
+      CleaningTask.fromJson((res.data as Map).cast<String, dynamic>());
 
-  Future<CleaningTask> start(int id) async {
-    final res = await _api.dio.put('/cleaning-tasks/$id/start');
-    return CleaningTask.fromJson(
-        (res.data as Map).cast<String, dynamic>());
-  }
+  Future<CleaningTask> detail(String id) async =>
+      _one(await _api.dio.get('/cleaning-tasks/$id'));
 
-  Future<CleaningTask> complete(int id) async {
-    final res = await _api.dio.put('/cleaning-tasks/$id/complete');
-    return CleaningTask.fromJson(
-        (res.data as Map).cast<String, dynamic>());
-  }
+  Future<CleaningTask> start(String id) async =>
+      _one(await _api.dio.put('/cleaning-tasks/$id/start'));
 
-  Future<CleaningTask> validate(int id) async {
-    final res = await _api.dio.put('/cleaning-tasks/$id/validate');
-    return CleaningTask.fromJson(
-        (res.data as Map).cast<String, dynamic>());
-  }
+  Future<CleaningTask> complete(String id) async =>
+      _one(await _api.dio.put('/cleaning-tasks/$id/complete'));
 
-  Future<CleaningTask> reject(int id, String reason) async {
-    final res = await _api.dio
-        .put('/cleaning-tasks/$id/reject', data: {'reason': reason});
-    return CleaningTask.fromJson(
-        (res.data as Map).cast<String, dynamic>());
-  }
+  Future<CleaningTask> validate(String id) async =>
+      _one(await _api.dio.put('/cleaning-tasks/$id/validate'));
 
-  Future<TaskPhoto> uploadPhoto(int taskId, File file,
-      {required String phase}) async {
+  Future<CleaningTask> reject(String id, String reason) async => _one(
+      await _api.dio.put('/cleaning-tasks/$id/reject', data: {'reason': reason}));
+
+  /// `label` est un paramètre de requête : before, after ou rejection.
+  Future<void> uploadPhoto(String taskId, XFile file,
+      {required String label}) async {
+    final name = file.name.contains('.') ? file.name : '${file.name}.jpg';
     final form = FormData.fromMap({
-      'phase': phase,
-      'file': await MultipartFile.fromFile(file.path),
+      'file': await MultipartFile.fromFile(file.path, filename: name),
     });
-    final res =
-        await _api.dio.post('/cleaning-tasks/$taskId/photos', data: form);
-    return TaskPhoto.fromJson((res.data as Map).cast<String, dynamic>());
+    await _api.dio.post(
+      '/cleaning-tasks/$taskId/photos',
+      queryParameters: {'label': label},
+      data: form,
+    );
   }
 
   Future<StaffStats> myStats() async {
-    final res = await _api.dio.get('/staff/stats');
+    final res = await _api.dio.get('/staff/stats/me');
     return StaffStats.fromJson((res.data as Map).cast<String, dynamic>());
   }
 }

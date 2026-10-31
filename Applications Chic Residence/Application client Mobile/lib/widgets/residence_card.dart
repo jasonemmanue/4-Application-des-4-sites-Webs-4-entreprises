@@ -7,213 +7,146 @@ import '../config/format.dart';
 import '../config/theme.dart';
 import '../models/residence.dart';
 import '../providers/providers.dart';
-import 'app_surface.dart';
 
-/// Card style Airbnb : image carrée arrondie, cœur overlay, badge
-/// « Coup de cœur », titre + prix + note.
-///
-/// Les éléments posés **sur la photo** (cœur, badges) utilisent
-/// `tokens.textOnPhoto` — blanc dans les deux thèmes, puisque le fond est une
-/// image et non une surface du thème.
+/// Carte logement de la maquette : photo en haut avec le cœur, titre, quartier,
+/// prix en rouge, note et capacité.
 class ResidenceCard extends ConsumerWidget {
   const ResidenceCard({
     super.key,
     required this.residence,
     this.onTap,
-    this.horizontal = false,
     this.width,
+    this.imageHeight = 150,
+    this.trailing,
   });
 
   final Residence residence;
   final VoidCallback? onTap;
-  final bool horizontal;
-
-  /// Largeur imposée. Par défaut : 260 px en mode carrousel, pleine largeur
-  /// sinon. Permet des cadres plus compacts (carrousel style Airbnb, grille).
   final double? width;
+  final double imageHeight;
+
+  /// Remplace le cœur (non utilisé sur les favoris où il sert à retirer).
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = context.tokens;
-    final favorites = ref.watch(favoritesProvider);
-    final isFav = favorites.contains(residence.id);
-    final width = this.width ?? (horizontal ? 260.0 : double.infinity);
+    final isFav = ref.watch(favoritesProvider).contains(residence.id);
 
     return SizedBox(
       width: width,
-      child: AppCard(
-        onTap: onTap,
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AspectRatio(
-              aspectRatio: 1,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: Semantics(
-                        label: 'Photo de ${residence.name}',
-                        child: CachedNetworkImage(
-                          imageUrl: ApiConfig.resolveImage(residence.mainPhoto),
-                          fit: BoxFit.cover,
-                          placeholder: (_, __) =>
-                              Container(color: t.imagePlaceholder),
-                          errorWidget: (_, __, ___) => Container(
-                            color: t.imagePlaceholder,
-                            child: Icon(Icons.image_outlined,
-                                size: 40, color: t.textSecondary),
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (residence.availability != AvailabilityStatus.available)
-                      Positioned(
-                        top: 12,
-                        left: 12,
-                        child: _StatusPill(status: residence.availability),
-                      )
-                    else if (residence.rating >= 4.5 &&
-                        residence.reviewsCount > 0)
-                      const Positioned(
-                        top: 12,
-                        left: 12,
-                        child: _GuestFavoritePill(),
-                      ),
-                    Positioned(
-                      top: 12,
-                      right: 12,
-                      child: _FavoriteButton(
-                        favored: isFav,
-                        onTap: () => ref
-                            .read(favoritesProvider.notifier)
-                            .toggle(residence.id),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          '${residence.type.label} à ${residence.city}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 15,
-                                letterSpacing: -0.2,
-                              ),
-                        ),
-                      ),
-                      if (residence.reviewsCount > 0) ...[
-                        const SizedBox(width: 6),
-                        Icon(Icons.star_rounded,
-                            size: 14, color: t.textPrimary),
-                        const SizedBox(width: 3),
-                        Text(
-                          residence.rating.toStringAsFixed(2),
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelMedium
-                              ?.copyWith(fontSize: 13),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    '${Money.fcfa(residence.pricePerNight)} par nuit',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: t.textSecondary,
-                          fontSize: 13,
-                        ),
-                  ),
-                  const SizedBox(height: 2),
-                ],
-              ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: t.surfaceElevated,
+          borderRadius: BorderRadius.circular(18),
+          border: t.isDark ? Border.all(color: t.border) : null,
+          boxShadow: [
+            BoxShadow(
+              color: t.shadow,
+              blurRadius: 16,
+              spreadRadius: -6,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// Badge blanc « Coup de cœur ». Posé sur la photo : il reste blanc dans les
-/// deux thèmes, comme chez Airbnb.
-class _GuestFavoritePill extends StatelessWidget {
-  const _GuestFavoritePill();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(999),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x26000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: const Text(
-        'Coup de cœur',
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: Color(0xFF222222),
-        ),
-      ),
-    );
-  }
-}
-
-class _FavoriteButton extends StatelessWidget {
-  const _FavoriteButton({required this.favored, required this.onTap});
-  final bool favored;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = context.tokens;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(999),
-        onTap: onTap,
-        child: SizedBox(
-          width: 36,
-          height: 36,
-          child: Center(
-            child: Icon(
-              favored ? Icons.favorite : Icons.favorite_border,
-              color: favored ? AppColors.primary500 : t.textOnPhoto,
-              size: 26,
-              shadows: const [
-                Shadow(
-                  blurRadius: 6,
-                  color: Colors.black38,
-                  offset: Offset(0, 1),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(18),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  height: imageHeight,
+                  width: double.infinity,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ResidencePhoto(url: residence.mainPhoto),
+                      if (residence.availability !=
+                          AvailabilityStatus.available)
+                        Positioned(
+                          left: 10,
+                          top: 10,
+                          child: AvailabilityPill(residence: residence),
+                        ),
+                      Positioned(
+                        right: 8,
+                        top: 8,
+                        child: trailing ??
+                            HeartButton(
+                              favored: isFav,
+                              onTap: () => ref
+                                  .read(favoritesProvider.notifier)
+                                  .toggle(residence.id),
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        residence.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          Icon(Icons.place_outlined,
+                              size: 14, color: t.textSecondary),
+                          const SizedBox(width: 3),
+                          Expanded(
+                            child: Text(
+                              residence.city,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  fontSize: 12.5, color: t.textSecondary),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      PriceLine(price: residence.pricePerNight),
+                      const SizedBox(height: 5),
+                      Row(
+                        children: [
+                          if (residence.reviewsCount > 0) ...[
+                            const Icon(Icons.star_rounded,
+                                size: 16, color: AppColors.star),
+                            const SizedBox(width: 3),
+                            Text(
+                              '${residence.rating.toStringAsFixed(1).replaceAll('.', ',')} '
+                              '(${residence.reviewsCount} avis)',
+                              style: TextStyle(
+                                  fontSize: 12, color: t.textSecondary),
+                            ),
+                          ],
+                          const Spacer(),
+                          Icon(Icons.person_outline_rounded,
+                              size: 15, color: t.textSecondary),
+                          const SizedBox(width: 2),
+                          Text(
+                            '${residence.capacity} pers.',
+                            style:
+                                TextStyle(fontSize: 12, color: t.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -224,23 +157,115 @@ class _FavoriteButton extends StatelessWidget {
   }
 }
 
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.status});
-  final AvailabilityStatus status;
+class ResidencePhoto extends StatelessWidget {
+  const ResidencePhoto({super.key, required this.url, this.fit = BoxFit.cover});
+  final String url;
+  final BoxFit fit;
 
   @override
   Widget build(BuildContext context) {
-    final color = status == AvailabilityStatus.occupied
-        ? AppColors.error
+    final t = context.tokens;
+    return CachedNetworkImage(
+      imageUrl: ApiConfig.resolveImage(url),
+      fit: fit,
+      placeholder: (_, __) => Container(color: t.imagePlaceholder),
+      errorWidget: (_, __, ___) => Container(
+        color: t.imagePlaceholder,
+        child: Icon(Icons.image_outlined, size: 40, color: t.textSecondary),
+      ),
+    );
+  }
+}
+
+class PriceLine extends StatelessWidget {
+  const PriceLine({super.key, required this.price, this.size = 15});
+  final int price;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: Money.fcfa(price),
+            style: TextStyle(
+              fontSize: size,
+              fontWeight: FontWeight.w700,
+              color: t.brand,
+            ),
+          ),
+          TextSpan(
+            text: ' / nuit',
+            style: TextStyle(
+              fontSize: size - 2.5,
+              fontWeight: FontWeight.w500,
+              color: t.brand,
+            ),
+          ),
+        ],
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+}
+
+/// Cœur sur la photo : blanc dans les deux thèmes, le fond est une image.
+class HeartButton extends StatelessWidget {
+  const HeartButton({super.key, required this.favored, required this.onTap});
+  final bool favored;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: favored ? 'Retirer des favoris' : 'Ajouter aux favoris',
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: SizedBox(
+          width: 38,
+          height: 38,
+          child: Icon(
+            favored ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+            color: favored ? AppColors.primary600 : Colors.white,
+            size: 26,
+            shadows: const [
+              Shadow(blurRadius: 6, color: Colors.black45, offset: Offset(0, 1)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class AvailabilityPill extends StatelessWidget {
+  const AvailabilityPill({super.key, required this.residence});
+  final Residence residence;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = residence.availability == AvailabilityStatus.occupied
+        ? AppColors.primary700
         : AppColors.warning;
+    final label = residence.availabilityLabel.isNotEmpty
+        ? residence.availabilityLabel
+        : residence.availability.label;
     return Container(
+      constraints: const BoxConstraints(maxWidth: 190),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        status.label,
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: const TextStyle(
           color: Colors.white,
           fontSize: 11,

@@ -1,5 +1,8 @@
 # CLAUDE.md — Application Mobile Gestionnaire Chic Residence
 
+> **v2.0.0 (2026-10-31) : lire `../docs/REFONTE_V2.md` d'abord.** Palette commune
+> aux 3 apps. Les endpoints existent ; statut final d'une tâche : `validated`.
+
 ## Identite du projet
 
 **Nom** : Chic Residence Gestionnaire

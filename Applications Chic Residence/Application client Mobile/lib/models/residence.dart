@@ -70,7 +70,7 @@ extension AvailabilityStatusX on AvailabilityStatus {
       case AvailabilityStatus.available:
         return 'Libre';
       case AvailabilityStatus.occupied:
-        return 'Occupe';
+        return 'Occupé';
       case AvailabilityStatus.maintenance:
         return 'Maintenance';
     }
@@ -79,6 +79,7 @@ extension AvailabilityStatusX on AvailabilityStatus {
   static AvailabilityStatus parse(String? v) {
     switch ((v ?? '').toLowerCase()) {
       case 'occupied':
+      case 'busy':
       case 'occupe':
         return AvailabilityStatus.occupied;
       case 'maintenance':
@@ -109,7 +110,19 @@ class Residence {
   final int pricePerNight; // API: base_price_per_night (string parsee)
   final double rating;
   final int reviewsCount;
-  final AvailabilityStatus availability; // API: availability_status
+  final AvailabilityStatus availability; // API: availability_summary.state
+
+  /// Libellé rédigé par le backend (« Occupé jusqu'au 12 mars »), jamais
+  /// recomposé ici : l'admin et le public doivent dire la même chose.
+  final String availabilityLabel;
+
+  /// Faux seulement quand l'administration a fermé le logement. Occupé
+  /// aujourd'hui n'empêche pas de réserver pour plus tard.
+  final bool isBookable;
+
+  /// Périodes occupées (bornes incluses), pour écarter un logement des résultats
+  /// quand le client a choisi ses dates.
+  final List<(DateTime, DateTime)> bookedRanges;
   final String description;
   final List<String> photos; // API: images
   final List<String> amenities;
@@ -134,6 +147,9 @@ class Residence {
     required this.rating,
     required this.reviewsCount,
     required this.availability,
+    this.availabilityLabel = '',
+    this.isBookable = true,
+    this.bookedRanges = const [],
     required this.description,
     required this.photos,
     required this.amenities,
@@ -142,6 +158,13 @@ class Residence {
     this.isActive = true,
     this.isFeatured = false,
   });
+
+  /// Le logement est-il libre sur ces dates ? `checkOut` n'est pas une nuit.
+  bool isFreeBetween(DateTime checkIn, DateTime checkOut) {
+    final lastNight = checkOut.subtract(const Duration(days: 1));
+    return !bookedRanges
+        .any((r) => !r.$1.isAfter(lastNight) && !r.$2.isBefore(checkIn));
+  }
 
   String get mainPhoto => photos.isNotEmpty
       ? photos.first
@@ -160,7 +183,11 @@ class Residence {
     return double.tryParse(v.toString().replaceAll(',', '.')) ?? fallback;
   }
 
-  factory Residence.fromJson(Map<String, dynamic> json) => Residence(
+  factory Residence.fromJson(Map<String, dynamic> json) {
+    final summary =
+        (json['availability_summary'] as Map?)?.cast<String, dynamic>();
+    final reviews = (json['reviews_summary'] as Map?)?.cast<String, dynamic>();
+    return Residence(
         id: json['id']?.toString() ?? '',
         slug: json['slug']?.toString() ?? '',
         name: (json['title'] ?? json['name'])?.toString() ?? '',
@@ -175,10 +202,23 @@ class Residence {
         areaSqm: json['area_sqm'] == null ? null : _toInt(json['area_sqm']),
         pricePerNight: _toInt(
             json['base_price_per_night'] ?? json['price_per_night'], 0),
-        rating: _toDouble(json['rating'] ?? json['average_rating']),
-        reviewsCount: _toInt(json['reviews_count'] ?? json['review_count']),
+        // Listes : `rating_average` / `rating_count`. Fiche : `reviews_summary`.
+        rating: _toDouble(json['rating_average'] ?? reviews?['average_rating']),
+        reviewsCount: _toInt(json['rating_count'] ?? reviews?['total_reviews']),
         availability: AvailabilityStatusX.parse(
-            (json['availability_status'] ?? json['availability'])?.toString()),
+            summary?['state']?.toString() ??
+                json['availability_status']?.toString()),
+        availabilityLabel: summary?['label']?.toString() ?? '',
+        isBookable: summary?['is_bookable'] != false,
+        bookedRanges: ((summary?['booked_ranges'] as List?) ?? const [])
+            .map((e) {
+              final m = e as Map;
+              return (
+                DateTime.parse(m['start'].toString()),
+                DateTime.parse(m['end'].toString()),
+              );
+            })
+            .toList(),
         description: json['description']?.toString() ?? '',
         photos: (json['images'] as List?)
                 ?.map((e) => e is Map ? (e['url']?.toString() ?? '') : e.toString())
@@ -196,4 +236,5 @@ class Residence {
         isActive: json['is_active'] != false,
         isFeatured: json['is_featured'] == true,
       );
+  }
 }

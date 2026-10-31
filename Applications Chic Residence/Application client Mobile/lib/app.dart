@@ -18,6 +18,8 @@ class _ChicResidenceAppState extends ConsumerState<ChicResidenceApp> {
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
+    // Charge les coordonnées réglées dans l'administration.
+    ref.watch(publicInfoProvider);
     return MaterialApp.router(
       title: 'Chic Residence',
       debugShowCheckedModeBanner: false,

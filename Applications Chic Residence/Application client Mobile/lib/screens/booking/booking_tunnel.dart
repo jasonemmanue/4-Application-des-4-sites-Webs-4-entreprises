@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:table_calendar/table_calendar.dart';
 
 import '../../config/format.dart';
 import '../../config/theme.dart';
 import '../../models/booking.dart';
-import '../../models/payment.dart';
 import '../../models/residence.dart';
 import '../../providers/providers.dart';
-import '../../services/whatsapp_service.dart';
+import '../../services/booking_history.dart';
+import '../../widgets/residence_card.dart';
 import '../../widgets/state_views.dart';
-import '../payment/payment_wait_screen.dart';
+import '../../widgets/stay_calendar.dart';
+import '../payment/pay_deposit_screen.dart';
 
-/// Tunnel de reservation en 4 etapes : Dates / Infos / Confirmation / Paiement.
+/// Réservation en deux écrans (maquette) : séjour et tarif, puis coordonnées.
+/// Le paiement vit dans [PayDepositScreen], partagé avec « Mes réservations ».
+///
+/// Pas d'email : le reçu et les confirmations partent sur WhatsApp, l'API n'en
+/// prend plus depuis 2026-09-13. L'ancien champ bloquait le tunnel pour rien.
 class BookingTunnel extends ConsumerStatefulWidget {
   const BookingTunnel({super.key, required this.slug});
 
@@ -23,823 +27,488 @@ class BookingTunnel extends ConsumerStatefulWidget {
 }
 
 class _BookingTunnelState extends ConsumerState<BookingTunnel> {
-  int step = 0;
+  int _step = 0;
+  DateTime? _checkIn;
+  DateTime? _checkOut;
+  int _guests = 1;
 
-  DateTime? checkIn;
-  DateTime? checkOut;
-  int guests = 1;
+  final _name = TextEditingController();
+  final _phone = TextEditingController();
+  final _notes = TextEditingController();
 
-  final _nameCtrl = TextEditingController();
-  final _emailCtrl = TextEditingController();
-  final _phoneCtrl = TextEditingController();
-  final _notesCtrl = TextEditingController();
+  BookingPriceBreakdown? _price;
+  bool _computing = false;
+  bool _submitting = false;
+  String? _error;
 
-  BookingPriceBreakdown? price;
-  bool computing = false;
-  String? errorMsg;
-
-  PaymentChannel channel = PaymentChannel.wave;
+  @override
+  void initState() {
+    super.initState();
+    final draft = ref.read(stayDraftProvider);
+    _checkIn = draft.checkIn;
+    _checkOut = draft.checkOut;
+    _guests = draft.guests;
+    _name.text = ref.read(guestNameProvider) ?? '';
+  }
 
   @override
   void dispose() {
-    _nameCtrl.dispose();
-    _emailCtrl.dispose();
-    _phoneCtrl.dispose();
-    _notesCtrl.dispose();
+    _name.dispose();
+    _phone.dispose();
+    _notes.dispose();
     super.dispose();
   }
 
-  bool _canNext(Residence r) {
-    switch (step) {
-      case 0:
-        return checkIn != null &&
-            checkOut != null &&
-            checkOut!.isAfter(checkIn!) &&
-            guests > 0 &&
-            guests <= r.capacity;
-      case 1:
-        return _nameCtrl.text.trim().length >= 2 &&
-            _emailCtrl.text.contains('@') &&
-            _phoneCtrl.text.replaceAll(RegExp(r'\D'), '').length >= 8;
-      case 2:
-        return price != null;
-      case 3:
-        // La carte bancaire ne demande pas de numéro Mobile Money.
-        if (!channel.needsPhone) return true;
-        final phone = _phoneCtrl.text.replaceAll(RegExp(r'\D'), '');
-        if (channel == PaymentChannel.wave) return phone.length >= 8;
-        return phone.startsWith(channel.prefix);
-      default:
-        return false;
-    }
-  }
+  bool get _hasDates =>
+      _checkIn != null && _checkOut != null && _checkOut!.isAfter(_checkIn!);
 
   Future<void> _computePrice(String residenceId) async {
+    if (!_hasDates) {
+      setState(() => _price = null);
+      return;
+    }
     setState(() {
-      computing = true;
-      errorMsg = null;
+      _computing = true;
+      _error = null;
     });
     try {
-      final svc = ref.read(bookingServiceProvider);
-      final p = await svc.calculatePrice(
-        residenceId: residenceId,
-        checkIn: checkIn!,
-        checkOut: checkOut!,
-      );
-      setState(() => price = p);
+      final p = await ref.read(bookingServiceProvider).calculatePrice(
+            residenceId: residenceId,
+            checkIn: _checkIn!,
+            checkOut: _checkOut!,
+          );
+      if (mounted) setState(() => _price = p);
     } catch (e) {
-      setState(() => errorMsg = e.toString());
+      if (mounted) {
+        setState(() {
+          _price = null;
+          _error = _message(e);
+        });
+      }
     } finally {
-      setState(() => computing = false);
+      if (mounted) setState(() => _computing = false);
     }
   }
 
-  Future<void> _submitAndPay(Residence r) async {
+  static String _message(Object e) {
+    final s = e.toString();
+    return s.startsWith('DioException') ? 'Une erreur est survenue.' : s;
+  }
+
+  bool get _contactValid =>
+      _name.text.trim().length >= 2 &&
+      _phone.text.replaceAll(RegExp(r'\D'), '').length >= 8;
+
+  Future<void> _submit(Residence r) async {
     setState(() {
-      computing = true;
-      errorMsg = null;
+      _submitting = true;
+      _error = null;
     });
     try {
+      final phone = Phones.toApi(_phone.text);
       final booking = await ref.read(bookingServiceProvider).create(
             residenceId: r.id,
-            checkIn: checkIn!,
-            checkOut: checkOut!,
-            guests: guests,
-            guestName: _nameCtrl.text.trim(),
-            guestPhone: _phoneCtrl.text.trim(),
-            notes:
-                _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+            checkIn: _checkIn!,
+            checkOut: _checkOut!,
+            guests: _guests,
+            guestName: _name.text.trim(),
+            guestPhone: phone,
+            notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
           );
 
       // Pas de compte : le nom de la dernière réservation personnalise le
       // Profil.
-      final name = _nameCtrl.text.trim();
-      if (name.isNotEmpty) {
-        await ref.read(sessionServiceProvider).setGuestName(name);
-        ref.read(guestNameProvider.notifier).state = name;
-      }
+      final name = _name.text.trim();
+      await ref.read(sessionServiceProvider).setGuestName(name);
+      ref.read(guestNameProvider.notifier).state = name;
 
-      final init = await ref.read(paymentServiceProvider).init(
+      await ref.read(bookingHistoryProvider.notifier).upsert(BookingRecord(
             bookingId: booking.id,
-            channel: channel,
-            phone: _phoneCtrl.text.trim(),
-          );
+            residenceSlug: r.slug,
+            residenceName: r.name,
+            city: r.city,
+            photo: r.mainPhoto,
+            checkIn: _checkIn!,
+            checkOut: _checkOut!,
+            guests: _guests,
+            total: _price?.totalAmount ?? booking.price.totalAmount,
+            deposit: booking.deposit,
+            guestPhone: phone,
+          ));
 
       if (!mounted) return;
-      Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => PaymentWaitScreen(
-          reference: init.reference,
-          bookingReference: booking.reference,
-          amount: init.amount,
-          channel: channel,
-          checkoutUrl: init.checkoutUrl,
-        ),
+      Navigator.of(context).pushReplacement(MaterialPageRoute(
+        builder: (_) => PayDepositScreen(bookingId: booking.id),
       ));
     } catch (e) {
-      setState(() => errorMsg = e.toString());
+      if (mounted) setState(() => _error = _message(e));
     } finally {
-      if (mounted) setState(() => computing = false);
+      if (mounted) setState(() => _submitting = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(residenceDetailProvider(widget.slug));
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Reservation'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(4),
-          child: LinearProgressIndicator(
-            value: (step + 1) / 4,
-            minHeight: 4,
-            backgroundColor: context.tokens.surfaceSunken,
-            valueColor: AlwaysStoppedAnimation(context.tokens.brand),
+    return PopScope(
+      canPop: _step == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) setState(() => _step = 0);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(_step == 0 ? 'Réservation' : 'Vos coordonnées'),
+          centerTitle: true,
+        ),
+        body: async.when(
+          loading: () => const LoadingCards(count: 2),
+          error: (e, _) => ErrorView(message: e.toString()),
+          data: (r) => Column(
+            children: [
+              Expanded(child: _step == 0 ? _stayStep(r) : _contactStep()),
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: _step == 0
+                      ? FilledButton(
+                          onPressed: _price == null || _computing
+                              ? null
+                              : () => setState(() {
+                                    _step = 1;
+                                    _error = null;
+                                  }),
+                          child: const Text('Continuer'),
+                        )
+                      : FilledButton(
+                          onPressed: !_contactValid || _submitting
+                              ? null
+                              : () => _submit(r),
+                          child: _submitting
+                              ? const SizedBox(
+                                  height: 22,
+                                  width: 22,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Text('Confirmer la réservation'),
+                        ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
-      body: async.when(
-        loading: () => const LoadingCards(),
-        error: (e, _) => ErrorView(message: e.toString()),
-        data: (r) => Column(
-          children: [
-            Expanded(child: _buildStep(r)),
-            SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
+    );
+  }
+
+  Widget _stayStep(Residence r) {
+    final t = context.tokens;
+    final blocked =
+        ref.watch(blockedDaysProvider(r.id)).valueOrNull ?? const <DateTime>{};
+    // Les dates reprises de l'accueil n'ont pas encore de tarif.
+    if (_hasDates && _price == null && !_computing && _error == null) {
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _computePrice(r.id));
+    }
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: t.surfaceElevated,
+            borderRadius: BorderRadius.circular(18),
+            border: t.isDark ? Border.all(color: t.border) : null,
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                height: 130,
+                width: double.infinity,
+                child: ResidencePhoto(url: r.mainPhoto),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (step > 0)
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: computing
-                              ? null
-                              : () => setState(() => step -= 1),
-                          child: const Text('Retour'),
-                        ),
-                      ),
-                    if (step > 0) const SizedBox(width: 12),
-                    Expanded(
-                      flex: 2,
-                      child: FilledButton(
-                        onPressed: !_canNext(r) || computing
-                            ? null
-                            : () async {
-                                if (step == 1) {
-                                  await _computePrice(r.id);
-                                  if (price != null) {
-                                    setState(() => step += 1);
-                                  }
-                                } else if (step == 3) {
-                                  await _submitAndPay(r);
-                                } else {
-                                  setState(() => step += 1);
-                                }
-                              },
-                        child: computing
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : Text(step == 3 ? 'Payer le depot' : 'Continuer'),
-                      ),
+                    Text(r.name,
+                        style: const TextStyle(
+                            fontSize: 17, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Icon(Icons.place_outlined,
+                            size: 15, color: t.textSecondary),
+                        const SizedBox(width: 3),
+                        Text(r.city,
+                            style: TextStyle(
+                                fontSize: 13, color: t.textSecondary)),
+                      ],
                     ),
                   ],
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStep(Residence r) {
-    switch (step) {
-      case 0:
-        return _DatesStep(
-          residence: r,
-          checkIn: checkIn,
-          checkOut: checkOut,
-          guests: guests,
-          onCheckIn: (d) => setState(() {
-            checkIn = d;
-            if (checkOut != null && !checkOut!.isAfter(d)) checkOut = null;
-          }),
-          onCheckOut: (d) => setState(() => checkOut = d),
-          onGuests: (n) => setState(() => guests = n),
-        );
-      case 1:
-        return _InfoStep(
-          nameCtrl: _nameCtrl,
-          emailCtrl: _emailCtrl,
-          phoneCtrl: _phoneCtrl,
-          notesCtrl: _notesCtrl,
-          onChanged: () => setState(() {}),
-        );
-      case 2:
-        return _ConfirmStep(
-          residence: r,
-          checkIn: checkIn!,
-          checkOut: checkOut!,
-          guests: guests,
-          name: _nameCtrl.text,
-          email: _emailCtrl.text,
-          phone: _phoneCtrl.text,
-          price: price,
-          error: errorMsg,
-        );
-      case 3:
-        return _PaymentStep(
-          channel: channel,
-          onChannel: (c) => setState(() => channel = c),
-          phoneCtrl: _phoneCtrl,
-          amount: price?.depositAmount ?? 0,
-          error: errorMsg,
-          onChanged: () => setState(() {}),
-        );
-      default:
-        return const SizedBox.shrink();
-    }
-  }
-}
-
-class _DatesStep extends StatelessWidget {
-  const _DatesStep({
-    required this.residence,
-    required this.checkIn,
-    required this.checkOut,
-    required this.guests,
-    required this.onCheckIn,
-    required this.onCheckOut,
-    required this.onGuests,
-  });
-
-  final Residence residence;
-  final DateTime? checkIn;
-  final DateTime? checkOut;
-  final int guests;
-  final ValueChanged<DateTime> onCheckIn;
-  final ValueChanged<DateTime> onCheckOut;
-  final ValueChanged<int> onGuests;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Text(residence.name, style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 4),
-        Text('Selectionnez vos dates',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: context.tokens.textSecondary,
-                )),
-        const SizedBox(height: 16),
-        TableCalendar(
-          firstDay: DateTime.now(),
-          lastDay: DateTime.now().add(const Duration(days: 365)),
-          focusedDay: checkIn ?? DateTime.now(),
-          rangeStartDay: checkIn,
-          rangeEndDay: checkOut,
-          rangeSelectionMode: RangeSelectionMode.enforced,
-          calendarFormat: CalendarFormat.month,
-          headerStyle: const HeaderStyle(
-            formatButtonVisible: false,
-            titleCentered: true,
+            ],
           ),
-          calendarStyle: CalendarStyle(
-            rangeHighlightColor: AppColors.primary600.withOpacity(0.15),
-            rangeStartDecoration: const BoxDecoration(
-              color: AppColors.primary600,
-              shape: BoxShape.circle,
-            ),
-            rangeEndDecoration: const BoxDecoration(
-              color: AppColors.primary600,
-              shape: BoxShape.circle,
-            ),
-            todayDecoration: BoxDecoration(
-              color: context.tokens.surfaceSunken,
-              shape: BoxShape.circle,
-            ),
-          ),
-          onRangeSelected: (start, end, _) {
-            if (start != null) onCheckIn(start);
-            if (end != null) onCheckOut(end);
-          },
         ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _DateChip(
-                label: 'Arrivee',
-                value: checkIn == null ? 'Choisir' : Dates.short(checkIn!),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _DateChip(
-                label: 'Depart',
-                value: checkOut == null ? 'Choisir' : Dates.short(checkOut!),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 24),
-        Text('Nombre de voyageurs',
-            style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 18),
+        const _Title('Sélectionnez vos dates'),
         const SizedBox(height: 8),
         Row(
           children: [
-            IconButton.outlined(
-              onPressed: guests > 1 ? () => onGuests(guests - 1) : null,
-              icon: const Icon(Icons.remove),
+            Expanded(
+              child: _DateBox(label: 'Arrivée', date: _checkIn),
             ),
-            const SizedBox(width: 16),
-            Text('$guests', style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(width: 16),
-            IconButton.outlined(
-              onPressed: guests < residence.capacity
-                  ? () => onGuests(guests + 1)
-                  : null,
-              icon: const Icon(Icons.add),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _DateBox(label: 'Départ', date: _checkOut),
             ),
-            const SizedBox(width: 12),
-            Text('sur ${residence.capacity} max',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: context.tokens.textSecondary,
-                    )),
           ],
         ),
+        const SizedBox(height: 8),
+        StayCalendar(
+          checkIn: _checkIn,
+          checkOut: _checkOut,
+          blocked: blocked,
+          onChanged: (a, b) {
+            setState(() {
+              _checkIn = a;
+              _checkOut = b;
+              _price = null;
+              _error = null;
+            });
+            if (a != null && b != null) _computePrice(r.id);
+          },
+        ),
+        const SizedBox(height: 14),
+        const _Title('Nombre d\'invités'),
+        const SizedBox(height: 8),
+        Container(
+          height: 54,
+          decoration: BoxDecoration(
+            color: t.surfaceSunken,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              IconButton(
+                tooltip: 'Moins',
+                onPressed: _guests > 1 ? () => setState(() => _guests--) : null,
+                icon: const Icon(Icons.remove_rounded),
+              ),
+              Expanded(
+                child: Text(
+                  '$_guests invité${_guests > 1 ? 's' : ''} (${r.capacity} max.)',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Plus',
+                onPressed: _guests < r.capacity
+                    ? () => setState(() => _guests++)
+                    : null,
+                icon: const Icon(Icons.add_rounded),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (_computing)
+          const Center(child: CircularProgressIndicator())
+        else if (_price != null)
+          _PriceCard(price: _price!, perNight: r.pricePerNight),
+        if (_error != null) ...[
+          const SizedBox(height: 10),
+          Text(_error!, style: const TextStyle(color: AppColors.error)),
+        ],
+      ],
+    );
+  }
+
+  Widget _contactStep() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text(
+          'Nous confirmons la réservation et envoyons le reçu sur WhatsApp, à '
+          'ce numéro.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _name,
+          onChanged: (_) => setState(() {}),
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(
+            labelText: 'Nom complet',
+            prefixIcon: Icon(Icons.person_outline_rounded),
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _phone,
+          onChanged: (_) => setState(() {}),
+          keyboardType: TextInputType.phone,
+          decoration: const InputDecoration(
+            labelText: 'Téléphone (WhatsApp)',
+            hintText: '07 00 00 00 00',
+            prefixIcon: Icon(Icons.call_outlined),
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _notes,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            labelText: 'Notes (facultatif)',
+            hintText: 'Heure d\'arrivée, demandes particulières...',
+            alignLabelWithHint: true,
+          ),
+        ),
+        if (_price != null) ...[
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: context.tokens.brand.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Text(
+              'À l\'étape suivante : acompte de ${Money.fcfa(_price!.depositAmount)}. '
+              'Le solde se règle à l\'arrivée. Les dates sont à vous dès le '
+              'paiement de l\'acompte.',
+              style: const TextStyle(fontSize: 13, height: 1.4),
+            ),
+          ),
+        ],
+        if (_error != null) ...[
+          const SizedBox(height: 12),
+          Text(_error!, style: const TextStyle(color: AppColors.error)),
+        ],
       ],
     );
   }
 }
 
-class _DateChip extends StatelessWidget {
-  const _DateChip({required this.label, required this.value});
+class _Title extends StatelessWidget {
+  const _Title(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Text(
+        text,
+        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+      );
+}
+
+class _DateBox extends StatelessWidget {
+  const _DateBox({required this.label, required this.date});
   final String label;
-  final String value;
+  final DateTime? date;
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        border: Border.all(color: context.tokens.border),
-        borderRadius: BorderRadius.circular(12),
+        color: t.surfaceSunken,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.calendar_month_outlined, size: 20, color: t.textPrimary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: TextStyle(fontSize: 11, color: t.textSecondary)),
+                Text(
+                  date == null ? 'Choisir' : Dates.dayMonthYear(date!),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PriceCard extends StatelessWidget {
+  const _PriceCard({required this.price, required this.perNight});
+  final BookingPriceBreakdown price;
+  final int perNight;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: t.surfaceSunken,
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: context.tokens.textSecondary,
-                  )),
-          const SizedBox(height: 4),
-          Text(value,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: value == 'Choisir'
-                        ? context.tokens.textSecondary
-                        : context.tokens.textPrimary,
-                  )),
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoStep extends StatelessWidget {
-  const _InfoStep({
-    required this.nameCtrl,
-    required this.emailCtrl,
-    required this.phoneCtrl,
-    required this.notesCtrl,
-    required this.onChanged,
-  });
-
-  final TextEditingController nameCtrl;
-  final TextEditingController emailCtrl;
-  final TextEditingController phoneCtrl;
-  final TextEditingController notesCtrl;
-  final VoidCallback onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Text('Vos informations', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 4),
-        Text(
-          'Nous confirmerons la reservation par WhatsApp au numero fourni.',
-          style: Theme.of(context)
-              .textTheme
-              .bodyMedium
-              ?.copyWith(color: context.tokens.textSecondary),
-        ),
-        const SizedBox(height: 20),
-        TextField(
-          controller: nameCtrl,
-          onChanged: (_) => onChanged(),
-          textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(
-            labelText: 'Nom complet',
-            prefixIcon: Icon(Icons.person_outline),
+          const _Title('Détail du tarif'),
+          const SizedBox(height: 8),
+          _Line(
+            '${price.nights} nuit${price.nights > 1 ? 's' : ''}',
+            Money.fcfa(price.nightsTotal),
           ),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: emailCtrl,
-          onChanged: (_) => onChanged(),
-          keyboardType: TextInputType.emailAddress,
-          decoration: const InputDecoration(
-            labelText: 'Email',
-            prefixIcon: Icon(Icons.mail_outline),
-          ),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: phoneCtrl,
-          onChanged: (_) => onChanged(),
-          keyboardType: TextInputType.phone,
-          decoration: const InputDecoration(
-            labelText: 'Telephone (WhatsApp)',
-            prefixIcon: Icon(Icons.call_outlined),
-            hintText: '+225 07 XX XX XX XX',
-          ),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: notesCtrl,
-          onChanged: (_) => onChanged(),
-          maxLines: 3,
-          decoration: const InputDecoration(
-            labelText: 'Notes (facultatif)',
-            hintText: 'Heures d\'arrivee, demandes speciales...',
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ConfirmStep extends StatelessWidget {
-  const _ConfirmStep({
-    required this.residence,
-    required this.checkIn,
-    required this.checkOut,
-    required this.guests,
-    required this.name,
-    required this.email,
-    required this.phone,
-    required this.price,
-    this.error,
-  });
-
-  final Residence residence;
-  final DateTime checkIn;
-  final DateTime checkOut;
-  final int guests;
-  final String name;
-  final String email;
-  final String phone;
-  final BookingPriceBreakdown? price;
-  final String? error;
-
-  @override
-  Widget build(BuildContext context) {
-    final nights = Dates.nightsBetween(checkIn, checkOut);
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Text('Recapitulatif', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 16),
-        _Row(label: 'Residence', value: residence.name),
-        _Row(label: 'Arrivee', value: Dates.short(checkIn)),
-        _Row(label: 'Depart', value: Dates.short(checkOut)),
-        _Row(label: 'Voyageurs', value: '$guests personne(s)'),
-        _Row(label: 'Nuits', value: '$nights'),
-        const Divider(height: 32),
-        _Row(label: 'Nom', value: name),
-        _Row(label: 'Email', value: email),
-        _Row(label: 'Telephone', value: phone),
-        const Divider(height: 32),
-        if (price != null) ...[
-          _Row(
-            label: '$nights nuits',
-            value: Money.fcfa(price!.nightsTotal),
-          ),
-          _Row(
-            label: 'Frais de service (5%)',
-            value: Money.fcfa(price!.serviceFee),
-          ),
-          _Row(
-            label: 'Total',
-            value: Money.fcfa(price!.totalAmount),
-            bold: true,
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.primary600.withOpacity(0.06),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.primary600.withOpacity(0.2)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.payments_outlined,
-                    color: AppColors.primary600),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Depot 50% a payer maintenant',
-                          style: Theme.of(context).textTheme.bodySmall),
-                      Text(
-                        Money.fcfa(price!.depositAmount),
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: AppColors.primary600,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-        if (error != null) ...[
-          const SizedBox(height: 12),
-          Text(error!, style: const TextStyle(color: AppColors.error)),
-        ],
-      ],
-    );
-  }
-}
-
-class _Row extends StatelessWidget {
-  const _Row({required this.label, required this.value, this.bold = false});
-  final String label;
-  final String value;
-  final bool bold;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: context.tokens.textSecondary,
-                  ),
-            ),
-          ),
-          Text(
-            value,
-            style: bold
-                ? Theme.of(context).textTheme.titleMedium
-                : Theme.of(context).textTheme.bodyMedium,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PaymentStep extends StatelessWidget {
-  const _PaymentStep({
-    required this.channel,
-    required this.onChannel,
-    required this.phoneCtrl,
-    required this.amount,
-    required this.onChanged,
-    this.error,
-  });
-
-  final PaymentChannel channel;
-  final ValueChanged<PaymentChannel> onChannel;
-  final TextEditingController phoneCtrl;
-  final int amount;
-  final VoidCallback onChanged;
-  final String? error;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Text('Depot 50%', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 4),
-        Text('Montant : ${Money.fcfa(amount)}',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppColors.primary600,
-                )),
-        const SizedBox(height: 20),
-        Text('Choisissez votre moyen de paiement',
-            style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            for (final c in PaymentChannel.values)
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 3),
-                  child: _ChannelCard(
-                    channel: c,
-                    selected: channel == c,
-                    onTap: () => onChannel(c),
-                  ),
+          _Line('Frais de service', Money.fcfa(price.serviceFee)),
+          const Divider(height: 18),
+          Row(
+            children: [
+              const Expanded(
+                child: Text('Total',
+                    style:
+                        TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+              ),
+              Text(
+                Money.fcfa(price.totalAmount),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: t.brand,
                 ),
               ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        // La carte bancaire se règle sur une page sécurisée : pas de numéro
-        // Mobile Money à saisir.
-        if (channel.needsPhone)
-          TextField(
-            controller: phoneCtrl,
-            onChanged: (_) => onChanged(),
-            keyboardType: TextInputType.phone,
-            decoration: InputDecoration(
-              labelText: 'Numero ${channel.label}',
-              hintText: channel.prefix.isEmpty
-                  ? '+225 ...'
-                  : '${channel.prefix}XXXXXXXX',
-              prefixIcon: const Icon(Icons.call_outlined),
-            ),
-          )
-        else
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: context.tokens.surfaceSunken,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: context.tokens.border),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.lock_outline, size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Paiement par carte Visa / Mastercard sur une page '
-                    'sécurisée. Aucun numéro à saisir ici.',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: context.tokens.surfaceSunken,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Comment ca marche ?',
-                  style: Theme.of(context).textTheme.titleSmall),
-              const SizedBox(height: 8),
-              const _BulletLine(
-                  text:
-                      'Wave / Carte bancaire : page de paiement securisee dans le navigateur'),
-              const _BulletLine(
-                  text: 'Orange / MTN : notification USSD sur votre telephone'),
-              const _BulletLine(
-                  text: 'Depot bloque pendant 30 min — le solde sur place'),
-              const _BulletLine(
-                  text: 'Confirmation par WhatsApp des reception du paiement'),
             ],
           ),
-        ),
-        if (error != null) ...[
-          const SizedBox(height: 12),
-          Text(error!, style: const TextStyle(color: AppColors.error)),
+          const SizedBox(height: 6),
+          _Line('Acompte à la réservation', Money.fcfa(price.depositAmount)),
         ],
-        const SizedBox(height: 12),
-        TextButton.icon(
-          onPressed: () => WhatsAppService.send(
-            'Bonjour, j\'ai besoin d\'aide pour finaliser mon paiement de reservation Chic Residence.',
-          ),
-          icon: const Icon(Icons.support_agent_outlined, size: 18),
-          label: const FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              'Besoin d\'aide ? Contactez-nous sur WhatsApp',
-              maxLines: 1,
-              softWrap: false,
-              overflow: TextOverflow.visible,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ChannelCard extends StatelessWidget {
-  const _ChannelCard({
-    required this.channel,
-    required this.selected,
-    required this.onTap,
-  });
-  final PaymentChannel channel;
-  final bool selected;
-  final VoidCallback onTap;
-
-  IconData get _icon {
-    switch (channel) {
-      case PaymentChannel.wave:
-        return Icons.waves_rounded;
-      case PaymentChannel.orangeMoney:
-        return Icons.circle;
-      case PaymentChannel.mtnMoney:
-        return Icons.stars_rounded;
-      case PaymentChannel.card:
-        return Icons.credit_card_rounded;
-    }
-  }
-
-  Color get _color {
-    switch (channel) {
-      case PaymentChannel.wave:
-        return const Color(0xFF1BC8F1);
-      case PaymentChannel.orangeMoney:
-        return const Color(0xFFFF6600);
-      case PaymentChannel.mtnMoney:
-        return const Color(0xFFFFCC00);
-      case PaymentChannel.card:
-        return AppColors.primary600;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected ? AppColors.primary600 : context.tokens.border,
-            width: selected ? 2 : 1,
-          ),
-          color: selected
-              ? AppColors.primary600.withOpacity(0.05)
-              : Colors.transparent,
-        ),
-        child: Column(
-          children: [
-            Icon(_icon, size: 28, color: _color),
-            const SizedBox(height: 6),
-            Text(
-              channel.shortLabel,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
 }
 
-class _BulletLine extends StatelessWidget {
-  const _BulletLine({required this.text});
-  final String text;
+class _Line extends StatelessWidget {
+  const _Line(this.label, this.value);
+  final String label;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('• '),
-          Expanded(
-            child: Text(text, style: Theme.of(context).textTheme.bodySmall),
-          ),
+          Expanded(child: Text(label, style: const TextStyle(fontSize: 13))),
+          Text(value, style: const TextStyle(fontSize: 13)),
         ],
       ),
     );

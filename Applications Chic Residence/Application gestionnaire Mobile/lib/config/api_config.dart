@@ -10,6 +10,12 @@ class ApiConfig {
       ? LienApi.apiUrl
       : const String.fromEnvironment('API_BASE_URL');
 
+  static const String appVersion = '2.0.0';
+
+  /// Les photos sont servies par l'API (`/uploads/…`).
+  static String resolve(String url) =>
+      url.startsWith('http') ? url : '$baseUrl${url.startsWith('/') ? '' : '/'}$url';
+
   static const String apiPrefix = '/api/v1';
   static String get apiBase => '$baseUrl$apiPrefix';
 

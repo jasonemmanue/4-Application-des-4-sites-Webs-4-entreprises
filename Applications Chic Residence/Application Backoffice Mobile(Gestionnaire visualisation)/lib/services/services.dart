@@ -1,6 +1,15 @@
+import 'package:dio/dio.dart';
+import 'package:image_picker/image_picker.dart';
+
 import '../models/models.dart';
 import 'api_client.dart';
 
+/// Même connexion que l'admin web : `POST /auth/login` (email + mot de passe).
+///
+/// L'API répond `{access_token, token_type}`, rien d'autre. L'ancienne version
+/// lisait `token` et `user` : la lecture plantait, et l'écran affichait
+/// « identifiant incorrect » alors que le serveur venait d'accepter le mot de
+/// passe. Le profil se lit donc à part, sur `/auth/me`, comme le fait le web.
 class AuthService {
   AuthService(this._api);
   final ApiClient _api;
@@ -12,21 +21,33 @@ class AuthService {
       'password': password,
     });
     final data = (res.data as Map).cast<String, dynamic>();
-    await _api.setToken(data['token'].toString());
-    current = AdminUser.fromJson((data['user'] as Map).cast<String, dynamic>());
-    return current!;
+    await _api.setToken(data['access_token'].toString());
+    final me = await _me();
+    if (me.role != 'admin') {
+      await logout();
+      throw ApiException('Ce compte n\'a pas accès à l\'administration.',
+          statusCode: 403);
+    }
+    current = me;
+    return me;
+  }
+
+  Future<AdminUser> _me() async {
+    final res = await _api.dio.get('/auth/me');
+    return AdminUser.fromJson((res.data as Map).cast<String, dynamic>());
   }
 
   Future<AdminUser?> restore() async {
     final t = await _api.readToken();
     if (t == null || t.isEmpty) return null;
     try {
-      final res = await _api.dio.get('/auth/me');
-      current = AdminUser.fromJson(
-          (res.data as Map).cast<String, dynamic>());
+      current = await _me();
       return current;
-    } catch (_) {
-      await _api.clearToken();
+    } on DioException catch (e) {
+      // Hors réseau, on ne détruit pas la session ; seul un refus du serveur
+      // l'invalide.
+      final code = e.response?.statusCode;
+      if (code == 401 || code == 403) await _api.clearToken();
       return null;
     }
   }
@@ -37,82 +58,232 @@ class AuthService {
   }
 }
 
-class DashboardService {
-  DashboardService(this._api);
+class AdminApi {
+  AdminApi(this._api);
   final ApiClient _api;
 
+  Dio get _d => _api.dio;
+
+  Paged<T> _paged<T>(
+      Response<dynamic> res, T Function(Map<String, dynamic>) parse) {
+    final m = (res.data as Map).cast<String, dynamic>();
+    final items = ((m['items'] as List?) ?? const [])
+        .map((e) => parse((e as Map).cast<String, dynamic>()))
+        .toList();
+    return Paged(items, asInt(m['total']));
+  }
+
+  // ── Tableau de bord ──
   Future<DashboardStats> stats() async {
-    final res = await _api.dio.get('/stats/dashboard');
+    final res = await _d.get('/stats/dashboard');
     return DashboardStats.fromJson((res.data as Map).cast<String, dynamic>());
   }
 
-  Future<List<BookingSummary>> recentBookings() async {
-    final res = await _api.dio
-        .get('/bookings', queryParameters: {'limit': 10, 'sort': '-created_at'});
-    final data = res.data;
-    final items = (data is Map ? data['items'] : data) as List? ?? [];
-    return items
-        .map((e) =>
-            BookingSummary.fromJson((e as Map).cast<String, dynamic>()))
+  // ── Logements ──
+  Future<List<Residence>> residences() async {
+    final res = await _d.get('/residences', queryParameters: {'limit': 100});
+    return _paged(res, Residence.fromJson).items;
+  }
+
+  Future<Residence> residence(String id) async {
+    final res = await _d.get('/residences/$id');
+    return Residence.fromJson((res.data as Map).cast<String, dynamic>());
+  }
+
+  Future<void> saveResidence(String? id, Map<String, dynamic> body) async {
+    if (id == null) {
+      await _d.post('/residences', data: body);
+    } else {
+      await _d.put('/residences/$id', data: body);
+    }
+  }
+
+  Future<void> deleteResidence(String id) async {
+    await _d.delete('/residences/$id');
+  }
+
+  Future<void> setResidenceStatus(String id, String status,
+      {String? availableFrom, String note = ''}) async {
+    await _d.patch('/residences/$id/status', data: {
+      'availability_status': status,
+      if (availableFrom != null) 'available_from': availableFrom,
+      'status_note': note,
+    });
+  }
+
+  Future<String> upload(XFile file) async {
+    final name = file.name.contains('.') ? file.name : '${file.name}.jpg';
+    final form = FormData.fromMap({
+      'file': await MultipartFile.fromFile(file.path, filename: name),
+    });
+    final res = await _d.post('/upload', data: form);
+    return (res.data as Map)['url'].toString();
+  }
+
+  /// Jours indisponibles sur une plage (366 jours au plus côté API).
+  Future<Set<DateTime>> blockedDays(
+      String id, DateTime start, DateTime end) async {
+    String f(DateTime d) => d.toIso8601String().substring(0, 10);
+    final res = await _d.get('/availability/$id',
+        queryParameters: {'start': f(start), 'end': f(end)});
+    return ((res.data as List?) ?? const [])
+        .map((e) => (e as Map).cast<String, dynamic>())
+        .where((e) => e['is_available'] == false)
+        .map((e) {
+      final d = DateTime.parse(e['date'].toString());
+      return DateTime(d.year, d.month, d.day);
+    }).toSet();
+  }
+
+  Future<void> setAvailability(
+      String id, List<DateTime> dates, bool available) async {
+    await _d.put('/availability/$id', data: {
+      'dates': dates.map((d) => d.toIso8601String().substring(0, 10)).toList(),
+      'is_available': available,
+    });
+  }
+
+  // ── Réservations ──
+  Future<Paged<Booking>> bookings({String? status, int limit = 100}) async {
+    final res = await _d.get('/bookings', queryParameters: {
+      'limit': limit,
+      if (status != null) 'status': status,
+    });
+    return _paged(res, Booking.fromJson);
+  }
+
+  Future<void> setBookingStatus(String id, String status) async {
+    await _d.put('/bookings/$id/status', data: {'status': status});
+  }
+
+  // ── Paiements ──
+  Future<Paged<Payment>> payments({String? status}) async {
+    final res = await _d.get('/payments', queryParameters: {
+      'limit': 100,
+      if (status != null) 'status': status,
+    });
+    return _paged(res, Payment.fromJson);
+  }
+
+  // ── Avis ──
+  Future<Paged<Review>> reviews(String state) async {
+    final res = await _d.get('/reviews/moderation',
+        queryParameters: {'state': state, 'limit': 100});
+    return _paged(res, Review.fromJson);
+  }
+
+  Future<void> moderateReview(String id, bool approved) async {
+    await _d.put('/reviews/$id/moderate', data: {'is_approved': approved});
+  }
+
+  Future<void> deleteReview(String id) async {
+    await _d.delete('/reviews/$id');
+  }
+
+  // ── Messages ──
+  Future<Paged<ContactMessage>> contacts() async {
+    final res = await _d.get('/contact', queryParameters: {'limit': 100});
+    return _paged(res, ContactMessage.fromJson);
+  }
+
+  Future<void> markRead(String id) async {
+    await _d.put('/contact/$id/read');
+  }
+
+  // ── Paramètres ──
+  Future<List<SettingItem>> settings() async {
+    final res = await _d.get('/settings');
+    return ((res.data as List?) ?? const [])
+        .map((e) => SettingItem.fromJson((e as Map).cast<String, dynamic>()))
         .toList();
   }
-}
 
-class StaffService {
-  StaffService(this._api);
-  final ApiClient _api;
+  Future<void> saveSetting(String key, String value) async {
+    await _d.put('/settings/$key', data: {'value': value});
+  }
 
-  Future<List<StaffMember>> list() async {
-    final res = await _api.dio.get('/staff');
-    final items = (res.data as List?) ?? [];
-    return items
+  // ── Personnel ──
+  Future<List<StaffMember>> staff() async {
+    final res = await _d.get('/staff');
+    return ((res.data as List?) ?? const [])
         .map((e) => StaffMember.fromJson((e as Map).cast<String, dynamic>()))
         .toList();
   }
 
-  Future<StaffMember> create({
+  Future<void> createStaff({
     required String fullName,
     required String phone,
     required String pin,
     required StaffRole role,
   }) async {
-    final res = await _api.dio.post('/staff', data: {
+    await _d.post('/staff', data: {
       'full_name': fullName,
       'phone': phone,
       'pin': pin,
       'role': role.name,
     });
-    return StaffMember.fromJson((res.data as Map).cast<String, dynamic>());
   }
 
-  Future<void> deactivate(int id) async {
-    await _api.dio.delete('/staff/$id');
+  Future<void> updateStaff(String id, Map<String, dynamic> body) async {
+    await _d.put('/staff/$id', data: body);
   }
-}
 
-class CleaningService {
-  CleaningService(this._api);
-  final ApiClient _api;
+  Future<StaffStats> staffStats(String id) async {
+    final res = await _d.get('/staff/stats/$id');
+    return StaffStats.fromJson((res.data as Map).cast<String, dynamic>());
+  }
 
-  Future<List<TaskSummary>> list({TaskStatus? status}) async {
-    final res = await _api.dio.get('/cleaning-tasks',
-        queryParameters: status == null ? null : {'status': status.apiValue});
-    final items = (res.data as List?) ?? [];
-    return items
+  Future<CleaningOverview> overview() async {
+    final res = await _d.get('/staff/stats/overview');
+    return CleaningOverview.fromJson((res.data as Map).cast<String, dynamic>());
+  }
+
+  Future<List<PerformancePoint>> performance(String period) async {
+    final res = await _d.get('/staff/stats/performance',
+        queryParameters: {'period': period});
+    return (((res.data as Map)['points'] as List?) ?? const [])
         .map((e) =>
-            TaskSummary.fromJson((e as Map).cast<String, dynamic>()))
+            PerformancePoint.fromJson((e as Map).cast<String, dynamic>()))
         .toList();
   }
 
-  Future<void> assign(int id, int staffId) async {
-    await _api.dio.put('/cleaning-tasks/$id/assign', data: {'staff_id': staffId});
+  // ── Tâches ──
+  Future<List<CleaningTask>> tasks() async {
+    final res = await _d.get('/cleaning-tasks');
+    return ((res.data as List?) ?? const [])
+        .map((e) => CleaningTask.fromJson((e as Map).cast<String, dynamic>()))
+        .toList();
   }
 
-  Future<void> forceValidate(int id) async {
-    await _api.dio.put('/cleaning-tasks/$id/force-validate');
+  Future<void> createTask({
+    required String residenceId,
+    String? agentId,
+    String? controllerId,
+    String? nextCheckIn,
+    String notes = '',
+  }) async {
+    await _d.post('/cleaning-tasks', data: {
+      'residence_id': residenceId,
+      if (agentId != null) 'assigned_agent_id': agentId,
+      if (controllerId != null) 'assigned_controller_id': controllerId,
+      if (nextCheckIn != null) 'next_checkin': nextCheckIn,
+      'notes': notes,
+    });
   }
 
-  Future<void> delete(int id) async {
-    await _api.dio.delete('/cleaning-tasks/$id');
+  Future<void> assignTask(String id,
+      {String? agentId, String? controllerId}) async {
+    await _d.put('/cleaning-tasks/$id/assign', data: {
+      if (agentId != null) 'assigned_agent_id': agentId,
+      if (controllerId != null) 'assigned_controller_id': controllerId,
+    });
+  }
+
+  Future<void> forceValidate(String id) async {
+    await _d.put('/cleaning-tasks/$id/force-validate');
+  }
+
+  Future<void> deleteTask(String id) async {
+    await _d.delete('/cleaning-tasks/$id');
   }
 }

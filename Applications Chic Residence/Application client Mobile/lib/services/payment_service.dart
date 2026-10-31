@@ -1,81 +1,69 @@
-import 'package:dio/dio.dart';
-import 'package:uuid/uuid.dart';
-
-import '../config/api_config.dart';
 import '../models/payment.dart';
 import 'api_client.dart';
 
-/// URLs reelles du backend :
-///  POST /payments/init                    -> initie
+/// Routes réelles du backend :
+///  GET  /payments/config                  -> moyens proposés
+///  POST /payments/init                    -> première tentative
 ///  GET  /payments/{reference}             -> statut
-///  POST /payments/{reference}/retry       -> reessai
-///  POST /payments/{reference}/cancel      -> annule
+///  POST /payments/{reference}/retry       -> autre opérateur, même réservation
+///  POST /payments/{reference}/push/resend -> renvoi USSD (nouvelle référence)
+///  POST /payments/{reference}/cancel      -> abandonne la tentative
 class PaymentService {
   PaymentService(this._api);
   final ApiClient _api;
-  static const _uuid = Uuid();
 
   bool _initInProgress = false;
 
-  Future<PaymentInit> init({
+  Future<PaymentOptions> options() async {
+    final res = await _api.dio.get('/payments/config');
+    return PaymentOptions.fromJson((res.data as Map).cast<String, dynamic>());
+  }
+
+  /// Nouvelle tentative : `previousReference` nul pour la première, sinon la
+  /// réservation est retrouvée par la référence précédente. Sans cela, changer
+  /// d'opérateur créerait une seconde réservation.
+  Future<PaymentAttempt> start({
     required String bookingId,
+    String? previousReference,
     required PaymentChannel channel,
     required String phone,
   }) async {
     if (_initInProgress) {
-      throw ApiException('Paiement deja en cours. Patientez.');
+      throw ApiException('Paiement déjà en cours. Patientez.');
     }
     _initInProgress = true;
     try {
-      final idempotencyKey = _uuid.v4();
-      final res = await _api.dio.post('/payments/init',
-          data: {
-            'booking_id': bookingId,
-            'channel': channel.apiValue,
-            'customer_phone': phone,
-          },
-          options: Options(headers: {'X-Cle-Demande': idempotencyKey}));
-      return PaymentInit.fromJson((res.data as Map).cast<String, dynamic>());
+      // Orange / MTN : `window_opened` faux, l'API exécute elle-même la page du
+      // guichet qui fait partir le message. Wave / carte : l'application ouvre
+      // cette page dans le navigateur.
+      final body = {
+        'channel': channel.apiValue,
+        'customer_phone': channel == PaymentChannel.card ? '' : phone,
+        'window_opened': !channel.usesPush,
+      };
+      final res = previousReference == null
+          ? await _api.dio.post('/payments/init',
+              data: {...body, 'booking_id': bookingId})
+          : await _api.dio
+              .post('/payments/$previousReference/retry', data: body);
+      return PaymentAttempt.fromJson((res.data as Map).cast<String, dynamic>());
     } finally {
       _initInProgress = false;
     }
   }
 
-  Future<PaymentStatus> status(String reference) async {
+  Future<PaymentAttempt> status(String reference) async {
     final res = await _api.dio.get('/payments/$reference');
-    final data = (res.data as Map).cast<String, dynamic>();
-    return PaymentStatusX.parse(data['status']?.toString());
+    return PaymentAttempt.fromJson((res.data as Map).cast<String, dynamic>());
   }
 
-  Future<PaymentInit> retry(String reference,
-      {required PaymentChannel newChannel, required String newPhone}) async {
-    final idempotencyKey = _uuid.v4();
-    final res = await _api.dio.post('/payments/$reference/retry',
-        data: {
-          'channel': newChannel.apiValue,
-          'customer_phone': newPhone,
-        },
-        options: Options(headers: {'X-Cle-Demande': idempotencyKey}));
-    return PaymentInit.fromJson((res.data as Map).cast<String, dynamic>());
+  /// La réponse porte une NOUVELLE référence, à suivre désormais.
+  Future<PaymentAttempt> resendPush(String reference) async {
+    final res = await _api.dio.post('/payments/$reference/push/resend');
+    return PaymentAttempt.fromJson((res.data as Map).cast<String, dynamic>());
   }
 
   Future<void> cancel(String reference) async {
     await _api.dio.post('/payments/$reference/cancel');
-  }
-
-  Stream<PaymentStatus> pollStatus(String reference) async* {
-    final deadline = DateTime.now().add(ApiConfig.paymentTimeout);
-    while (DateTime.now().isBefore(deadline)) {
-      final s = await status(reference);
-      yield s;
-      if (s == PaymentStatus.success ||
-          s == PaymentStatus.failed ||
-          s == PaymentStatus.cancelled ||
-          s == PaymentStatus.expired) {
-        return;
-      }
-      await Future.delayed(ApiConfig.paymentPollInterval);
-    }
-    yield PaymentStatus.expired;
   }
 }

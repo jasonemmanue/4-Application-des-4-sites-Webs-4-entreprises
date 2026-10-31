@@ -1,24 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+/// Palette de la maquette du 2026-10-31, commune aux trois applications :
+/// fond crème, titres bleu nuit, actions rouge-orangé.
 class AppColors {
   AppColors._();
 
-  static const primary = Color(0xFFDC2626);
-  static const primaryLight = Color(0xFFEF4444);
-  static const primaryDark = Color(0xFF991B1B);
+  static const primary = Color(0xFFF04E2E);
+  static const primaryDark = Color(0xFFD93D1F);
+  static const primaryLight = Color(0xFFFDE7E1);
+  static const accent = Color(0xFFF5A623);
 
-  static const surface = Color(0xFFF9FAFB);
+  static const surface = Color(0xFFFFF9F2);
+  static const surfaceAlt = Color(0xFFF7EFE4);
   static const card = Color(0xFFFFFFFF);
-  static const border = Color(0xFFE5E7EB);
-  static const text = Color(0xFF1F2937);
-  static const textMuted = Color(0xFF6B7280);
+  static const navy = Color(0xFF12294B);
+  static const border = Color(0xFFEDE3D6);
+  static const text = navy;
+  static const textMuted = Color(0xFF66718A);
+  static const shadow = Color(0x1F12294B);
 
-  // Status
-  static const pending = Color(0xFFF59E0B);
-  static const inProgress = Color(0xFF3B82F6);
-  static const completed = Color(0xFF22C55E);
-  static const rejected = Color(0xFFEF4444);
+  static const success = Color(0xFF16804A);
+  static const successSoft = Color(0xFFDDF5E6);
+  static const warning = Color(0xFFD98A06);
+  static const info = Color(0xFF2F6FDB);
+  static const error = Color(0xFFD92D20);
 }
 
 class AppTheme {
@@ -30,78 +36,102 @@ class AppTheme {
       colorScheme: const ColorScheme.light(
         primary: AppColors.primary,
         onPrimary: Colors.white,
-        secondary: AppColors.primaryLight,
+        secondary: AppColors.navy,
         surface: AppColors.card,
         onSurface: AppColors.text,
+        error: AppColors.error,
       ),
       scaffoldBackgroundColor: AppColors.surface,
-      textTheme: GoogleFonts.interTextTheme(base.textTheme).apply(
+      textTheme: GoogleFonts.poppinsTextTheme(base.textTheme).apply(
         bodyColor: AppColors.text,
         displayColor: AppColors.text,
       ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.card,
+      appBarTheme: AppBarTheme(
+        backgroundColor: AppColors.surface,
         foregroundColor: AppColors.text,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
+        centerTitle: false,
+        titleTextStyle: GoogleFonts.poppins(
+          fontSize: 19,
+          fontWeight: FontWeight.w700,
+          color: AppColors.text,
+        ),
       ),
       cardTheme: CardThemeData(
         color: AppColors.card,
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: AppColors.border),
-        ),
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
+      dividerTheme: const DividerThemeData(color: AppColors.border, space: 1),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.card,
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: AppColors.border),
         ),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          minimumSize: const Size.fromHeight(56),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          elevation: 0,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
-          minimumSize: const Size.fromHeight(56),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          minimumSize: const Size.fromHeight(54),
+          shape: const StadiumBorder(),
+          textStyle: GoogleFonts.poppins(
+            fontSize: 15.5,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.text,
+          minimumSize: const Size.fromHeight(50),
+          side: const BorderSide(color: AppColors.border, width: 1.4),
+          shape: const StadiumBorder(),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+      ),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: AppColors.card,
+        selectedColor: AppColors.navy,
+        secondaryLabelStyle: const TextStyle(color: Colors.white),
+        checkmarkColor: Colors.white,
+        side: const BorderSide(color: AppColors.border),
+        shape: const StadiumBorder(),
+      ),
+      snackBarTheme: const SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.card,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        ),
+      ),
+      dialogTheme: const DialogThemeData(
+        backgroundColor: AppColors.card,
+        surfaceTintColor: Colors.transparent,
+      ),
     );
-  }
-}
-
-Color statusColor(String status) {
-  switch (status.toLowerCase()) {
-    case 'pending':
-    case 'en_attente':
-      return AppColors.pending;
-    case 'in_progress':
-    case 'en_cours':
-      return AppColors.inProgress;
-    case 'completed':
-    case 'nettoye':
-    case 'controle':
-    case 'valide':
-      return AppColors.completed;
-    case 'rejected':
-    case 'rejete':
-      return AppColors.rejected;
-    default:
-      return AppColors.textMuted;
   }
 }

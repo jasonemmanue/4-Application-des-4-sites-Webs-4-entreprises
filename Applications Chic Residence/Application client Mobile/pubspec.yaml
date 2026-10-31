@@ -1,7 +1,7 @@
 name: chic_residence_mobile
 description: "Chic Residence - Reservation de residences meublees a Abidjan (style Airbnb)."
 publish_to: 'none'
-version: 1.1.0+2
+version: 2.0.0+3
 
 environment:
   sdk: ^3.6.0
@@ -26,6 +26,7 @@ dependencies:
   shimmer: ^3.0.0
   flutter_animate: ^4.5.0
   table_calendar: ^3.1.2
+  flutter_svg: ^2.0.10+1
 
   # System
   url_launcher: ^6.3.0
@@ -49,6 +50,7 @@ flutter:
   assets:
     - assets/images/
     - assets/branding/
+    - assets/paiement/
 
 flutter_launcher_icons:
   android: "ic_launcher"
