@@ -61,6 +61,10 @@ L'administration (services, reservations, galerie, avis, devis) se fait exclusiv
 
 ## Derniere version
 
+**v1.2.0+3** : bandeau hors connexion et reprise des lectures, rafraichissement automatique,
+boite de notifications, FAQ, noter et partager l'application.
+Voir [docs/V1_2_RESEAU_NOTIFICATIONS.md](docs/V1_2_RESEAU_NOTIFICATIONS.md).
+
 **v1.1.0+2** : refonte UI/UX bordeaux, Favoris, Mes rendez-vous, paiements fiabilises.
 Voir [docs/REFONTE_UI_2026-10.md](docs/REFONTE_UI_2026-10.md).
 

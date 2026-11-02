@@ -10,6 +10,8 @@ import '../screens/contact/contact_screen.dart';
 import '../screens/favorites/favorites_screen.dart';
 import '../screens/gallery/gallery_screen.dart';
 import '../screens/home/home_screen.dart';
+import '../screens/inbox/inbox_screen.dart';
+import '../screens/more/faq_screen.dart';
 import '../screens/more/more_screen.dart';
 import '../screens/payment/payment_result_screen.dart';
 import '../screens/payment/payment_wait_screen.dart';
@@ -68,6 +70,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           initialTab: state.uri.queryParameters['tab'] == 'history' ? 1 : 0,
         ),
       ),
+      GoRoute(path: '/notifications', builder: (_, __) => const InboxScreen()),
+      GoRoute(path: '/faq', builder: (_, __) => const FaqScreen()),
       GoRoute(path: '/team', builder: (_, __) => const TeamScreen()),
       GoRoute(path: '/articles', builder: (_, __) => const ArticlesScreen()),
       GoRoute(

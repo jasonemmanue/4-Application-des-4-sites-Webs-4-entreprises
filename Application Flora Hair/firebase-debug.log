@@ -1,0 +1,9 @@
+[debug] [2026-11-02T11:54:01.257Z] ----------------------------------------------------------------------
+[debug] [2026-11-02T11:54:01.263Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\hp\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js login
+[debug] [2026-11-02T11:54:01.264Z] CLI Version:   15.19.0
+[debug] [2026-11-02T11:54:01.265Z] Platform:      win32
+[debug] [2026-11-02T11:54:01.265Z] Node Version:  v22.23.1
+[debug] [2026-11-02T11:54:01.265Z] Time:          Mon Nov 02 2026 11:54:01 GMT+0000 (heure moyenne de Greenwich)
+[debug] [2026-11-02T11:54:01.266Z] ----------------------------------------------------------------------
+[debug] 
+[info] Already logged in as emmanuelsakam@gmail.com

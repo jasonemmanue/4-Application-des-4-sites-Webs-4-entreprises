@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
-import 'services/push_notification_service.dart';
+import 'services/network.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,8 +18,8 @@ Future<void> main() async {
     DeviceOrientation.portraitUp,
   ]);
 
-  // Firebase / FCM (best-effort — l'app doit demarrer meme sans Firebase).
-  await PushNotificationService.instance.initialize();
+  // Firebase / FCM : initialisé par FloraHairApp, sans bloquer l'ouverture.
+  await NetworkStatus.start();
 
   runApp(const ProviderScope(child: FloraHairApp()));
 }

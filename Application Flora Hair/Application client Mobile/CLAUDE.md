@@ -123,6 +123,12 @@ La carte d'identite et les cartes photo de ce document ont ete remplacees par «
 2. **Creneau** : date, creneau, note, total estime
 3. **Confirmation** : recapitulatif, informations client, moyen de paiement (acompte 50 %)
 
+### Reseau et notifications (v1.2.0+3)
+
+Voir `docs/V1_2_RESEAU_NOTIFICATIONS.md` : bandeau hors connexion, lectures GET retentees
+(jamais les envois), rafraichissement automatique, boite de notifications locale (`/notifications`),
+FAQ (`/faq`), noter et partager l'application.
+
 ### Mes rendez-vous
 
 Liste locale a l'appareil (`services/appointments.dart`), sans compte. L'etat vient du back-office

@@ -11,6 +11,7 @@ import '../models/review.dart';
 import '../models/service.dart';
 import '../models/team_member.dart';
 import '../models/video.dart';
+import 'network.dart';
 
 /// Client HTTP unique de l'application mobile.
 ///
@@ -50,7 +51,11 @@ class ApiClient {
                   'X-App-Source': ApiConfig.appSource,
                 },
               ),
-            );
+            ) {
+    // En premier : une lecture coupée par le réseau est retentée avant que
+    // l'erreur ne soit traduite pour l'écran. Les envois ne sont jamais rejoués.
+    _dio.interceptors.insert(0, RetryOnNetwork(_dio));
+  }
 
   final Dio _dio;
   Dio get dio => _dio;

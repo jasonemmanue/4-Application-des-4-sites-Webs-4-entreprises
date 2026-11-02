@@ -167,12 +167,12 @@ mobile ne remonte que ceux dont `available == true`.
 Chaque requête sortante de l'application est marquée par un en-tête HTTP :
 
 ```
-X-App-Source: android/1.1.0+2
+X-App-Source: android/1.2.0+3
 ```
 
 La valeur est définie par [`ApiConfig.appSource`](../lib/config/api_config.dart)
 et posée en dur dans le `BaseOptions` de Dio ([api_client.dart](../lib/services/api_client.dart)).
-Elle doit rester **alignée sur `pubspec.yaml`** (`version: 1.1.0+2`, vérifié par
+Elle doit rester **alignée sur `pubspec.yaml`** (`version: 1.2.0+3`, vérifié par
 `test/payment_contract_test.dart`) à chaque sortie : c'est ce qui apparaîtra dans l'administration à côté des demandes.
 
 Côté backend :
@@ -189,7 +189,7 @@ Côté backend :
 Côté administration Next.js :
 - Un composant partagé `<SourceBadge source={…} />` (dans
   `admin/components/SourceBadge.tsx`) rend une pastille compacte :
-  - **📱 Android v1.1.0+2** (or, discret) si la valeur commence par
+  - **📱 Android v1.2.0+3** (or, discret) si la valeur commence par
     `android/` ou `ios/`
   - **🌐 Site** (gris) si `source` est vide (demandes issues du site web)
 - Une colonne « Canal » est ajoutée en tête des listes *Réservations*,

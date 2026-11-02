@@ -6,7 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/theme.dart';
 import '../../models/gallery_item.dart';
 import '../../models/service.dart';
-import '../../services/appointments.dart';
+import '../../services/inbox.dart';
 import '../../services/favorites.dart';
 import '../../services/providers.dart';
 import '../../widgets/deposit_notice.dart';
@@ -285,8 +285,7 @@ class _HomeHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final upcoming =
-        ref.watch(appointmentsProvider).where((a) => a.isUpcoming).length;
+    final unread = ref.watch(unreadInboxCountProvider);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 10, 12, 4),
       child: Row(
@@ -308,13 +307,13 @@ class _HomeHeader extends ConsumerWidget {
             ),
           ),
           const Spacer(),
-          // Pastille réelle : le nombre de rendez-vous à venir sur cet appareil.
+          // Pastille réelle : les notifications non lues.
           IconButton(
-            tooltip: 'Mes rendez-vous',
-            onPressed: () => context.push('/appointments'),
+            tooltip: 'Notifications',
+            onPressed: () => context.push('/notifications'),
             icon: Badge(
-              isLabelVisible: upcoming > 0,
-              label: Text('$upcoming'),
+              isLabelVisible: unread > 0,
+              label: Text('$unread'),
               backgroundColor: FloraColors.danger,
               child: const Icon(Icons.notifications_none_rounded,
                   color: FloraColors.textPrimary, size: 26),

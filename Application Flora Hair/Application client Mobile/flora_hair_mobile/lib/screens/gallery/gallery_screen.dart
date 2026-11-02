@@ -44,6 +44,12 @@ class GalleryScreen extends ConsumerWidget {
                           label: const Text('Tout'),
                           selected: tag == null,
                           selectedColor: FloraColors.lime,
+                          checkmarkColor: Colors.white,
+                          labelStyle: TextStyle(
+                            color: tag == null
+                                ? Colors.white
+                                : FloraColors.textPrimary,
+                          ),
                           onSelected: (_) =>
                               ref.read(_tagFilterProvider.notifier).state = null,
                         ),
@@ -55,6 +61,12 @@ class GalleryScreen extends ConsumerWidget {
                             label: Text(t),
                             selected: tag == t,
                             selectedColor: FloraColors.lime,
+                            checkmarkColor: Colors.white,
+                            labelStyle: TextStyle(
+                              color: tag == t
+                                  ? Colors.white
+                                  : FloraColors.textPrimary,
+                            ),
                             onSelected: (_) =>
                                 ref.read(_tagFilterProvider.notifier).state = t,
                           ),

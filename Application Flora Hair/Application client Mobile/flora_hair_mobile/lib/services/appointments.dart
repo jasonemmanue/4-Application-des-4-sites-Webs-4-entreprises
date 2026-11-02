@@ -11,7 +11,9 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../widgets/flora_ui.dart' show frLongDate;
 import 'api_client.dart';
+import 'inbox.dart';
 
 const _appointmentsKey = 'flora_appointments';
 
@@ -103,8 +105,61 @@ class LocalAppointment {
 
 final appointmentsProvider =
     StateNotifierProvider<AppointmentsNotifier, List<LocalAppointment>>((ref) {
-  return AppointmentsNotifier(ref.watch(apiClientProvider));
+  final inbox = ref.read(inboxProvider.notifier);
+  return AppointmentsNotifier(
+    ref.watch(apiClientProvider),
+    onChange: (before, after) {
+      final notice = appointmentNotice(before, after);
+      if (notice != null) inbox.add(notice);
+    },
+  );
 });
+
+/// Message de la boîte de réception pour un changement décidé par le salon.
+InboxItem? appointmentNotice(LocalAppointment before, LocalAppointment after) {
+  final date = DateTime.tryParse(after.date);
+  final when = '${date == null ? after.date : frLongDate(date)} à ${after.time}';
+  if (after.status != before.status) {
+    switch (after.status) {
+      case 'confirmed':
+        return InboxItem(
+          id: '${after.bookingId}:status:confirmed',
+          title: 'Rendez-vous confirmé',
+          body: '${after.serviceName}, $when : le salon vous attend.',
+          receivedAt: DateTime.now(),
+          route: '/appointments',
+        );
+      case 'cancelled':
+        return InboxItem(
+          id: '${after.bookingId}:status:cancelled',
+          title: 'Rendez-vous annulé',
+          body: '${after.serviceName}, $when, a été annulé. Écrivez au salon '
+              'pour toute question.',
+          receivedAt: DateTime.now(),
+          route: '/appointments?tab=history',
+        );
+      case 'completed':
+        return InboxItem(
+          id: '${after.bookingId}:status:completed',
+          title: 'Merci de votre visite',
+          body: "Comment s'est passée votre prestation ${after.serviceName} ? "
+              'Votre avis aide le salon.',
+          receivedAt: DateTime.now(),
+          route: '/reviews',
+        );
+    }
+  }
+  if (after.isDepositPaid && !before.isDepositPaid) {
+    return InboxItem(
+      id: '${after.bookingId}:deposit:paid',
+      title: 'Acompte reçu',
+      body: 'Votre acompte pour ${after.serviceName}, $when, est bien reçu.',
+      receivedAt: DateTime.now(),
+      route: '/appointments',
+    );
+  }
+  return null;
+}
 
 /// Le prochain rendez-vous à venir, s'il y en a un.
 final nextAppointmentProvider = Provider<LocalAppointment?>((ref) {
@@ -117,11 +172,17 @@ final nextAppointmentProvider = Provider<LocalAppointment?>((ref) {
 });
 
 class AppointmentsNotifier extends StateNotifier<List<LocalAppointment>> {
-  AppointmentsNotifier(this._api) : super(const <LocalAppointment>[]) {
+  AppointmentsNotifier(this._api, {this.onChange})
+      : super(const <LocalAppointment>[]) {
     _restore();
   }
 
   final ApiClient _api;
+
+  /// Appelé pour chaque rendez-vous dont l'état a changé côté salon.
+  final void Function(LocalAppointment before, LocalAppointment after)?
+      onChange;
+  bool _refreshing = false;
 
   Future<void> _restore() async {
     try {
@@ -178,7 +239,20 @@ class AppointmentsNotifier extends StateNotifier<List<LocalAppointment>> {
 
   /// Relit l'état de chaque rendez-vous encore ouvert auprès de l'API.
   Future<void> refresh() async {
+    // Minuterie, retour au premier plan et retour du réseau peuvent tomber
+    // ensemble : une seule relecture à la fois.
+    if (_refreshing) return;
+    _refreshing = true;
+    try {
+      await _refresh();
+    } finally {
+      _refreshing = false;
+    }
+  }
+
+  Future<void> _refresh() async {
     final next = <LocalAppointment>[];
+    final changes = <(LocalAppointment, LocalAppointment)>[];
     var changed = false;
     for (final a in state) {
       if (a.isCancelled || a.status == 'completed') {
@@ -192,10 +266,11 @@ class AppointmentsNotifier extends StateNotifier<List<LocalAppointment>> {
           depositStatus: json['deposit_status'] as String?,
           depositAmount: (json['deposit_amount'] as num?)?.toInt(),
         );
-        changed = changed ||
-            updated.status != a.status ||
+        final differs = updated.status != a.status ||
             updated.depositStatus != a.depositStatus ||
             updated.depositAmount != a.depositAmount;
+        if (differs) changes.add((a, updated));
+        changed = changed || differs;
         next.add(updated);
       } catch (_) {
         next.add(a); // Hors ligne : on garde le dernier état connu.
@@ -209,6 +284,9 @@ class AppointmentsNotifier extends StateNotifier<List<LocalAppointment>> {
       ...next,
     ];
     await _persist();
+    for (final (before, after) in changes) {
+      onChange?.call(before, after);
+    }
   }
 
   /// `POST /bookings/{id}/cancel` : le refus du backend remonte tel quel.

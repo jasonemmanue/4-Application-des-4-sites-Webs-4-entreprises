@@ -140,7 +140,8 @@ class FloraTheme {
         primary: primary,
         onPrimary: onPrimary,
         secondary: FloraColors.mint,
-        onSecondary: onPrimary,
+        // Texte sur l'or : brun, le blanc y serait illisible.
+        onSecondary: FloraColors.cocoa,
         error: const Color(0xFFE85D75),
         onError: Colors.white,
         surface: surface,

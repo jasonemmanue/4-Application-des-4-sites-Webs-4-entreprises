@@ -51,7 +51,15 @@ class ApiConfig {
   /// distinguer, dans l'administration, une demande mobile Android d'une
   /// demande venue du site web (qui n'envoie pas cet en-tête). Version à
   /// garder alignée sur `pubspec.yaml`.
-  static const String appSource = 'android/1.1.0+2';
+  static const String appSource = 'android/1.2.0+3';
+
+  /// Version affichée dans « Mon espace ».
+  static String get appVersion => appSource.split('/').last.split('+').first;
+
+  /// Fiche Play Store (« Noter l'application »).
+  static const String playStoreUrl =
+      'https://play.google.com/store/apps/details?id=com.florahair.flora_hair_mobile';
+  static const String siteUrl = 'https://www.florahair.online';
 
   // ── Contact salon ────────────────────────────────────
   static const String salonPhone = '+2250545079850';

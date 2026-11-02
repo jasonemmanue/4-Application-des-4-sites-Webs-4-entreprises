@@ -3,7 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../config/theme.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../../config/api_config.dart';
 import '../../services/appointments.dart';
+import '../../services/inbox.dart';
 import '../../services/client_profile.dart';
 import '../../services/whatsapp_service.dart';
 import '../../widgets/flora_ui.dart';
@@ -29,6 +34,7 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
     _MoreTile('Vidéos', Icons.play_circle_outline, '/videos'),
     _MoreTile('Avis clients', Icons.star_outline, '/reviews'),
     _MoreTile('Formations', Icons.school_outlined, '/training'),
+    _MoreTile('Questions fréquentes', Icons.help_outline_rounded, '/faq'),
   ];
 
   @override
@@ -43,6 +49,7 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
   Widget build(BuildContext context) {
     final name = ref.watch(clientNameProvider);
     final next = ref.watch(nextAppointmentProvider);
+    final unread = ref.watch(unreadInboxCountProvider);
 
     return SafeArea(
       bottom: false,
@@ -128,9 +135,9 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
                 onTap: () => context.go('/favorites'),
               ),
               _QuickAction(
-                icon: Icons.history_rounded,
-                label: 'Historique',
-                onTap: () => context.push('/appointments?tab=history'),
+                icon: Icons.notifications_none_rounded,
+                label: unread > 0 ? 'Notifications ($unread)' : 'Notifications',
+                onTap: () => context.push('/notifications'),
               ),
               _QuickAction(
                 icon: Icons.phone_outlined,
@@ -155,6 +162,36 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
                   ),
                 ],
               ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          FloraCard(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            child: Column(
+              children: <Widget>[
+                _Tile(
+                  icon: Icons.star_rate_outlined,
+                  title: "Noter l'application",
+                  onTap: () => launchUrl(Uri.parse(ApiConfig.playStoreUrl),
+                      mode: LaunchMode.externalApplication),
+                ),
+                const Divider(height: 1),
+                _Tile(
+                  icon: Icons.share_outlined,
+                  title: "Partager l'application",
+                  onTap: () => Share.share(
+                    'Je réserve chez Flora Hair, salon de coiffure & beauté à '
+                    'Abidjan : ${ApiConfig.playStoreUrl} · ${ApiConfig.siteUrl}',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: Text(
+              'Flora Hair · version ${ApiConfig.appVersion}',
+              style: const TextStyle(fontSize: 12, color: FloraColors.textMuted),
             ),
           ),
         ],
