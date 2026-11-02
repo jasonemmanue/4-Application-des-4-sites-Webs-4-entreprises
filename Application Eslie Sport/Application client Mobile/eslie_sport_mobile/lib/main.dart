@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
 import 'config/theme.dart';
+import 'services/network.dart';
 import 'services/push_notification_service.dart';
 
 Future<void> main() async {
@@ -33,7 +34,10 @@ Future<void> main() async {
     ),
   );
 
-  await PushNotificationService.instance.initialize();
+  await NetworkStatus.start();
+  // Push en arriere-plan : l'ouverture n'attend ni Firebase ni la demande
+  // d'autorisation des notifications.
+  PushNotificationService.instance.initialize();
 
   runApp(const ProviderScope(child: EslieSportApp()));
 }

@@ -30,6 +30,7 @@ import '../models/schedule_slot.dart';
 import '../models/subscription.dart';
 import '../models/transformation.dart';
 import '../models/video.dart';
+import 'network.dart';
 
 class ApiException implements Exception {
   ApiException(this.message, {this.statusCode, this.code});
@@ -73,6 +74,9 @@ class ApiClient {
         validateStatus: (s) => s != null && s < 500,
       ),
     );
+    // En premier : une lecture coupee par le reseau est retentee avant que
+    // l'erreur ne remonte a l'ecran. Les POST ne sont jamais rejoues.
+    dio.interceptors.insert(0, RetryOnNetwork(dio));
     return dio;
   }
 

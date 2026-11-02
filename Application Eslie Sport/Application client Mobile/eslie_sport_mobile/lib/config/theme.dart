@@ -210,6 +210,12 @@ class AppTheme {
           color: AppColors.textPrimary,
           fontWeight: FontWeight.w600,
         ),
+        // Puce choisie : fond vert, donc texte et coche en blanc.
+        secondaryLabelStyle: GoogleFonts.poppins(
+          color: AppColors.onPrimary,
+          fontWeight: FontWeight.w600,
+        ),
+        checkmarkColor: AppColors.onPrimary,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.full),
           side: const BorderSide(color: AppColors.border),

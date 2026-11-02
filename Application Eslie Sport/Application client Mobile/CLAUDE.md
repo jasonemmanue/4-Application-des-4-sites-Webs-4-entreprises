@@ -83,7 +83,7 @@ eslie_sport_mobile/
 
 ## Design System
 
-Refonte 1.1.0 : voir `eslie_sport_mobile/docs/REFONTE-UI-1.1.0.md`.
+Refonte 1.1.0 et reprise reseau / FAQ / noter-partager en 1.2.0 : voir `eslie_sport_mobile/docs/REFONTE-UI-1.1.0.md`.
 
 ### Palette de couleurs (`lib/config/theme.dart`)
 

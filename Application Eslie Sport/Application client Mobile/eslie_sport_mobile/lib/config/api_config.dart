@@ -79,4 +79,9 @@ class ApiConfig {
   static const String slogan = 'Parce que le corps a besoin de sport';
 
   static const int depositPercent = 50;
+
+  /// Fiche Play Store (« Noter l'application », « Partager l'application »).
+  static const String playStoreId = 'com.esliesport.eslie_sport_mobile';
+  static const String playStoreUrl =
+      'https://play.google.com/store/apps/details?id=$playStoreId';
 }

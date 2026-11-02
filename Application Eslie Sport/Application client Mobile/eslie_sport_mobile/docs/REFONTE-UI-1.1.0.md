@@ -52,6 +52,26 @@ Toutes les donnees viennent de l'API partagee avec le site et l'admin. Les
 reservations et souscriptions portent `X-Client-Source: mobile`, affiche par le
 badge de source de l'admin. Aucun changement du backend n'a ete necessaire.
 
+## Version 1.2.0 (2026-11-02) — repris de Chic Residence 2.1.0
+
+Seule la partie applicative a ete reprise : l'API Eslie n'a ni boite de
+notifications, ni enregistrement des telephones (`/devices`), ni FAQ.
+
+- **Reseau** (`lib/services/network.dart`) : bandeau « Hors connexion » ; une
+  lecture (GET) coupee est retentee toutes les 3 s pendant 2 minutes, et des que
+  le reseau revient. Un POST (reservation, paiement) n'est **jamais** rejoue.
+- **Rafraichissement** (`lib/app.dart`) : planning, places, tarifs et parametres
+  se rechargent au retour du reseau et au retour dans l'app apres 30 s.
+- **Profil** : Questions frequentes (texte dans l'app, horaires lus au
+  back-office), Noter l'application (Play Store), Partager l'application.
+- **Puces choisies** : texte et coche blancs sur le vert.
+- **Push** : Firebase s'initialise en arriere-plan, sans retarder l'ouverture.
+
+Non repris, faute de routes cote API : boite de notifications, relances
+d'acompte, campagnes. A ajouter au backend Eslie si la salle en veut.
+Le lien Play Store ne marche qu'une fois l'app publiee sous
+`com.esliesport.eslie_sport_mobile`.
+
 ## Limites connues
 
 - Les 5 videos en base pointent vers des fichiers absents (`musculation-demo.mp4`...) :

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/api_config.dart';
@@ -9,6 +10,7 @@ import '../../models/public_settings.dart';
 import '../../services/member_profile.dart';
 import '../../services/providers.dart';
 import '../../widgets/brand_logo.dart';
+import 'faq_screen.dart';
 
 /// Profil : carte d'identité, WhatsApp, deux cartes photo, une carte large,
 /// puis les rubriques (icône + chevron).
@@ -39,6 +41,16 @@ class MoreScreen extends ConsumerWidget {
         icon: Icons.calculate_outlined, label: 'Calcul IMC', route: '/bmi'),
     _MoreItem(icon: Icons.mail_outline, label: 'Contact', route: '/contact'),
   ];
+
+  /// Ouvre la fiche dans l'application Play Store, sinon dans le navigateur.
+  static Future<void> _rateApp() async {
+    final market = Uri.parse('market://details?id=${ApiConfig.playStoreId}');
+    try {
+      if (await launchUrl(market, mode: LaunchMode.externalApplication)) return;
+    } catch (_) {}
+    await launchUrl(Uri.parse(ApiConfig.playStoreUrl),
+        mode: LaunchMode.externalApplication);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -113,6 +125,26 @@ class MoreScreen extends ConsumerWidget {
                 title: it.label,
                 onTap: () => context.push(it.route),
               ),
+            const Divider(),
+            _Tile(
+              icon: Icons.help_outline_rounded,
+              title: 'Questions fréquentes',
+              onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const FaqScreen())),
+            ),
+            const _Tile(
+              icon: Icons.star_outline_rounded,
+              title: "Noter l'application",
+              onTap: MoreScreen._rateApp,
+            ),
+            _Tile(
+              icon: Icons.ios_share_rounded,
+              title: "Partager l'application",
+              onTap: () => Share.share(
+                'ESLIE SPORT, la salle de sport de Blaukauss : réservez vos '
+                "séances depuis l'application. ${ApiConfig.playStoreUrl}",
+              ),
+            ),
             const Divider(),
             const SizedBox(height: 20),
             _AboutCard(settings: settings),
