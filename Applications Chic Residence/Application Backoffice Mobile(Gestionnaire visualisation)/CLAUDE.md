@@ -5,6 +5,8 @@
 > tarifs saisonniers et export restent sur l'admin web. Connexion :
 > `POST /auth/login` renvoie `access_token`, le profil se lit sur `/auth/me`.
 
+> **v2.1.0 (2026-11-02)** : notifications, campagnes, fiches voyageurs, nettoyage automatique au départ, rôle gérant. Voir `../docs/V2_1_GERANT_NOTIFICATIONS.md`.
+
 ## Identite du projet
 
 **Nom** : Chic Residence Backoffice

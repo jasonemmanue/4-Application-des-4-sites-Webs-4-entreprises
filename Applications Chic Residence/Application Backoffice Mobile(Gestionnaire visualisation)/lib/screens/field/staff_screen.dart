@@ -60,8 +60,11 @@ class _StaffTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final s = member;
-    final color =
-        s.role == StaffRole.controller ? AppColors.info : AppColors.primary;
+    final color = switch (s.role) {
+      StaffRole.controller => AppColors.info,
+      StaffRole.manager => AppColors.success,
+      StaffRole.agent => AppColors.primary,
+    };
     return Panel(
       onTap: () => _StaffForm.open(context, ref, member: s),
       child: Row(
@@ -70,9 +73,11 @@ class _StaffTile extends ConsumerWidget {
             radius: 23,
             backgroundColor: color.withValues(alpha: 0.13),
             child: Icon(
-              s.role == StaffRole.controller
-                  ? Icons.verified_user_outlined
-                  : Icons.cleaning_services_outlined,
+              switch (s.role) {
+                StaffRole.controller => Icons.verified_user_outlined,
+                StaffRole.manager => Icons.manage_accounts_outlined,
+                StaffRole.agent => Icons.cleaning_services_outlined,
+              },
               color: color,
             ),
           ),
@@ -243,6 +248,7 @@ class _StaffFormState extends ConsumerState<_StaffForm> {
                 ButtonSegment(value: StaffRole.agent, label: Text('Agent')),
                 ButtonSegment(
                     value: StaffRole.controller, label: Text('Contrôleur')),
+                ButtonSegment(value: StaffRole.manager, label: Text('Gérant')),
               ],
               selected: {_role},
               onSelectionChanged: (s) => setState(() => _role = s.first),

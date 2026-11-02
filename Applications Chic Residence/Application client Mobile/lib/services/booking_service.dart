@@ -31,6 +31,7 @@ class BookingService {
     required String guestName,
     required String guestPhone,
     String? notes,
+    String? sessionId,
   }) async {
     final res = await _api.dio.post('/bookings', data: {
       'residence_id': residenceId,
@@ -40,6 +41,7 @@ class BookingService {
       'guest_name': guestName,
       'guest_phone': guestPhone,
       if (notes != null && notes.isNotEmpty) 'notes': notes,
+      if (sessionId != null && sessionId.isNotEmpty) 'session_id': sessionId,
     });
     return Booking.fromJson((res.data as Map).cast<String, dynamic>());
   }

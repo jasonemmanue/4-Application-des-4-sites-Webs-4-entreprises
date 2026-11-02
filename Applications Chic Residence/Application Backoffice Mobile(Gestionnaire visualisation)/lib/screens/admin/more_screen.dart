@@ -5,6 +5,11 @@ import 'package:go_router/go_router.dart';
 import '../../config/api_config.dart';
 import '../../config/theme.dart';
 import '../../providers/providers.dart';
+import '../../services/device_registration.dart';
+import '../../widgets/notifications.dart';
+import '../field/auto_cleaning_screen.dart';
+import 'campaigns_screen.dart';
+import 'guests_screen.dart';
 import '../../widgets/ui.dart';
 
 class MoreScreen extends ConsumerWidget {
@@ -57,6 +62,12 @@ class MoreScreen extends ConsumerWidget {
               padding: EdgeInsets.zero,
               child: Column(
                 children: [
+                  _PageTile(Icons.notifications_none_rounded, 'Notifications',
+                      (_) => const NotificationsScreen()),
+                  _PageTile(Icons.campaign_outlined, 'Campagnes et relances',
+                      (_) => const CampaignsScreen()),
+                  _PageTile(Icons.badge_outlined, 'Fiches voyageurs',
+                      (_) => const GuestsScreen()),
                   _Tile(Icons.payments_outlined, 'Paiements', '/payments'),
                   _Tile(
                     Icons.rate_review_outlined,
@@ -82,12 +93,15 @@ class MoreScreen extends ConsumerWidget {
                 children: [
                   _Tile(Icons.groups_outlined, 'Personnel', '/staff'),
                   _Tile(Icons.insights_rounded, 'Performance', '/performance'),
+                  _PageTile(Icons.auto_mode_rounded, 'Nettoyage automatique',
+                      (_) => const AutoCleaningScreen()),
                 ],
               ),
             ),
             const SizedBox(height: 20),
             OutlinedButton.icon(
               onPressed: () async {
+                await DeviceRegistration.unregister(ref.read(apiClientProvider));
                 await ref.read(authServiceProvider).logout();
                 ref.read(currentAdminProvider.notifier).state = null;
                 if (context.mounted) context.go('/login');
@@ -131,6 +145,25 @@ class _Tile extends StatelessWidget {
         ],
       ),
       onTap: () => context.push(path),
+    );
+  }
+}
+
+class _PageTile extends StatelessWidget {
+  const _PageTile(this.icon, this.title, this.builder);
+  final IconData icon;
+  final String title;
+  final WidgetBuilder builder;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(icon, color: AppColors.navy),
+      title: Text(title,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+      trailing:
+          const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: builder)),
     );
   }
 }

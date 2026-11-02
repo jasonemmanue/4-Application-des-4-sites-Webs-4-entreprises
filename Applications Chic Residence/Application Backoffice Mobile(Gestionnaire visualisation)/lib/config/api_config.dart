@@ -8,7 +8,7 @@ class ApiConfig {
   static final String baseUrl = const String.fromEnvironment('API_BASE_URL').isEmpty
       ? LienApi.apiUrl
       : const String.fromEnvironment('API_BASE_URL');
-  static const String appVersion = '2.0.0';
+  static const String appVersion = '2.1.0';
 
   /// Fichiers servis par l'API (`/uploads/…`) ou par le site (`/images/…`).
   static String resolve(String url) {

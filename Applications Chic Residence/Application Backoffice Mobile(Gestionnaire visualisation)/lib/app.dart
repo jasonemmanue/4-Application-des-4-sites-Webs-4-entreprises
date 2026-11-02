@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'config/routes.dart';
 import 'config/theme.dart';
 import 'providers/providers.dart';
+import 'services/network.dart';
 
 class BackofficeApp extends ConsumerStatefulWidget {
   const BackofficeApp({super.key});
@@ -48,6 +49,7 @@ class _BackofficeAppState extends ConsumerState<BackofficeApp> {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       routerConfig: _router,
+      builder: (context, child) => NetworkBanner(child: child!),
     );
   }
 }

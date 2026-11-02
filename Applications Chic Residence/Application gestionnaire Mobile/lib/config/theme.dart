@@ -33,10 +33,15 @@ class AppTheme {
   static ThemeData light() {
     final base = ThemeData(useMaterial3: true, brightness: Brightness.light);
     return base.copyWith(
+      // `onSecondary` vaut noir par défaut : un segment ou une puce choisis
+      // s'affichaient en noir sur bleu nuit, illisibles.
       colorScheme: const ColorScheme.light(
         primary: AppColors.primary,
         onPrimary: Colors.white,
         secondary: AppColors.navy,
+        onSecondary: Colors.white,
+        secondaryContainer: AppColors.navy,
+        onSecondaryContainer: Colors.white,
         surface: AppColors.card,
         onSurface: AppColors.text,
         error: AppColors.error,
@@ -117,6 +122,18 @@ class AppTheme {
         checkmarkColor: Colors.white,
         side: const BorderSide(color: AppColors.border),
         shape: const StadiumBorder(),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith((s) =>
+              s.contains(WidgetState.selected) ? AppColors.navy : AppColors.card),
+          foregroundColor: WidgetStateProperty.resolveWith((s) =>
+              s.contains(WidgetState.selected) ? Colors.white : AppColors.text),
+          iconColor: WidgetStateProperty.resolveWith((s) =>
+              s.contains(WidgetState.selected) ? Colors.white : AppColors.text),
+          side: WidgetStateProperty.all(
+              const BorderSide(color: AppColors.border)),
+        ),
       ),
       snackBarTheme: const SnackBarThemeData(
         behavior: SnackBarBehavior.floating,

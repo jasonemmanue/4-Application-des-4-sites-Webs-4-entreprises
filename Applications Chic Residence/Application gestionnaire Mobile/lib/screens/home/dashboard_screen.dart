@@ -6,6 +6,7 @@ import '../../config/theme.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
 import '../../widgets/task_card.dart';
+import '../../widgets/notifications.dart';
 import '../../widgets/ui.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -16,7 +17,9 @@ class DashboardScreen extends ConsumerWidget {
     final user = ref.watch(currentUserProvider);
     final async = ref.watch(myTasksProvider);
 
-    return Scaffold(
+    return AutoRefresh(
+      refresh: (ref) => ref.invalidate(myTasksProvider),
+      child: Scaffold(
       body: SafeArea(
         bottom: false,
         child: RefreshIndicator(
@@ -31,6 +34,10 @@ class DashboardScreen extends ConsumerWidget {
                   const Spacer(),
                   if (user != null)
                     StatusPill(label: user.role.label, color: AppColors.navy),
+                  NotificationBell(
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => const NotificationsScreen())),
+                  ),
                 ],
               ),
               const SizedBox(height: 14),
@@ -62,6 +69,7 @@ class DashboardScreen extends ConsumerWidget {
           ),
         ),
       ),
+    ),
     );
   }
 }

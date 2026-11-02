@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../config/theme.dart';
 import '../../providers/providers.dart';
+import '../../services/device_registration.dart';
 import '../../widgets/ui.dart';
 
 /// Connexion du personnel : téléphone + PIN, comptes créés par l'administrateur.
@@ -50,6 +51,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final user =
           await ref.read(authServiceProvider).login(phone: phone, pin: pin);
       ref.read(currentUserProvider.notifier).state = user;
+      DeviceRegistration.register(ref.read(apiClientProvider), 'gestionnaire');
       if (mounted) context.go('/');
     } on DioException catch (e) {
       setState(() => _error = e.response?.statusCode == 401

@@ -286,4 +286,84 @@ class AdminApi {
   Future<void> deleteTask(String id) async {
     await _d.delete('/cleaning-tasks/$id');
   }
+
+
+  // ── Fiches voyageurs ──
+  Future<List<GuestIdentity>> guests({String? q, String? bookingId}) async {
+    final res = await _d.get('/guests', queryParameters: {
+      if (q != null && q.isNotEmpty) 'q': q,
+      if (bookingId != null) 'booking_id': bookingId,
+    });
+    return ((res.data as List?) ?? const [])
+        .map((e) => GuestIdentity.fromJson((e as Map).cast<String, dynamic>()))
+        .toList();
+  }
+
+  Future<GuestIdentity> saveGuest(String? id, Map<String, dynamic> body) async {
+    final res = id == null
+        ? await _d.post('/guests', data: body)
+        : await _d.put('/guests/$id', data: body);
+    return GuestIdentity.fromJson((res.data as Map).cast<String, dynamic>());
+  }
+
+  Future<GuestIdentity> uploadGuestPhoto(
+      String id, String face, XFile file) async {
+    final name = file.name.contains('.') ? file.name : '${file.name}.jpg';
+    final lower = name.toLowerCase();
+    final type = lower.endsWith('.png')
+        ? 'png'
+        : lower.endsWith('.webp')
+            ? 'webp'
+            : 'jpeg';
+    final form = FormData.fromMap({
+      'file': await MultipartFile.fromFile(file.path,
+          filename: name, contentType: DioMediaType('image', type)),
+    });
+    final res = await _d.post('/guests/$id/photos/$face', data: form);
+    return GuestIdentity.fromJson((res.data as Map).cast<String, dynamic>());
+  }
+
+  /// Les photos de pièce ne sont servies qu'avec le jeton : on les lit par Dio,
+  /// jamais par une URL d'image.
+  Future<List<int>> guestPhoto(String id, String face) async {
+    final res = await _d.get<List<int>>('/guests/$id/photos/$face',
+        options: Options(responseType: ResponseType.bytes));
+    return res.data ?? const [];
+  }
+
+  Future<void> deleteGuest(String id) async {
+    await _d.delete('/guests/$id');
+  }
+
+
+  // ── Campagnes de notifications ──
+  Future<List<Campaign>> campaigns() async {
+    final res = await _d.get('/notifications/campaigns');
+    return ((res.data as List?) ?? const [])
+        .map((e) => Campaign.fromJson((e as Map).cast<String, dynamic>()))
+        .toList();
+  }
+
+  Future<void> createCampaign({
+    required String title,
+    required String body,
+    required String audience,
+    DateTime? sendAt,
+  }) async {
+    await _d.post('/notifications/campaigns', data: {
+      'title': title,
+      'body': body,
+      'audience': audience,
+      if (sendAt != null) 'send_at': sendAt.toUtc().toIso8601String(),
+    });
+  }
+
+  Future<void> cancelCampaign(String id) async {
+    await _d.delete('/notifications/campaigns/$id');
+  }
+
+  Future<bool> pushEnabled() async {
+    final res = await _d.get('/notifications/push-status');
+    return (res.data as Map)['push_enabled'] == true;
+  }
 }

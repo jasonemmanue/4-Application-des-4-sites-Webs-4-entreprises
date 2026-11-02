@@ -5,6 +5,9 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'app.dart';
 import 'providers/providers.dart';
+import 'services/device_registration.dart';
+import 'services/network.dart';
+import 'services/push.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,8 +20,14 @@ Future<void> main() async {
 
   final container = ProviderContainer();
   final auth = container.read(authServiceProvider);
+  await NetworkStatus.start();
   final admin = await auth.restore();
   container.read(currentAdminProvider.notifier).state = admin;
+  PushService.init().then((_) {
+    if (admin != null) {
+      DeviceRegistration.register(container.read(apiClientProvider), 'backoffice');
+    }
+  });
 
   runApp(
     UncontrolledProviderScope(

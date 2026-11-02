@@ -7,6 +7,7 @@ import '../../config/format.dart';
 import '../../config/theme.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
+import '../../widgets/notifications.dart';
 import '../../widgets/ui.dart';
 
 Color taskColor(TaskStatus s) {
@@ -39,7 +40,12 @@ class CleaningScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(tasksProvider);
-    return DefaultTabController(
+    return AutoRefresh(
+      refresh: (ref) {
+        ref.invalidate(tasksProvider);
+        ref.invalidate(staffProvider);
+      },
+      child: DefaultTabController(
       length: _tabs.length,
       child: Scaffold(
         appBar: AppBar(
@@ -78,6 +84,7 @@ class CleaningScreen extends ConsumerWidget {
           ),
         ),
       ),
+    ),
     );
   }
 }

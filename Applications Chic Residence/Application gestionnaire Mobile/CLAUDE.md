@@ -3,6 +3,8 @@
 > **v2.0.0 (2026-10-31) : lire `../docs/REFONTE_V2.md` d'abord.** Palette commune
 > aux 3 apps. Les endpoints existent ; statut final d'une tâche : `validated`.
 
+> **v2.1.0 (2026-11-02)** : rôle **gérant** (logements, réservations, fiches voyageurs CNI), notifications, rafraîchissement automatique, reprise réseau. Voir `../docs/V2_1_GERANT_NOTIFICATIONS.md`.
+
 ## Identite du projet
 
 **Nom** : Chic Residence Gestionnaire

@@ -6,6 +6,8 @@ import '../../config/api_config.dart';
 import '../../config/theme.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
+import '../../services/device_registration.dart';
+import '../../widgets/notifications.dart';
 import '../../widgets/ui.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -68,6 +70,14 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   const Divider(height: 1),
                   ListTile(
+                    leading: const Icon(Icons.notifications_none_rounded),
+                    title: const Text('Notifications'),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => const NotificationsScreen())),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
                     leading: const Icon(Icons.info_outline_rounded),
                     title: const Text('Version'),
                     subtitle: const Text(ApiConfig.appVersion),
@@ -78,6 +88,7 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: 20),
             OutlinedButton.icon(
               onPressed: () async {
+                await DeviceRegistration.unregister(ref.read(apiClientProvider));
                 await ref.read(authServiceProvider).logout();
                 ref.read(currentUserProvider.notifier).state = null;
                 if (context.mounted) context.go('/login');

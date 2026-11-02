@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../config/api_config.dart';
+import 'network.dart';
 
 class ApiException implements Exception {
   final String message;
@@ -38,6 +39,9 @@ class ApiClient {
         ));
       },
     ));
+    // En premier : une lecture coupée par le réseau est retentée avant que
+    // l'erreur ne soit traduite pour l'écran.
+    dio.interceptors.insert(0, RetryOnNetwork(dio));
   }
 
   /// Callback appele quand le serveur repond 401 (session expiree/revoquee).

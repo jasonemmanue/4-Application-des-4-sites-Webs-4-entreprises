@@ -13,6 +13,7 @@ import '../../widgets/fees_notice.dart';
 import '../../widgets/residence_card.dart';
 import '../../widgets/state_views.dart';
 import '../../widgets/stay_calendar.dart';
+import '../profile/inbox_screen.dart';
 
 /// Accueil (maquette du 2026-10-31) : logo en haut à gauche sur une photo qui se
 /// fond dans le crème, « Bonjour ! », carte de recherche, catégories en photo,
@@ -158,16 +159,7 @@ class _Header extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
-                    _RoundButton(
-                      icon: Icons.notifications_none_rounded,
-                      tooltip: 'Notifications',
-                      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                              'Vos confirmations et rappels arrivent sur WhatsApp.'),
-                        ),
-                      ),
-                    ),
+                    const _InboxButton(),
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -200,10 +192,12 @@ class _RoundButton extends StatelessWidget {
     required this.icon,
     required this.tooltip,
     required this.onTap,
+    this.badge = 0,
   });
   final IconData icon;
   final String tooltip;
   final VoidCallback onTap;
+  final int badge;
 
   @override
   Widget build(BuildContext context) {
@@ -220,7 +214,12 @@ class _RoundButton extends StatelessWidget {
           child: SizedBox(
             width: 44,
             height: 44,
-            child: Icon(icon, color: t.textPrimary),
+            child: Badge(
+              isLabelVisible: badge > 0,
+              label: Text(badge > 9 ? '9+' : '$badge'),
+              backgroundColor: t.brand,
+              child: Icon(icon, color: t.textPrimary),
+            ),
           ),
         ),
       ),
@@ -790,6 +789,25 @@ class _ProposeCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _InboxButton extends ConsumerWidget {
+  const _InboxButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final count = ref.watch(inboxUnreadProvider).valueOrNull ?? 0;
+    return _RoundButton(
+      icon: Icons.notifications_none_rounded,
+      tooltip: 'Notifications',
+      badge: count,
+      onTap: () async {
+        await Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const InboxScreen()));
+        ref.invalidate(inboxUnreadProvider);
+      },
     );
   }
 }

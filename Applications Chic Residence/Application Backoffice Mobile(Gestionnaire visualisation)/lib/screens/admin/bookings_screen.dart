@@ -6,7 +6,9 @@ import '../../config/format.dart';
 import '../../config/theme.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
+import '../../widgets/notifications.dart';
 import '../../widgets/ui.dart';
+import 'guests_screen.dart';
 
 const bookingLabels = {
   'pending': 'En attente',
@@ -39,7 +41,9 @@ class BookingsScreen extends ConsumerWidget {
     final async = ref.watch(bookingsProvider);
     final titles = ref.watch(residenceTitlesProvider).valueOrNull ?? const {};
 
-    return Scaffold(
+    return AutoRefresh(
+      refresh: (ref) => ref.invalidate(bookingsProvider),
+      child: Scaffold(
       appBar: AppBar(title: const Text('Réservations')),
       body: Column(
         children: [
@@ -88,6 +92,7 @@ class BookingsScreen extends ConsumerWidget {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -212,6 +217,24 @@ class BookingTile extends ConsumerWidget {
               ),
               if (b.notes.isNotEmpty) _Fact('Notes', b.notes),
               const SizedBox(height: 14),
+              if (b.status == 'confirmed' || b.status == 'pending') ...[
+                FilledButton.icon(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    GuestFormScreen.open(
+                      context,
+                      ref,
+                      bookingId: b.id,
+                      prefillName: b.guestName,
+                      prefillPhone: b.guestPhone,
+                      residenceTitle: residence,
+                    );
+                  },
+                  icon: const Icon(Icons.badge_outlined),
+                  label: const Text('Enregistrer l\'arrivée (pièce)'),
+                ),
+                const SizedBox(height: 8),
+              ],
               if (b.status == 'pending')
                 FilledButton(
                   onPressed: () => set(ctx, 'confirmed'),

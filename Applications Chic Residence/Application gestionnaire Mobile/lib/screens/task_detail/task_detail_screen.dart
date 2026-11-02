@@ -10,6 +10,7 @@ import '../../config/theme.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
 import '../../widgets/task_card.dart';
+import '../../widgets/notifications.dart';
 import '../../widgets/ui.dart';
 
 class TaskDetailScreen extends ConsumerStatefulWidget {
@@ -127,7 +128,9 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   Widget build(BuildContext context) {
     final async = ref.watch(taskDetailProvider(widget.taskId));
     final user = ref.watch(currentUserProvider);
-    return Scaffold(
+    return AutoRefresh(
+      refresh: (ref) => ref.invalidate(taskDetailProvider(widget.taskId)),
+      child: Scaffold(
       appBar: AppBar(title: const Text('Détail de la tâche')),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -148,6 +151,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 

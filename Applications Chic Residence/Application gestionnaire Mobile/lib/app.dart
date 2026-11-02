@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'config/routes.dart';
 import 'config/theme.dart';
 import 'providers/providers.dart';
+import 'services/network.dart';
 
 class GestionnaireApp extends ConsumerStatefulWidget {
   const GestionnaireApp({super.key});
@@ -33,6 +34,7 @@ class _GestionnaireAppState extends ConsumerState<GestionnaireApp> {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       routerConfig: _router,
+      builder: (context, child) => NetworkBanner(child: child!),
     );
   }
 }

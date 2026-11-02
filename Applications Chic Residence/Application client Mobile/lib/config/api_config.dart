@@ -46,7 +46,7 @@ class ApiConfig {
   }
 
   /// Version affichée sur le Profil (à garder alignée sur pubspec.yaml).
-  static const String appVersion = '2.0.0';
+  static const String appVersion = '2.1.0';
 
   /// Timeout par defaut
   static const Duration connectTimeout = Duration(seconds: 15);
@@ -58,6 +58,11 @@ class ApiConfig {
   static const String contactEmail = 'chicresidencemeublee@gmail.com';
   static const String companyAddress =
       "Dans le dos de l'Ivoire Trade Center (ITC), Abidjan";
+
+  /// Fiche Play Store (bouton « Noter l'application »).
+  static const String playStoreId = 'com.chicresidence.chic_residence_mobile';
+  static const String playStoreUrl =
+      'https://play.google.com/store/apps/details?id=$playStoreId';
 
   /// Session anonyme
   static const String sessionIdKey = 'chic_session_id';

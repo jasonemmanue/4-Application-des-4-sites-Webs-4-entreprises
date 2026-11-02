@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/api_config.dart';
@@ -10,6 +11,8 @@ import '../../providers/providers.dart';
 import '../../services/booking_history.dart';
 import '../../services/whatsapp_service.dart';
 import '../../widgets/residence_card.dart';
+import 'faq_screen.dart';
+import 'inbox_screen.dart';
 
 /// Profil (maquette du 2026-10-31) : identité, prochain séjour, menu, aide.
 ///
@@ -17,6 +20,18 @@ import '../../widgets/residence_card.dart';
 /// faite depuis l'appareil, « Visiteur » sinon. D'où l'absence de « Déconnexion ».
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
+
+  /// Ouvre la fiche Play Store dans l'application Play Store, sinon dans le
+  /// navigateur.
+  static Future<void> _rateApp() async {
+    final market =
+        Uri.parse('market://details?id=${ApiConfig.playStoreId}');
+    try {
+      if (await launchUrl(market, mode: LaunchMode.externalApplication)) return;
+    } catch (_) {}
+    await launchUrl(Uri.parse(ApiConfig.playStoreUrl),
+        mode: LaunchMode.externalApplication);
+  }
 
   void _openSettings(BuildContext context) {
     showModalBottomSheet<void>(
@@ -189,6 +204,15 @@ class ProfileScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   _Tile(
+                    icon: Icons.notifications_none_rounded,
+                    title: 'Notifications',
+                    subtitle: (ref.watch(inboxUnreadProvider).valueOrNull ?? 0) > 0
+                        ? '${ref.watch(inboxUnreadProvider).valueOrNull} non lue(s)'
+                        : null,
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => const InboxScreen())),
+                  ),
+                  _Tile(
                     icon: Icons.calendar_month_outlined,
                     title: 'Mes réservations',
                     onTap: () => context.go('/bookings'),
@@ -205,6 +229,25 @@ class ProfileScreen extends ConsumerWidget {
                         ref.watch(publicInfoProvider).valueOrNull?.phone ??
                             ApiConfig.contactPhone,
                     onTap: WhatsAppService.call,
+                  ),
+                  _Tile(
+                    icon: Icons.help_outline_rounded,
+                    title: 'Questions fréquentes',
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => const FaqScreen())),
+                  ),
+                  _Tile(
+                    icon: Icons.star_outline_rounded,
+                    title: 'Noter l\'application',
+                    onTap: _rateApp,
+                  ),
+                  _Tile(
+                    icon: Icons.ios_share_rounded,
+                    title: 'Partager l\'application',
+                    onTap: () => Share.share(
+                      'Logements meublés à Abidjan avec CHIC RESIDENCE : '
+                      '${ApiConfig.playStoreUrl}',
+                    ),
                   ),
                   _Tile(
                     icon: Icons.tune_rounded,

@@ -2,15 +2,19 @@
 // `StaffStatsOut` du backend. Les identifiants sont des UUID (texte), et le
 // statut final d'une tâche est `validated`.
 
-enum StaffRole { agent, controller }
+enum StaffRole { agent, controller, manager }
 
 extension StaffRoleX on StaffRole {
-  String get label =>
-      this == StaffRole.agent ? 'Agent de nettoyage' : 'Contrôleur';
-  static StaffRole parse(String? v) =>
-      (v ?? '').toLowerCase() == 'controller'
-          ? StaffRole.controller
-          : StaffRole.agent;
+  String get label => switch (this) {
+        StaffRole.agent => 'Agent de nettoyage',
+        StaffRole.controller => 'Contrôleur',
+        StaffRole.manager => 'Gérant',
+      };
+  static StaffRole parse(String? v) => switch ((v ?? '').toLowerCase()) {
+        'controller' => StaffRole.controller,
+        'manager' => StaffRole.manager,
+        _ => StaffRole.agent,
+      };
 }
 
 class StaffUser {

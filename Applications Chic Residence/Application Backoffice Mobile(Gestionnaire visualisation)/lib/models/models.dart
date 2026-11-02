@@ -355,15 +355,19 @@ class Residence {
 
 // ── Suivi terrain ─────────────────────────────────────────────────────────
 
-enum StaffRole { agent, controller }
+enum StaffRole { agent, controller, manager }
 
 extension StaffRoleX on StaffRole {
-  String get label =>
-      this == StaffRole.agent ? 'Agent de nettoyage' : 'Contrôleur';
-  static StaffRole parse(String? v) =>
-      (v ?? '').toLowerCase() == 'controller'
-          ? StaffRole.controller
-          : StaffRole.agent;
+  String get label => switch (this) {
+        StaffRole.agent => 'Agent de nettoyage',
+        StaffRole.controller => 'Contrôleur',
+        StaffRole.manager => 'Gérant',
+      };
+  static StaffRole parse(String? v) => switch ((v ?? '').toLowerCase()) {
+        'controller' => StaffRole.controller,
+        'manager' => StaffRole.manager,
+        _ => StaffRole.agent,
+      };
 }
 
 class StaffMember {
@@ -558,4 +562,120 @@ class CleaningTask {
           .toList(),
     );
   }
+}
+
+
+// ── Fiches voyageurs ──────────────────────────────────────────────────────
+
+const guestIdTypes = {
+  'cni': "Carte nationale d'identité",
+  'passeport': 'Passeport',
+  'carte_consulaire': 'Carte consulaire',
+  'permis': 'Permis de conduire',
+  'titre_sejour': 'Titre de séjour',
+  'autre': 'Autre pièce',
+};
+
+class GuestIdentity {
+  final String id;
+  final String? bookingId;
+  final String? residenceId;
+  final String residenceTitle;
+  final String fullName;
+  final DateTime? birthDate;
+  final String birthPlace;
+  final String nationality;
+  final String idType;
+  final String idNumber;
+  final DateTime? idIssuedOn;
+  final DateTime? idExpiresOn;
+  final String phone;
+  final String address;
+  final DateTime? arrivalDate;
+  final DateTime? departureDate;
+  final String notes;
+  final bool hasFront;
+  final bool hasBack;
+  final String recordedByName;
+  final DateTime? createdAt;
+
+  const GuestIdentity({
+    required this.id,
+    required this.fullName,
+    required this.idType,
+    required this.idNumber,
+    this.bookingId,
+    this.residenceId,
+    this.residenceTitle = '',
+    this.birthDate,
+    this.birthPlace = '',
+    this.nationality = '',
+    this.idIssuedOn,
+    this.idExpiresOn,
+    this.phone = '',
+    this.address = '',
+    this.arrivalDate,
+    this.departureDate,
+    this.notes = '',
+    this.hasFront = false,
+    this.hasBack = false,
+    this.recordedByName = '',
+    this.createdAt,
+  });
+
+  String get idTypeLabel => guestIdTypes[idType] ?? idType;
+
+  factory GuestIdentity.fromJson(Map<String, dynamic> j) => GuestIdentity(
+        id: j['id'].toString(),
+        bookingId: j['booking_id']?.toString(),
+        residenceId: j['residence_id']?.toString(),
+        residenceTitle: j['residence_title']?.toString() ?? '',
+        fullName: j['full_name']?.toString() ?? '',
+        birthDate: asDate(j['birth_date']),
+        birthPlace: j['birth_place']?.toString() ?? '',
+        nationality: j['nationality']?.toString() ?? '',
+        idType: j['id_type']?.toString() ?? 'cni',
+        idNumber: j['id_number']?.toString() ?? '',
+        idIssuedOn: asDate(j['id_issued_on']),
+        idExpiresOn: asDate(j['id_expires_on']),
+        phone: j['phone']?.toString() ?? '',
+        address: j['address']?.toString() ?? '',
+        arrivalDate: asDate(j['arrival_date']),
+        departureDate: asDate(j['departure_date']),
+        notes: j['notes']?.toString() ?? '',
+        hasFront: j['has_front'] == true,
+        hasBack: j['has_back'] == true,
+        recordedByName: j['recorded_by_name']?.toString() ?? '',
+        createdAt: asDate(j['created_at']),
+      );
+}
+
+class Campaign {
+  final String id;
+  final String title;
+  final String body;
+  final String audience;
+  final DateTime sendAt;
+  final String status;
+  final int recipients;
+
+  const Campaign({
+    required this.id,
+    required this.title,
+    required this.body,
+    required this.audience,
+    required this.sendAt,
+    required this.status,
+    required this.recipients,
+  });
+
+  factory Campaign.fromJson(Map<String, dynamic> j) => Campaign(
+        id: j['id'].toString(),
+        title: j['title']?.toString() ?? '',
+        body: j['body']?.toString() ?? '',
+        audience: j['audience']?.toString() ?? '',
+        sendAt: DateTime.parse(j['send_at'].toString()),
+        status: j['status']?.toString() ?? '',
+        recipients: asInt(j['recipients']),
+      );
 }

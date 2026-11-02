@@ -114,6 +114,7 @@ class _BookingTunnelState extends ConsumerState<BookingTunnel> {
             guestName: _name.text.trim(),
             guestPhone: phone,
             notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+            sessionId: ref.read(sessionServiceProvider).sessionId,
           );
 
       // Pas de compte : le nom de la dernière réservation personnalise le

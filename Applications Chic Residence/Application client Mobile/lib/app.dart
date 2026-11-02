@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'config/routes.dart';
 import 'config/theme.dart';
 import 'providers/providers.dart';
+import 'services/network.dart';
 
 class ChicResidenceApp extends ConsumerStatefulWidget {
   const ChicResidenceApp({super.key});
@@ -27,6 +28,7 @@ class _ChicResidenceAppState extends ConsumerState<ChicResidenceApp> {
       darkTheme: AppTheme.dark(),
       themeMode: themeMode,
       routerConfig: _router,
+      builder: (context, child) => NetworkBanner(child: child!),
     );
   }
 }

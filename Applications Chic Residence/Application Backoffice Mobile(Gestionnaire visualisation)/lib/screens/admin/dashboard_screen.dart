@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../config/format.dart';
 import '../../config/theme.dart';
 import '../../providers/providers.dart';
+import '../../widgets/notifications.dart';
 import '../../widgets/ui.dart';
 import 'bookings_screen.dart';
 
@@ -18,7 +19,12 @@ class DashboardScreen extends ConsumerWidget {
     final overview = ref.watch(overviewProvider);
     final titles = ref.watch(residenceTitlesProvider).valueOrNull ?? const {};
 
-    return Scaffold(
+    return AutoRefresh(
+      refresh: (ref) {
+        ref.invalidate(dashboardStatsProvider);
+        ref.invalidate(overviewProvider);
+      },
+      child: Scaffold(
       body: SafeArea(
         bottom: false,
         child: RefreshIndicator(
@@ -34,8 +40,10 @@ class DashboardScreen extends ConsumerWidget {
                   Image.asset('assets/branding/logo-full.png',
                       height: 58, semanticLabel: 'Chic Résidence Meublée'),
                   const Spacer(),
-                  const StatusPill(
-                      label: 'Administration', color: AppColors.navy),
+                  NotificationBell(
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => const NotificationsScreen())),
+                  ),
                 ],
               ),
               const SizedBox(height: 14),
@@ -160,6 +168,7 @@ class DashboardScreen extends ConsumerWidget {
           ),
         ),
       ),
+    ),
     );
   }
 }

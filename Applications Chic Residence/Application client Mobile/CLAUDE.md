@@ -4,6 +4,8 @@
 > (Poppins), onglets (Accueil, Explorer, Favoris, Réservations, Profil) et tunnel
 > ont changé. Pas d'email client : le tunnel ne le demande plus.
 
+> **v2.1.0 (2026-11-02)** : boîte de notifications, relances, noter / partager l'app, FAQ, reprise réseau. Voir `../docs/V2_1_GERANT_NOTIFICATIONS.md`.
+
 ## Identite du projet
 
 **Nom** : Chic Residence Mobile

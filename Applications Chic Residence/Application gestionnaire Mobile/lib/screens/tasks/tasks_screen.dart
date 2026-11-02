@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
 import '../../widgets/task_card.dart';
+import '../../widgets/notifications.dart';
 import '../../widgets/ui.dart';
 
 class TasksScreen extends ConsumerWidget {
@@ -23,7 +24,9 @@ class TasksScreen extends ConsumerWidget {
     final filter = ref.watch(tasksFilterProvider);
     final async = ref.watch(myTasksProvider);
 
-    return Scaffold(
+    return AutoRefresh(
+      refresh: (ref) => ref.invalidate(myTasksProvider),
+      child: Scaffold(
       appBar: AppBar(title: const Text('Tâches')),
       body: Column(
         children: [
@@ -87,6 +90,7 @@ class TasksScreen extends ConsumerWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }

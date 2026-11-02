@@ -506,7 +506,10 @@ class AppTheme {
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.resolveWith((s) =>
               s.contains(WidgetState.selected) ? t.chipBgSelected : t.chipBg),
-          foregroundColor: WidgetStateProperty.all(t.textPrimary),
+          foregroundColor: WidgetStateProperty.resolveWith((s) =>
+              s.contains(WidgetState.selected) ? Colors.white : t.textPrimary),
+          iconColor: WidgetStateProperty.resolveWith((s) =>
+              s.contains(WidgetState.selected) ? Colors.white : t.textPrimary),
           side: WidgetStateProperty.all(BorderSide(color: t.border)),
         ),
       ),
@@ -517,6 +520,11 @@ class AppTheme {
           fontWeight: FontWeight.w600,
           color: t.textPrimary,
         ),
+        secondaryLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
+        checkmarkColor: Colors.white,
         side: BorderSide(color: t.border),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(999),

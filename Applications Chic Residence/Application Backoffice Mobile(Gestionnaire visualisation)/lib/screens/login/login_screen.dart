@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../config/theme.dart';
 import '../../providers/providers.dart';
+import '../../services/device_registration.dart';
 import '../../widgets/ui.dart';
 
 /// Connexion avec les **mêmes identifiants que le backoffice web**.
@@ -62,6 +63,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           await ref.read(authServiceProvider).login(email, password);
       _failCount = 0;
       ref.read(currentAdminProvider.notifier).state = admin;
+      DeviceRegistration.register(ref.read(apiClientProvider), 'backoffice');
       if (mounted) context.go('/');
     } on DioException catch (e) {
       // Seul un 401 veut dire « identifiants refusés ». Une coupure réseau ou

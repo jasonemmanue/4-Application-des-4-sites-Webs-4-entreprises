@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../config/api_config.dart';
+import 'network.dart';
 
 /// Client HTTP partage. Attache l'entete `X-Session-Id` pour les favoris
 /// et intercepte les erreurs.
@@ -34,6 +35,9 @@ class ApiClient {
         ));
       },
     ));
+    // En premier : une lecture coupée par le réseau est retentée avant que
+    // l'erreur ne soit traduite pour l'écran.
+    dio.interceptors.insert(0, RetryOnNetwork(dio));
 
     return dio;
   }

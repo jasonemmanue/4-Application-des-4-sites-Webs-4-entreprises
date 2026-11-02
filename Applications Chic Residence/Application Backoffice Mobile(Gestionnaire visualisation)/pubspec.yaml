@@ -1,7 +1,7 @@
 name: chic_residence_backoffice
 description: "Chic Residence - Backoffice mobile administrateur (admin + suivi terrain)."
 publish_to: 'none'
-version: 2.0.0+2
+version: 2.1.0+3
 
 environment:
   sdk: ^3.6.0
@@ -34,6 +34,7 @@ dependencies:
   share_plus: ^10.0.2
   path_provider: ^2.1.4
   image_picker: ^1.1.2
+  connectivity_plus: ^6.0.3
 
   intl: ^0.19.0
 
