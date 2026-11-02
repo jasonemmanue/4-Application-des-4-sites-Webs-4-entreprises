@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../config/api_config.dart';
 import '../../config/routes.dart';
 import '../../config/theme.dart';
 import '../../providers/providers.dart';
 import '../../services/client_profile.dart';
+import '../../services/notification_inbox.dart';
 import '../../services/whatsapp_service.dart';
 
 const _whatsapp = WhatsAppService();
@@ -92,6 +94,13 @@ class MoreScreen extends ConsumerWidget {
             Divider(color: p.border, height: 1),
             _Tile(
               palette: p,
+              icon: Icons.notifications_none_rounded,
+              label: 'Notifications',
+              badge: ref.watch(inboxUnreadProvider),
+              onTap: () => context.push(AppRoutes.notifications),
+            ),
+            _Tile(
+              palette: p,
               icon: Icons.menu_book_outlined,
               label: 'Publications',
               onTap: () => context.push(AppRoutes.publications),
@@ -125,6 +134,17 @@ class MoreScreen extends ConsumerWidget {
               icon: Icons.mail_outline,
               label: 'Écrire au cabinet',
               onTap: () => context.push(AppRoutes.message),
+            ),
+            // Pas de « Noter l'application » : l'app n'est pas encore publiée
+            // sur le Play Store, le lien mènerait à une page introuvable.
+            _Tile(
+              palette: p,
+              icon: Icons.ios_share_rounded,
+              label: 'Partager l\'application',
+              onTap: () => Share.share(
+                '${ApiConfig.companyName}, cabinet d\'études et de conseil : '
+                '${ApiConfig.websiteUrl}',
+              ),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
@@ -456,11 +476,13 @@ class _Tile extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.badge = 0,
   });
   final _Palette palette;
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final int badge;
 
   @override
   Widget build(BuildContext context) {
@@ -482,6 +504,15 @@ class _Tile extends StatelessWidget {
                 ),
               ),
             ),
+            if (badge > 0)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Badge(
+                  label: Text(badge > 9 ? '9+' : '$badge'),
+                  backgroundColor: AppColors.accent500,
+                  textColor: AppColors.charcoal900,
+                ),
+              ),
             Icon(Icons.chevron_right_rounded, size: 22, color: palette.muted),
           ],
         ),

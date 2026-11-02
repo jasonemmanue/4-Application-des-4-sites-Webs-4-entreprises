@@ -12,6 +12,7 @@ import '../models/service.dart';
 import '../models/team_member.dart';
 import '../models/testimonial.dart';
 import '../models/video.dart';
+import 'network.dart';
 
 class PagedResult<T> {
   final List<T> items;
@@ -74,6 +75,10 @@ class ApiClient {
         ));
       },
     ));
+
+    // En premier : une lecture coupée par le réseau est retentée avant que
+    // l'erreur ne soit traduite pour l'écran.
+    dio.interceptors.insert(0, RetryOnNetwork(dio));
 
     return dio;
   }

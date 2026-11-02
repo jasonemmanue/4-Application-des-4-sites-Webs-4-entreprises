@@ -7,6 +7,7 @@ import '../screens/contact/contact_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/home/search_screen.dart';
 import '../screens/main_scaffold.dart';
+import '../screens/more/inbox_screen.dart';
 import '../screens/more/more_screen.dart';
 import '../screens/payment/payment_result_screen.dart';
 import '../screens/payment/payment_screen.dart';
@@ -40,6 +41,7 @@ class AppRoutes {
   static const String testimonials = '/more/testimonials';
   static const String contact = '/contact';
   static const String message = '/more/message';
+  static const String notifications = '/more/notifications';
   static const String quote = '/more/quote';
   static const String quoteConfirmation = '/more/quote/confirmation';
   static const String payment = '/more/payment';
@@ -132,6 +134,11 @@ final GoRouter appRouter = GoRouter(
                   ),
                 ),
               ],
+            ),
+            GoRoute(
+              path: 'notifications',
+              parentNavigatorKey: rootNavigatorKey,
+              builder: (context, state) => const InboxScreen(),
             ),
             GoRoute(
               path: 'about',

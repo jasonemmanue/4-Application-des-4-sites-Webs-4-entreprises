@@ -56,6 +56,7 @@ class ApiConfig {
   }
 
   static const String companyName = 'RUAH-STATISTICS';
+  static const String websiteUrl = 'https://www.ruah-statistics.com';
   static const String companyPhone = '+225 05 45 07 98 50';
   static const String companyWhatsapp = '2250545079850';
   static const String companyEmail = 'contact@ruah-statistics.com';

@@ -154,6 +154,8 @@ class AppTheme {
         backgroundColor: AppColors.charcoal700,
         selectedColor: AppColors.brand600,
         labelStyle: text.labelMedium!.copyWith(color: Colors.white),
+        secondaryLabelStyle: text.labelMedium!.copyWith(color: Colors.white),
+        checkmarkColor: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(999),
         ),
@@ -213,9 +215,12 @@ class AppTheme {
         showUnselectedLabels: true,
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: AppColors.brandTint,
-        selectedColor: AppColors.brandTint,
+        backgroundColor: Colors.white,
+        selectedColor: AppColors.brand600,
         labelStyle: text.labelMedium!,
+        secondaryLabelStyle:
+            text.labelMedium!.copyWith(color: Colors.white),
+        checkmarkColor: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(999),
         ),

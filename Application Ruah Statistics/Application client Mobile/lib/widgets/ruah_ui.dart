@@ -242,17 +242,25 @@ class RoundAction extends StatelessWidget {
     required this.icon,
     required this.tooltip,
     required this.onTap,
+    this.badge = 0,
   });
   final IconData icon;
   final String tooltip;
   final VoidCallback onTap;
+  final int badge;
 
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      tooltip: tooltip,
+      tooltip: badge > 0 ? '$tooltip, $badge non lue(s)' : tooltip,
       onPressed: onTap,
-      icon: Icon(icon, color: fgOf(context), size: 26),
+      icon: Badge(
+        isLabelVisible: badge > 0,
+        label: Text(badge > 9 ? '9+' : '$badge'),
+        backgroundColor: AppColors.accent500,
+        textColor: AppColors.charcoal900,
+        child: Icon(icon, color: fgOf(context), size: 26),
+      ),
     );
   }
 }

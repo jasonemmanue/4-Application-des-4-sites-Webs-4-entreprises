@@ -46,7 +46,9 @@ ruah_statistics_mobile/
     services/
       api_client.dart          # Client HTTP (dio ou http)
       whatsapp_service.dart    # Ouverture WhatsApp pour confirmations
-      push_notification_service.dart
+      push.dart                # FCM, sujet `actualites`
+      notification_inbox.dart  # Boite locale des push recus
+      network.dart             # Hors connexion et reprise
     screens/
       home/                    # Accueil
       services/                # Liste + detail des domaines
@@ -179,9 +181,13 @@ Tous les endpoints GET publics du backend existant :
 
 ### Push Notifications (Firebase Cloud Messaging)
 
-- Notification quand un devis recoit une reponse (necessite extension backend)
-- Notification quand un nouveau article/publication est publie (necesssite extension backend)
-- Notifications promotionnelles
+Voir `docs/V1_2_RESEAU_NOTIFICATIONS.md`. Chaque telephone s'abonne au sujet FCM `actualites` ; le cabinet envoie depuis la console Firebase. Les push recus sont ranges dans une boite locale (cloche de l'accueil, Profil > Notifications).
+
+- Notification quand un devis recoit une reponse : necessite d'enregistrer les appareils cote API (non fait)
+
+### Reseau
+
+`lib/services/network.dart` : bandeau hors connexion, lectures GET retentees 2 min, envois jamais rejoues, rechargement au retour du reseau.
 
 ## Regles metier
 

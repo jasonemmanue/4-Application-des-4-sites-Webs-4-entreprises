@@ -10,6 +10,7 @@ import '../../models/service.dart';
 import '../../providers/providers.dart';
 import '../../services/client_profile.dart';
 import '../../services/input_sanitizer.dart';
+import '../../services/notification_inbox.dart';
 import '../../widgets/animated_counter.dart';
 import '../../widgets/error_state.dart';
 import '../../widgets/loading_state.dart';
@@ -75,11 +76,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 RoundAction(
                   icon: Icons.notifications_none_rounded,
                   tooltip: 'Notifications',
-                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Le cabinet vous répond sur WhatsApp.'),
-                    ),
-                  ),
+                  badge: ref.watch(inboxUnreadProvider),
+                  onTap: () => context.push(AppRoutes.notifications),
                 ),
                 RoundAction(
                   icon: Icons.person_outline_rounded,
