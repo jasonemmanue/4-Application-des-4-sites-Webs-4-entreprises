@@ -37,3 +37,6 @@ Thumbs.db
 **/ios/Runner/GoogleService-Info.plist
 **/*.jks
 **/*.keystore
+
+# Journaux de la CLI Firebase
+firebase-debug.log
