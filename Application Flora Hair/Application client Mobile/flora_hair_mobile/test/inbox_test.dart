@@ -40,6 +40,6 @@ void main() {
   });
 
   test('version affichée tirée de X-App-Source', () {
-    expect(ApiConfig.appVersion, '1.2.0');
+    expect(ApiConfig.appVersion, '1.3.0');
   });
 }

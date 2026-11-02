@@ -102,6 +102,7 @@ Toutes préfixées par `/api/v1`. Ce que le mobile appelle, où c'est appelé.
 | POST | `/bookings`                 | `ApiClient.createBooking` | Corps `BookingCreate` |
 | POST | `/bookings/{id}/cancel`     | `ApiClient.cancelBooking` | Refus 409 si acompte payé |
 | GET  | `/bookings/{id}/status`     | `ApiClient.fetchBookingStatus` | État décidé dans l'admin, sans donnée personnelle |
+| PUT  | `/bookings/{id}/push-token` | `ApiClient.setPushToken` | Rattache le téléphone pour les notifications push |
 | GET  | `/gallery`                  | `ApiClient.fetchGallery` | |
 | GET  | `/articles?page=&per_page=` | `ApiClient.fetchArticles` | Publiés uniquement |
 | GET  | `/articles/{slug}`          | `ApiClient.fetchArticleBySlug` | 404 si brouillon |
@@ -167,12 +168,12 @@ mobile ne remonte que ceux dont `available == true`.
 Chaque requête sortante de l'application est marquée par un en-tête HTTP :
 
 ```
-X-App-Source: android/1.2.0+3
+X-App-Source: android/1.3.0+4
 ```
 
 La valeur est définie par [`ApiConfig.appSource`](../lib/config/api_config.dart)
 et posée en dur dans le `BaseOptions` de Dio ([api_client.dart](../lib/services/api_client.dart)).
-Elle doit rester **alignée sur `pubspec.yaml`** (`version: 1.2.0+3`, vérifié par
+Elle doit rester **alignée sur `pubspec.yaml`** (`version: 1.3.0+4`, vérifié par
 `test/payment_contract_test.dart`) à chaque sortie : c'est ce qui apparaîtra dans l'administration à côté des demandes.
 
 Côté backend :
@@ -189,7 +190,7 @@ Côté backend :
 Côté administration Next.js :
 - Un composant partagé `<SourceBadge source={…} />` (dans
   `admin/components/SourceBadge.tsx`) rend une pastille compacte :
-  - **📱 Android v1.2.0+3** (or, discret) si la valeur commence par
+  - **📱 Android v1.3.0+4** (or, discret) si la valeur commence par
     `android/` ou `ios/`
   - **🌐 Site** (gris) si `source` est vide (demandes issues du site web)
 - Une colonne « Canal » est ajoutée en tête des listes *Réservations*,

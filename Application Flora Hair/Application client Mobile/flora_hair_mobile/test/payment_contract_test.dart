@@ -125,6 +125,20 @@ void main() {
       expect(json['payment_method'], 'Payement electronique');
     });
 
+    test('le jeton du téléphone part avec la réservation', () {
+      final json = Booking(
+        serviceId: 's',
+        teamMemberId: 't',
+        date: DateTime(2026, 11, 4),
+        timeSlot: '10:30',
+        customerName: 'Cliente',
+        customerPhone: '0707070707',
+        pushToken: 'tok',
+      ).toCreateJson();
+      expect(json['push_token'], 'tok');
+      expect(booking().toCreateJson().containsKey('push_token'), isFalse);
+    });
+
     test('la modalité reste facultative', () {
       expect(booking().toCreateJson().containsKey('payment_method'), isFalse);
     });

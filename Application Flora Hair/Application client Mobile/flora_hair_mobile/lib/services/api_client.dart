@@ -238,6 +238,17 @@ class ApiClient {
     return Booking.fromJson(res.data as Map<String, dynamic>);
   }
 
+  /// `PUT /bookings/{id}/push-token` — rattache le téléphone à la réservation,
+  /// pour recevoir les notifications du salon. Garde : l'UUID, comme l'annulation.
+  Future<void> setPushToken(String bookingId, String token) async {
+    try {
+      await _dio.put('/bookings/$bookingId/push-token',
+          data: <String, dynamic>{'token': token});
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
   /// `POST /bookings/{id}/cancel` — route publique : la cliente annule
   /// elle-même son rendez-vous tant que l'acompte n'a pas été encaissé.
   Future<Booking> cancelBooking(String bookingId) async {

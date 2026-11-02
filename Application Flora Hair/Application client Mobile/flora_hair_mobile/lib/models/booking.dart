@@ -14,6 +14,7 @@ class Booking {
     this.status,
     this.reference,
     this.paymentMethod,
+    this.pushToken,
   });
 
   /// Libellés exacts attendus par le backend (`PaymentMethod`). Le premier est
@@ -37,6 +38,9 @@ class Booking {
   final String? reference;
   final String? paymentMethod;
 
+  /// Jeton FCM du téléphone : le salon le prévient de ses décisions.
+  final String? pushToken;
+
   // Alias historique
   String get startTime => timeSlot;
 
@@ -50,6 +54,7 @@ class Booking {
         'client_email': customerEmail ?? '',
         'notes': notes ?? '',
         if (paymentMethod != null) 'payment_method': paymentMethod,
+        if (pushToken != null && pushToken!.isNotEmpty) 'push_token': pushToken,
       };
 
   static String dateOnly(DateTime d) =>

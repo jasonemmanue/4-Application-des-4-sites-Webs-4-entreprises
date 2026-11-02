@@ -30,6 +30,7 @@ class _FloraHairAppState extends ConsumerState<FloraHairApp>
   Timer? _timer;
   StreamSubscription<void>? _reconnect;
   StreamSubscription<dynamic>? _push;
+  StreamSubscription<String>? _pushToken;
 
   @override
   void initState() {
@@ -43,14 +44,21 @@ class _FloraHairAppState extends ConsumerState<FloraHairApp>
     _push = push.onMessage.listen((msg) {
       final n = msg.notification;
       if (n == null) return;
+      // Même `id` que celui calculé par l'application quand elle constate le
+      // changement elle-même : le message n'apparaît qu'une fois.
       ref.read(inboxProvider.notifier).add(InboxItem(
-            id: msg.messageId ?? '${DateTime.now().millisecondsSinceEpoch}',
+            id: msg.data['id'] as String? ??
+                msg.messageId ??
+                '${DateTime.now().millisecondsSinceEpoch}',
             title: n.title ?? 'Flora Hair',
             body: n.body ?? '',
             receivedAt: msg.sentTime ?? DateTime.now(),
+            route: msg.data['route'] as String?,
           ));
       _refreshAppointments();
     });
+    _pushToken = push.onToken.listen(
+        (t) => ref.read(appointmentsProvider.notifier).syncPushToken(t));
     push.initialize();
   }
 
@@ -60,6 +68,7 @@ class _FloraHairAppState extends ConsumerState<FloraHairApp>
     _timer?.cancel();
     _reconnect?.cancel();
     _push?.cancel();
+    _pushToken?.cancel();
     super.dispose();
   }
 

@@ -6,6 +6,7 @@
 /// Ni téléphone ni courriel ne sont conservés dans cette liste.
 library;
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +17,7 @@ import 'api_client.dart';
 import 'inbox.dart';
 
 const _appointmentsKey = 'flora_appointments';
+const _pushTokenKey = 'flora_push_token_synced';
 
 class LocalAppointment {
   const LocalAppointment({
@@ -184,6 +186,9 @@ class AppointmentsNotifier extends StateNotifier<List<LocalAppointment>> {
       onChange;
   bool _refreshing = false;
 
+  /// Complété une fois la liste relue sur l'appareil.
+  final _restored = Completer<void>();
+
   Future<void> _restore() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -197,6 +202,7 @@ class AppointmentsNotifier extends StateNotifier<List<LocalAppointment>> {
     } catch (_) {
       // Préférences illisibles : on repart d'une liste vide.
     }
+    if (!_restored.isCompleted) _restored.complete();
     await refresh();
   }
 
@@ -287,6 +293,27 @@ class AppointmentsNotifier extends StateNotifier<List<LocalAppointment>> {
     for (final (before, after) in changes) {
       onChange?.call(before, after);
     }
+  }
+
+  /// Rattache ce téléphone à ses rendez-vous à venir quand son jeton FCM change
+  /// (première ouverture de cette version, renouvellement par Firebase). Les
+  /// réservations prises ensuite portent déjà le jeton.
+  Future<void> syncPushToken(String token) async {
+    if (token.isEmpty) return;
+    await _restored.future;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getString(_pushTokenKey) == token) return;
+      var allSent = true;
+      for (final a in state.where((a) => a.isUpcoming)) {
+        try {
+          await _api.setPushToken(a.bookingId, token);
+        } catch (_) {
+          allSent = false; // Réessayé au prochain lancement.
+        }
+      }
+      if (allSent) await prefs.setString(_pushTokenKey, token);
+    } catch (_) {}
   }
 
   /// `POST /bookings/{id}/cancel` : le refus du backend remonte tel quel.

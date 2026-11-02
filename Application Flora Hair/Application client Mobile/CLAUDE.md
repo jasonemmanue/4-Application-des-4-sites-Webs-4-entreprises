@@ -123,6 +123,11 @@ La carte d'identite et les cartes photo de ce document ont ete remplacees par «
 2. **Creneau** : date, creneau, note, total estime
 3. **Confirmation** : recapitulatif, informations client, moyen de paiement (acompte 50 %)
 
+### Notifications push (v1.3.0+4)
+
+Voir `docs/V1_3_NOTIFICATIONS_PUSH.md`. Le jeton FCM part avec `POST /bookings` (`push_token`)
+et par `PUT /bookings/{id}/push-token` ; le backend pousse les decisions du salon.
+
 ### Reseau et notifications (v1.2.0+3)
 
 Voir `docs/V1_2_RESEAU_NOTIFICATIONS.md` : bandeau hors connexion, lectures GET retentees

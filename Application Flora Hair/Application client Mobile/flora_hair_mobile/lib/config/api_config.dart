@@ -51,7 +51,7 @@ class ApiConfig {
   /// distinguer, dans l'administration, une demande mobile Android d'une
   /// demande venue du site web (qui n'envoie pas cet en-tête). Version à
   /// garder alignée sur `pubspec.yaml`.
-  static const String appSource = 'android/1.2.0+3';
+  static const String appSource = 'android/1.3.0+4';
 
   /// Version affichée dans « Mon espace ».
   static String get appVersion => appSource.split('/').last.split('+').first;

@@ -61,6 +61,9 @@ L'administration (services, reservations, galerie, avis, devis) se fait exclusiv
 
 ## Derniere version
 
+**v1.3.0+4** : notifications push du salon (confirmation, annulation, acompte recu).
+Voir [docs/V1_3_NOTIFICATIONS_PUSH.md](docs/V1_3_NOTIFICATIONS_PUSH.md).
+
 **v1.2.0+3** : bandeau hors connexion et reprise des lectures, rafraichissement automatique,
 boite de notifications, FAQ, noter et partager l'application.
 Voir [docs/V1_2_RESEAU_NOTIFICATIONS.md](docs/V1_2_RESEAU_NOTIFICATIONS.md).

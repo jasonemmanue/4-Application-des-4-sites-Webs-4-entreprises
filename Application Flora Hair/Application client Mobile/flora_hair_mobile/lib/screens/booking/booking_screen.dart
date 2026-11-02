@@ -13,6 +13,7 @@ import '../../services/appointments.dart';
 import '../../services/client_profile.dart';
 import '../../services/payment_service.dart';
 import '../../services/providers.dart';
+import '../../services/push_notification_service.dart';
 import '../../widgets/booking_form.dart';
 import '../../widgets/flora_ui.dart';
 import '../../widgets/operator_grid.dart';
@@ -195,6 +196,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                 draft.customerEmail.isEmpty ? null : draft.customerEmail,
             notes: draft.notes.isEmpty ? null : draft.notes,
             paymentMethod: online ? Booking.onlinePayment : Booking.cashPayment,
+            pushToken: PushNotificationService.instance.fcmToken,
           ),
         );
     final bookingId = created.id ?? '';
