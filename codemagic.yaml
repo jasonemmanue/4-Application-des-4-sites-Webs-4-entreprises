@@ -11,6 +11,8 @@
 #    ───────────────────────  ─────────────────────────  ──────────────  ──────────────────────
 #    eslie/ios-build-check    eslie-ios-build-check      non             compile ? (non signe)
 #    eslie/ios-testflight     eslie-ios-testflight       OUI             IPA envoyee a TestFlight
+#    flora-hair/ios-build-check  flora-ios-build-check  non             compile ? (non signe)
+#    flora-hair/testflight     flora-ios-testflight       OUI             IPA envoyee a TestFlight
 #
 #  Routine, depuis la racine du depot :
 #      git push origin main:eslie/ios-build-check     (d'abord, sans Apple)
@@ -41,6 +43,43 @@ definitions:
       # Pas test/api_contract_live_test.dart : il interroge l'API de production.
       script: flutter test test/widget_test.dart
     - &eslie_pods
+      name: CocoaPods
+      script: |
+        cd ios
+        pod install --repo-update
+
+  # ── Flora Hair ───────────────────────────────────────────────────────────
+  # Procedure : Application Flora Hair/Application client Mobile/docs/IOS_TESTFLIGHT_CODEMAGIC.md
+  flora_dossier: &flora_dossier "Application Flora Hair/Application client Mobile/flora_hair_mobile"
+
+  flora_vars: &flora_vars
+    BUNDLE_ID: com.florahair.floraHairMobile
+
+  flora_scripts:
+    - &flora_firebase_plist
+      name: Configuration Firebase iOS
+      # GoogleService-Info.plist n'est jamais commite (regle « Secrets » du
+      # .gitignore) : il arrive du groupe de variables `flora_firebase`, encode
+      # en base64. Il est reference par le projet Xcode : sans lui, pas de build.
+      script: |
+        if [ -z "$FLORA_GOOGLE_SERVICE_INFO_PLIST" ]; then
+          echo "Variable FLORA_GOOGLE_SERVICE_INFO_PLIST absente (groupe flora_firebase)."
+          echo "Voir docs/IOS_TESTFLIGHT_CODEMAGIC.md, etape 4."
+          exit 1
+        fi
+        echo "$FLORA_GOOGLE_SERVICE_INFO_PLIST" | base64 --decode > ios/Runner/GoogleService-Info.plist
+        echo "Bundle Firebase : $(/usr/libexec/PlistBuddy -c 'Print :BUNDLE_ID' ios/Runner/GoogleService-Info.plist)"
+    - &flora_pub_get
+      name: Dependances Flutter
+      script: flutter pub get
+    - &flora_analyse
+      name: Analyse statique
+      script: flutter analyze lib --no-fatal-infos --no-fatal-warnings
+    - &flora_tests
+      name: Tests
+      # Tous hors ligne : contrat de paiement, boite de notifications, rendu.
+      script: flutter test
+    - &flora_pods
       name: CocoaPods
       script: |
         cd ios
@@ -154,4 +193,301 @@ workflows:
         auth: integration
         # false : le build arrive dans TestFlight pour le test INTERNE sans revue
         # beta d'Apple. true seulement pour des testeurs externes.
+        submit_to_testflight: false
+
+  # ═════════════════════════════════════════════════════════════════════════
+  #  Ruah Statistics — bloc autonome (aucune ancre partagee avec les autres apps)
+  #
+  #    ruah/ios-build-check   ruah-ios-build-check   sans Apple   compile ? (non signe)
+  #    ruah/ios-simulateur    ruah-ios-simulateur    sans Apple   iPhone simule + captures
+  #    ruah/ios-testflight    ruah-ios-testflight    Apple        IPA envoyee a TestFlight
+  #
+  #  Procedure : Application Ruah Statistics/Application client Mobile/docs/IOS_TESTFLIGHT.md
+  # ═════════════════════════════════════════════════════════════════════════
+
+  ruah-ios-build-check:
+    name: Ruah Statistics · iOS build check
+    max_build_duration: 45
+    instance_type: mac_mini_m2
+    working_directory: Application Ruah Statistics/Application client Mobile
+    environment:
+      flutter: 3.38.4
+      xcode: latest
+      cocoapods: default
+      groups:
+        - ruah_firebase
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: ruah/ios-build-check
+          include: true
+      cancel_previous_builds: true
+    scripts:
+      - name: Configuration Firebase iOS
+        # GoogleService-Info.plist est hors Git (.gitignore de l'app) : il vient
+        # du groupe de variables Codemagic `ruah_firebase` (base64).
+        script: |
+          if [ -z "$RUAH_GOOGLE_SERVICE_INFO_PLIST" ]; then
+            echo "Groupe ruah_firebase absent ou vide : voir docs/IOS_TESTFLIGHT.md, etape 6."
+            exit 1
+          fi
+          echo "$RUAH_GOOGLE_SERVICE_INFO_PLIST" | base64 --decode > ios/Runner/GoogleService-Info.plist
+      - name: Dependances Flutter
+        script: flutter pub get
+      - name: Analyse statique
+        script: flutter analyze lib --no-fatal-infos --no-fatal-warnings
+      - name: Tests
+        # test/api_contract_live_test.dart est ignore sans LIVE_API=true.
+        script: flutter test
+      - name: CocoaPods
+        script: cd ios && pod install --repo-update
+      - name: Build iOS (sans signature)
+        script: flutter build ios --release --no-codesign
+    artifacts:
+      - build/ios/iphoneos/Runner.app
+      - /tmp/xcodebuild_logs/*.log
+
+  # Build de debogage lance dans un iPhone simule : captures a 15 s et 40 s,
+  # echec si l'app s'est arretee. Pas d'APNs sur simulateur, donc pas de push.
+  ruah-ios-simulateur:
+    name: Ruah Statistics · iOS simulateur
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    working_directory: Application Ruah Statistics/Application client Mobile
+    environment:
+      flutter: 3.38.4
+      xcode: latest
+      cocoapods: default
+      groups:
+        - ruah_firebase
+      vars:
+        BUNDLE_ID: com.ruahstatistics.ruahStatisticsMobile
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: ruah/ios-simulateur
+          include: true
+      cancel_previous_builds: true
+    scripts:
+      - name: Configuration Firebase iOS
+        # GoogleService-Info.plist est hors Git (.gitignore de l'app) : il vient
+        # du groupe de variables Codemagic `ruah_firebase` (base64).
+        script: |
+          if [ -z "$RUAH_GOOGLE_SERVICE_INFO_PLIST" ]; then
+            echo "Groupe ruah_firebase absent ou vide : voir docs/IOS_TESTFLIGHT.md, etape 6."
+            exit 1
+          fi
+          echo "$RUAH_GOOGLE_SERVICE_INFO_PLIST" | base64 --decode > ios/Runner/GoogleService-Info.plist
+      - name: Dependances Flutter
+        script: flutter pub get
+      - name: CocoaPods
+        script: cd ios && pod install --repo-update
+      - name: Build pour simulateur
+        script: flutter build ios --simulator --debug
+      - name: Lancement dans un iPhone simule
+        script: |
+          set -e
+          mkdir -p captures
+          UDID=$(xcrun simctl list devices available -j \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; l=[x for k in sorted(d) if "iOS" in k for x in d[k] if x["name"].startswith("iPhone")]; print(l[-1]["udid"])')
+          echo "Simulateur : $UDID"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" build/ios/iphonesimulator/Runner.app
+          xcrun simctl launch "$UDID" "$BUNDLE_ID"
+          sleep 15
+          xcrun simctl io "$UDID" screenshot captures/01_ouverture.png
+          sleep 25
+          xcrun simctl io "$UDID" screenshot captures/02_apres_40s.png
+          if ! xcrun simctl spawn "$UDID" launchctl list | grep -q "$BUNDLE_ID"; then
+            echo "L'application s'est arretee pendant le demarrage."
+            xcrun simctl spawn "$UDID" log show --last 2m --predicate 'process == "Runner"' | tail -200 || true
+            exit 1
+          fi
+          echo "Application lancee et toujours active apres 40 s."
+          cd build/ios/iphonesimulator && zip -qr ../../../Ruah-simulateur.zip Runner.app
+    artifacts:
+      - Ruah-simulateur.zip
+      - captures/*.png
+      - /tmp/xcodebuild_logs/*.log
+
+  ruah-ios-testflight:
+    name: Ruah Statistics · iOS TestFlight
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    working_directory: Application Ruah Statistics/Application client Mobile
+    integrations:
+      # Cle d'equipe deja declaree pour Prepaxia (equipe LD4W7KA5YG). Si Ruah
+      # est publiee sous un AUTRE compte Apple, ajouter sa cle dans Codemagic
+      # et mettre son nom ici.
+      app_store_connect: Prepaxia ASC
+    environment:
+      flutter: 3.38.4
+      xcode: latest
+      cocoapods: default
+      groups:
+        - ruah_firebase
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.ruahstatistics.ruahStatisticsMobile   # = BUNDLE_ID
+      vars:
+        BUNDLE_ID: com.ruahstatistics.ruahStatisticsMobile
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: ruah/ios-testflight
+          include: true
+      cancel_previous_builds: true
+    scripts:
+      - name: Configuration Firebase iOS
+        # GoogleService-Info.plist est hors Git (.gitignore de l'app) : il vient
+        # du groupe de variables Codemagic `ruah_firebase` (base64).
+        script: |
+          if [ -z "$RUAH_GOOGLE_SERVICE_INFO_PLIST" ]; then
+            echo "Groupe ruah_firebase absent ou vide : voir docs/IOS_TESTFLIGHT.md, etape 6."
+            exit 1
+          fi
+          echo "$RUAH_GOOGLE_SERVICE_INFO_PLIST" | base64 --decode > ios/Runner/GoogleService-Info.plist
+      - name: Dependances Flutter
+        script: flutter pub get
+      - name: Analyse statique
+        script: flutter analyze lib --no-fatal-infos --no-fatal-warnings
+      - name: Tests
+        script: flutter test
+      - name: CocoaPods
+        script: cd ios && pod install --repo-update
+      - name: Profils de signature
+        # Certificat Apple Distribution + profil App Store de l'integration ;
+        # ecrit /Users/builder/export_options.plist utilise juste apres.
+        script: xcode-project use-profiles
+      - name: Build IPA
+        # Numero de build = dernier TestFlight + 1 ; version : pubspec.yaml.
+        # L'app est retrouvee par son bundle (APP_STORE_APPLE_ID la force).
+        script: |
+          set -e
+          APP_ID="${APP_STORE_APPLE_ID:-}"
+          [ -n "$APP_ID" ] || APP_ID=$(app-store-connect apps list \
+              --bundle-id-identifier "$BUNDLE_ID" --strict-match-identifier --json \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[0]["id"] if d else "")' \
+            || true)
+          if [ -z "$APP_ID" ]; then
+            echo "Aucune app App Store Connect pour $BUNDLE_ID : la creer d'abord (docs/IOS_TESTFLIGHT.md, etape 3)."
+            exit 1
+          fi
+          DERNIER=$(app-store-connect get-latest-testflight-build-number "$APP_ID" || echo 0)
+          flutter build ipa --release \
+            --build-number=$((DERNIER + 1)) \
+            --export-options-plist=/Users/builder/export_options.plist \
+            --obfuscate --split-debug-info=build/symboles
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/symboles/**
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        # false : TestFlight en test INTERNE, sans revue beta d'Apple.
+        submit_to_testflight: false
+
+  # ── Flora Hair · compilation iOS sans signature ──────────────────────────
+  flora-ios-build-check:
+    name: Flora Hair · iOS build check
+    max_build_duration: 45
+    instance_type: mac_mini_m2
+    working_directory: *flora_dossier
+    environment:
+      flutter: 3.38.4
+      xcode: latest
+      cocoapods: default
+      groups:
+        - flora_firebase
+      vars:
+        <<: *flora_vars
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: flora-hair/ios-build-check
+          include: true
+      cancel_previous_builds: true
+    scripts:
+      - *flora_firebase_plist
+      - *flora_pub_get
+      - *flora_analyse
+      - *flora_tests
+      - *flora_pods
+      - name: Build iOS (sans signature)
+        script: flutter build ios --release --no-codesign
+    artifacts:
+      - build/ios/iphoneos/Runner.app
+      - /tmp/xcodebuild_logs/*.log
+
+  # ── Flora Hair · build signe + TestFlight ────────────────────────────────
+  flora-ios-testflight:
+    name: Flora Hair · iOS TestFlight
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    working_directory: *flora_dossier
+    integrations:
+      # Cle d'equipe deja declaree pour Prepaxia : elle couvre toutes les apps
+      # de l'equipe Apple LD4W7KA5YG.
+      app_store_connect: Prepaxia ASC
+    environment:
+      flutter: 3.38.4
+      xcode: latest
+      cocoapods: default
+      groups:
+        - flora_firebase
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.florahair.floraHairMobile   # = BUNDLE_ID
+      vars:
+        <<: *flora_vars
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: flora-hair/testflight
+          include: true
+      cancel_previous_builds: true
+    scripts:
+      - *flora_firebase_plist
+      - *flora_pub_get
+      - *flora_analyse
+      - *flora_tests
+      - *flora_pods
+      - name: Profils de signature
+        # Certificat Apple Distribution + profil App Store de l'integration ;
+        # ecrit /Users/builder/export_options.plist utilise juste apres.
+        script: xcode-project use-profiles
+      - name: Build IPA
+        # Apple ID de l'app retrouve par son bundle ; numero de build = dernier
+        # build TestFlight + 1 ; version (1.3.0) lue dans pubspec.yaml.
+        script: |
+          set -e
+          APP_ID="${APP_STORE_APPLE_ID:-}"
+          [ -n "$APP_ID" ] || APP_ID=$(app-store-connect apps list \
+              --bundle-id-identifier "$BUNDLE_ID" --json \
+            | python3 -c 'import json,os,sys; d=[a for a in json.load(sys.stdin) if a["attributes"]["bundleId"]==os.environ["BUNDLE_ID"]]; print(d[0]["id"] if d else "")' \
+            || true)
+          if [ -z "$APP_ID" ]; then
+            echo "Aucune app App Store Connect pour $BUNDLE_ID : la creer d'abord (docs/IOS_TESTFLIGHT_CODEMAGIC.md, etape 2)."
+            exit 1
+          fi
+          echo "App Store Connect : app $APP_ID"
+          DERNIER=$(app-store-connect get-latest-testflight-build-number "$APP_ID" || echo 0)
+          flutter build ipa --release \
+            --build-number=$((DERNIER + 1)) \
+            --export-options-plist=/Users/builder/export_options.plist \
+            --obfuscate --split-debug-info=build/symboles
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/symboles/**
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
         submit_to_testflight: false

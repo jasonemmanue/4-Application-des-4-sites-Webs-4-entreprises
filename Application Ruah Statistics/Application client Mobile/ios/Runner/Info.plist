@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Ruah Statistics Mobile</string>
+	<string>Ruah Statistics</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>ruah_statistics_mobile</string>
+	<string>Ruah Statistics</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -28,11 +28,12 @@
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
+
+	<!-- L'app est verrouillée en portrait (SystemChrome dans main.dart) : même
+	     contrainte ici, pour que l'écran de lancement ne pivote pas. -->
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
@@ -41,6 +42,45 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- iPad plein écran : sans cette clé, App Store Connect refuse un binaire
+	     iPad qui n'accepte pas les 4 orientations (ITMS-90474). -->
+	<key>UIRequiresFullScreen</key>
+	<true/>
+
+	<!-- Aucune autorisation (caméra, photos, micro, position) : l'app n'en
+	     utilise aucune. En déclarer une sans s'en servir est un motif de rejet. -->
+
+	<!-- Push (sujet FCM « actualites ») : réveil de l'app pour ranger le
+	     message dans la boîte de notifications. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+
+	<!-- url_launcher : canLaunchUrl() renvoie false pour tout schéma absent
+	     d'ici. WhatsApp, appel et e-mail du cabinet échoueraient sans message. -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>https</string>
+		<string>http</string>
+		<string>tel</string>
+		<string>mailto</string>
+		<string>whatsapp</string>
+	</array>
+
+	<!-- L'API de production est en HTTPS : aucune exception globale. Seul le
+	     backend local (Docker) est autorisé pendant le développement. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+
+	<!-- Aucun chiffrement propriétaire : évite le questionnaire de conformité
+	     export (« Missing Compliance ») à chaque envoi TestFlight. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

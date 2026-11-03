@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 
 import 'notification_inbox.dart';
 
@@ -57,13 +58,31 @@ class PushService {
       await fm.requestPermission(alert: true, badge: true, sound: true);
       FirebaseMessaging.onMessage.listen(_messages.add);
       FirebaseMessaging.onMessageOpenedApp.listen(_opened.add);
-      await fm.subscribeToTopic(newsTopic);
       final initial = await fm.getInitialMessage();
       if (initial != null) _opened.add(initial);
       _ready = true;
+      unawaited(_subscribe(fm));
     } catch (_) {
       _ready = false;
     }
     return _ready;
+  }
+
+  /// Sur iOS, l'abonnement échoue tant qu'Apple n'a pas remis le jeton APNs
+  /// (quelques secondes après l'autorisation, jamais sur simulateur).
+  static Future<void> _subscribe(FirebaseMessaging fm) async {
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      for (var i = 0; i < 20; i++) {
+        try {
+          if (await fm.getAPNSToken() != null) break;
+        } catch (_) {}
+        await Future<void>.delayed(const Duration(seconds: 3));
+      }
+    }
+    try {
+      await fm.subscribeToTopic(newsTopic);
+    } catch (_) {
+      // Pas de jeton (simulateur, autorisation refusée) : pas d'abonnement.
+    }
   }
 }

@@ -3,7 +3,7 @@
 ## Identite du projet
 
 **Nom** : Ruah Statistics Mobile
-**Type** : Application client Flutter (Android)
+**Type** : Application client Flutter (Android, iOS via Codemagic → TestFlight : `docs/IOS_TESTFLIGHT.md`)
 **Entreprise** : RUAH-STATISTICS — Cabinet d'Etudes & Conseil
 **Slogan** : "Cabinet d'etudes et de conseil de reference en Afrique"
 **Localisation** : Abidjan, Cote d'Ivoire (siege) + Dakar, Senegal (bureau regional)

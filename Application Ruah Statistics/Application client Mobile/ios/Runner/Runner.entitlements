@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Builds Debug / Profile : APNs de développement. La capacité « Push
+	     Notifications » doit être cochée sur l'App ID (developer.apple.com). -->
+	<key>aps-environment</key>
+	<string>development</string>
+</dict>
+</plist>
