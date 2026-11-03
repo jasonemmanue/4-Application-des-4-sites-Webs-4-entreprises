@@ -41,6 +41,18 @@ class _PaymentWaitScreenState extends ConsumerState<PaymentWaitScreen> {
   Duration _remaining = ApiConfig.paymentTimeout;
   bool _resending = false;
   bool _expired = false;
+  bool _inAppTab = false;
+
+  /// Referme l'onglet de paiement intégré, le verdict étant connu.
+  Future<void> _closeTab() async {
+    if (!_inAppTab) return;
+    _inAppTab = false;
+    try {
+      if (await supportsCloseForLaunchMode(LaunchMode.inAppBrowserView)) {
+        await closeInAppWebView();
+      }
+    } catch (_) {}
+  }
   String? _notice;
 
   @override
@@ -91,6 +103,7 @@ class _PaymentWaitScreenState extends ConsumerState<PaymentWaitScreen> {
       if (a.status != PaymentStatus.pending) {
         _ticker?.cancel();
         _poller?.cancel();
+        _closeTab();
         await _save(a);
       }
     } catch (_) {
@@ -115,7 +128,18 @@ class _PaymentWaitScreenState extends ConsumerState<PaymentWaitScreen> {
       setState(() => _notice = 'La page de paiement n\'est pas disponible.');
       return;
     }
-    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    // Comme Prepaxia : navigateur intégré (onglet Chrome) pour rester dans
+    // l'application ; il se referme au verdict. Repli : navigateur externe.
+    var ok = false;
+    try {
+      ok = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+      _inAppTab = ok;
+    } catch (_) {}
+    if (!ok) {
+      try {
+        ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } catch (_) {}
+    }
     if (!ok && mounted) {
       setState(() => _notice = 'Impossible d\'ouvrir la page de paiement.');
     }

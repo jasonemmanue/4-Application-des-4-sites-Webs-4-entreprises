@@ -40,6 +40,8 @@ class PaymentService {
         'channel': channel.apiValue,
         'customer_phone': channel == PaymentChannel.card ? '' : phone,
         'window_opened': !channel.usesPush,
+        // Retour sur la page de l'API, qui renvoie dans l'application.
+        'return_to': 'app',
       };
       final res = previousReference == null
           ? await _api.dio.post('/payments/init',

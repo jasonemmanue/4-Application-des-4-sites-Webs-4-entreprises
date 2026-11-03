@@ -1,7 +1,7 @@
 name: chic_residence_mobile
 description: "Chic Residence - Reservation de residences meublees a Abidjan (style Airbnb)."
 publish_to: 'none'
-version: 2.1.0+4
+version: 2.1.1+5
 
 environment:
   sdk: ^3.6.0

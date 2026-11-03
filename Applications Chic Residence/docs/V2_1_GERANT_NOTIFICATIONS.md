@@ -110,6 +110,23 @@ Réglages : clés `auto_cleaning_enabled`, `auto_cleaning_agent_id`,
   sert aux relances et rappels.
 - Mode sombre : segment et puce choisis lisibles (texte blanc).
 
+## Carte bancaire et Wave : retour dans l'application (client 2.1.1)
+
+Après la page Stripe, la passerelle renvoyait le client de l'application sur
+la page « succès » du **site**, faite pour la fenêtre annexe du navigateur : il
+restait bloqué dans le navigateur, loin de l'app. Comme Prepaxia :
+
+- l'app envoie `return_to: "app"` à `POST /payments/init` et `/retry` ;
+- la passerelle renvoie alors sur `GET /payments/retour?r=…` (API), qui
+  vérifie le paiement auprès de GeniusPay, l'applique, et propose « Revenir
+  dans l'application » (lien `chicresidence://paiement`, déclaré dans le
+  manifeste ; `flutter_deeplinking_enabled` à `false` pour que go_router ne le
+  prenne pas pour une route) ;
+- la page de paiement s'ouvre dans un **onglet intégré** (Chrome) et non le
+  navigateur externe ; l'app le referme dès qu'elle lit le verdict.
+
+Le site garde son parcours (`return_to: "site"` par défaut).
+
 ## Coupure et retour du réseau (les 3 apps)
 
 Repris de Prepaxia (`reprise_reseau.dart`), simplifié : bandeau « Hors

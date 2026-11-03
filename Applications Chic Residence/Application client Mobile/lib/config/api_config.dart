@@ -46,7 +46,7 @@ class ApiConfig {
   }
 
   /// Version affichée sur le Profil (à garder alignée sur pubspec.yaml).
-  static const String appVersion = '2.1.0';
+  static const String appVersion = '2.1.1';
 
   /// Timeout par defaut
   static const Duration connectTimeout = Duration(seconds: 15);
