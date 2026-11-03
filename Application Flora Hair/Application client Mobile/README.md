@@ -61,6 +61,8 @@ L'administration (services, reservations, galerie, avis, devis) se fait exclusiv
 
 ## Derniere version
 
+**iOS (TestFlight)** : build par Codemagic, voir [docs/IOS_TESTFLIGHT_CODEMAGIC.md](docs/IOS_TESTFLIGHT_CODEMAGIC.md).
+
 **v1.3.0+4** : notifications push du salon (confirmation, annulation, acompte recu).
 Voir [docs/V1_3_NOTIFICATIONS_PUSH.md](docs/V1_3_NOTIFICATIONS_PUSH.md).
 

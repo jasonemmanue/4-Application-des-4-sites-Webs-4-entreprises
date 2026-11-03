@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Builds Debug/Profile : un appareil de test signé en développement
+	     ne reçoit rien du serveur APNs de production.
+	     La capacité « Push Notifications » doit être cochée sur l'App ID
+	     com.florahair.floraHairMobile (developer.apple.com), et le profil
+	     App Store créé APRÈS. -->
+	<key>aps-environment</key>
+	<string>development</string>
+</dict>
+</plist>

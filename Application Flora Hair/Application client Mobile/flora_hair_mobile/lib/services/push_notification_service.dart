@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 /// Notifications push (FCM), configuration lue dans `google-services.json`.
@@ -32,6 +33,17 @@ class PushNotificationService {
       await Firebase.initializeApp();
       final messaging = FirebaseMessaging.instance;
       await messaging.requestPermission(alert: true, badge: true, sound: true);
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        // iOS n'affiche pas seul une notification reçue application ouverte.
+        await messaging.setForegroundNotificationPresentationOptions(
+            alert: true, badge: true, sound: true);
+        // Le jeton FCM n'existe qu'une fois le jeton APNs d'Apple reçu ;
+        // le demander avant lève « apns-token-not-set ».
+        for (var i = 0; i < 10; i++) {
+          if (await messaging.getAPNSToken() != null) break;
+          await Future<void>.delayed(const Duration(seconds: 1));
+        }
+      }
       FirebaseMessaging.onMessage.listen(_messages.add);
       FirebaseMessaging.onMessageOpenedApp.listen(_messages.add);
       final initial = await messaging.getInitialMessage();
