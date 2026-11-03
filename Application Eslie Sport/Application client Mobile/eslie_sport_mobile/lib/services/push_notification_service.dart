@@ -15,6 +15,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 
+import '../config/firebase_ios_options.dart';
+
 class PushNotificationService {
   PushNotificationService._();
   static final instance = PushNotificationService._();
@@ -29,7 +31,14 @@ class PushNotificationService {
     if (_initialized) return;
     try {
       if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp();
+        if (FirebaseIosOptions.isIos) {
+          // iOS : configuration fournie au build, sinon pas de push.
+          final options = FirebaseIosOptions.current;
+          if (options == null) return;
+          await Firebase.initializeApp(options: options);
+        } else {
+          await Firebase.initializeApp();
+        }
       }
       final messaging = FirebaseMessaging.instance;
       final settings = await messaging.requestPermission(

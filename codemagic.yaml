@@ -1,0 +1,157 @@
+# ═══════════════════════════════════════════════════════════════════════════
+#  Codemagic — depot des 4 applications mobiles (2026-11-03)
+# ═══════════════════════════════════════════════════════════════════════════
+#
+#  Calque sur Prepaxia (Prepaxia Mobile/codemagic.yaml), qui passe TestFlight.
+#  Une branche = un workflow : pousser sur la branche lance le build. Les
+#  branches portent le nom de l'app, pour qu'un push sur une app ne lance
+#  jamais le build d'une autre.
+#
+#    Branche                  Workflow                   Compte Apple ?  Resultat
+#    ───────────────────────  ─────────────────────────  ──────────────  ──────────────────────
+#    eslie/ios-build-check    eslie-ios-build-check      non             compile ? (non signe)
+#    eslie/ios-testflight     eslie-ios-testflight       OUI             IPA envoyee a TestFlight
+#
+#  Routine, depuis la racine du depot :
+#      git push origin main:eslie/ios-build-check     (d'abord, sans Apple)
+#      git push origin main:eslie/ios-testflight
+#
+#  Procedure complete (App ID, app App Store Connect, profil, Firebase) :
+#  Application Eslie Sport/Application client Mobile/eslie_sport_mobile/docs/IOS-TESTFLIGHT.md
+# ═══════════════════════════════════════════════════════════════════════════
+
+definitions:
+  eslie_dossier: &eslie_dossier "Application Eslie Sport/Application client Mobile/eslie_sport_mobile"
+
+  # Meme Flutter qu'en local : un « stable » flottant pourrait casser le build
+  # sans qu'aucune ligne du projet n'ait change.
+  eslie_vars: &eslie_vars
+    BUNDLE_ID: com.esliesport.eslieSportMobile
+
+  scripts:
+    - &eslie_pub_get
+      name: Dependances Flutter
+      script: flutter pub get
+    - &eslie_analyse
+      name: Analyse statique
+      # Seules les vraies erreurs arretent le build, pas les remarques de style.
+      script: flutter analyze lib --no-fatal-infos --no-fatal-warnings
+    - &eslie_tests
+      name: Tests unitaires
+      # Pas test/api_contract_live_test.dart : il interroge l'API de production.
+      script: flutter test test/widget_test.dart
+    - &eslie_pods
+      name: CocoaPods
+      script: |
+        cd ios
+        pod install --repo-update
+
+workflows:
+
+  # ── Eslie Sport · compilation iOS sans signature ─────────────────────────
+  eslie-ios-build-check:
+    name: Eslie Sport · iOS build check
+    max_build_duration: 45
+    instance_type: mac_mini_m2
+    working_directory: *eslie_dossier
+    environment:
+      flutter: 3.38.4
+      xcode: latest
+      cocoapods: default
+      vars:
+        <<: *eslie_vars
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: eslie/ios-build-check
+          include: true
+      cancel_previous_builds: true
+    scripts:
+      - *eslie_pub_get
+      - *eslie_analyse
+      - *eslie_tests
+      - *eslie_pods
+      - name: Build iOS (sans signature)
+        script: flutter build ios --release --no-codesign
+    artifacts:
+      - build/ios/iphoneos/Runner.app
+      - /tmp/xcodebuild_logs/*.log
+
+  # ── Eslie Sport · build signe + TestFlight ───────────────────────────────
+  eslie-ios-testflight:
+    name: Eslie Sport · iOS TestFlight
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    working_directory: *eslie_dossier
+    integrations:
+      # Cle API App Store Connect deja declaree dans Codemagic pour Prepaxia :
+      # une cle d'equipe couvre toutes les apps de l'equipe LD4W7KA5YG. Si Eslie
+      # Sport est publiee sous un AUTRE compte Apple, ajouter sa cle dans
+      # Codemagic et mettre son nom ici.
+      app_store_connect: Prepaxia ASC
+    environment:
+      flutter: 3.38.4
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.esliesport.eslieSportMobile   # = BUNDLE_ID
+      # Push iOS : creer dans Codemagic le groupe de variables `eslie_firebase`
+      # (FIREBASE_IOS_API_KEY, FIREBASE_IOS_APP_ID), puis retirer les # des deux
+      # lignes suivantes. Un groupe absent fait echouer le build : sans lui,
+      # l'app part sur TestFlight, simplement sans push.
+      # groups:
+      #   - eslie_firebase
+      vars:
+        <<: *eslie_vars
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: eslie/ios-testflight
+          include: true
+      cancel_previous_builds: true
+    scripts:
+      - *eslie_pub_get
+      - *eslie_analyse
+      - *eslie_tests
+      - *eslie_pods
+      - name: Profils de signature
+        # Certificat Apple Distribution + profil App Store de l'integration ;
+        # ecrit /Users/builder/export_options.plist utilise juste apres.
+        script: xcode-project use-profiles
+      - name: Build IPA
+        # Numero de build = dernier build TestFlight + 1 (Apple refuse un numero
+        # deja utilise). La version (1.2.0...) vient de pubspec.yaml.
+        # L'Apple ID de l'app est retrouve par son bundle : rien a recopier ici.
+        script: |
+          set -e
+          # APP_STORE_APPLE_ID (Apple ID numerique de l'app, facultatif) court-circuite
+          # la recherche si elle echoue.
+          APP_ID="${APP_STORE_APPLE_ID:-}"
+          [ -n "$APP_ID" ] || APP_ID=$(app-store-connect apps list \
+              --bundle-id-identifier "$BUNDLE_ID" --strict-match-identifier --json \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[0]["id"] if d else "")' \
+            || true)
+          if [ -z "$APP_ID" ]; then
+            echo "Aucune app App Store Connect pour $BUNDLE_ID : la creer d'abord (docs/IOS-TESTFLIGHT.md, etape 3)."
+            exit 1
+          fi
+          DERNIER=$(app-store-connect get-latest-testflight-build-number "$APP_ID" || echo 0)
+          flutter build ipa --release \
+            --build-number=$((DERNIER + 1)) \
+            --export-options-plist=/Users/builder/export_options.plist \
+            --dart-define=FIREBASE_IOS_API_KEY="${FIREBASE_IOS_API_KEY:-}" \
+            --dart-define=FIREBASE_IOS_APP_ID="${FIREBASE_IOS_APP_ID:-}" \
+            --obfuscate --split-debug-info=build/symboles
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/symboles/**
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        # false : le build arrive dans TestFlight pour le test INTERNE sans revue
+        # beta d'Apple. true seulement pour des testeurs externes.
+        submit_to_testflight: false

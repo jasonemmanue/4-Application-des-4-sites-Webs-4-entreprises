@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Builds Debug / Profile : APNs de developpement.
+	     La capacite « Push Notifications » doit etre cochee sur l'App ID
+	     com.esliesport.eslieSportMobile AVANT de creer le profil App Store,
+	     sinon la signature echoue (profil sans aps-environment). -->
+	<key>aps-environment</key>
+	<string>development</string>
+</dict>
+</plist>
