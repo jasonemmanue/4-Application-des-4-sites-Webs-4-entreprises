@@ -491,3 +491,189 @@ workflows:
       app_store_connect:
         auth: integration
         submit_to_testflight: false
+
+  # ═════════════════════════════════════════════════════════════════════════
+  #  Chic Résidence — bloc autonome (aucune ancre partagée avec les autres apps)
+  #
+  #    chic/ios-build-check          chic-ios-build-check          sans Apple  compile les 3 (non signé)
+  #    chic-client/ios-testflight    chic-client-ios-testflight    Apple       IPA client → TestFlight
+  #    chic-gestion/ios-testflight   chic-gestion-ios-testflight   Apple       IPA gestionnaire → TestFlight
+  #    chic-admin/ios-testflight     chic-admin-ios-testflight     Apple       IPA backoffice → TestFlight
+  #
+  #  Routine, depuis la racine du dépôt :
+  #      git push origin main:chic/ios-build-check      (d'abord, sans Apple)
+  #      git push origin main:chic-client/ios-testflight
+  #
+  #  Firebase iOS : groupe de variables `chic_residence_firebase`
+  #  (FIREBASE_IOS_API_KEY, FIREBASE_IOS_APP_ID_CLIENT / _GESTIONNAIRE /
+  #  _BACKOFFICE), passées en --dart-define : aucun GoogleService-Info.plist
+  #  dans le projet Xcode.
+  #  Procédure : Applications Chic Residence/docs/IOS_TESTFLIGHT.md
+  # ═════════════════════════════════════════════════════════════════════════
+
+  chic-ios-build-check:
+    name: Chic Résidence · iOS build check (3 apps)
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    environment:
+      flutter: 3.38.4
+      xcode: latest
+      cocoapods: default
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: chic/ios-build-check
+          include: true
+      cancel_previous_builds: true
+    scripts:
+      - name: Client, gestionnaire et backoffice sans signature
+        script: |
+          set -e
+          for APP in "Application client Mobile" \
+                     "Application gestionnaire Mobile" \
+                     "Application Backoffice Mobile(Gestionnaire visualisation)"; do
+            echo "════ $APP"
+            cd "$CM_BUILD_DIR/Applications Chic Residence/$APP"
+            flutter pub get
+            flutter analyze lib --no-fatal-infos --no-fatal-warnings
+            flutter test
+            (cd ios && pod install --repo-update)
+            flutter build ios --release --no-codesign
+          done
+    artifacts:
+      - /tmp/xcodebuild_logs/*.log
+
+  chic-client-ios-testflight:
+    name: Chic Résidence · Client · iOS TestFlight
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    working_directory: Applications Chic Residence/Application client Mobile
+    integrations:
+      # Clé d'équipe déjà déclarée pour Prepaxia (équipe LD4W7KA5YG), comme les
+      # autres apps du dépôt. Autre compte Apple : sa clé ici.
+      app_store_connect: Prepaxia ASC
+    environment:
+      flutter: 3.38.4
+      xcode: latest
+      cocoapods: default
+      groups:
+        - chic_residence_firebase
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.chicresidence.chicResidenceMobile   # = BUNDLE_ID
+      vars:
+        BUNDLE_ID: com.chicresidence.chicResidenceMobile
+        CHIC_FIREBASE_APP: CLIENT
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: chic-client/ios-testflight
+          include: true
+      cancel_previous_builds: true
+    scripts: &chic_testflight_scripts
+      - name: Dépendances Flutter
+        script: flutter pub get
+      - name: Analyse statique
+        script: flutter analyze lib --no-fatal-infos --no-fatal-warnings
+      - name: Tests
+        script: flutter test
+      - name: CocoaPods
+        script: cd ios && pod install --repo-update
+      - name: Profils de signature
+        # Certificat Apple Distribution + profil App Store de l'intégration ;
+        # écrit /Users/builder/export_options.plist utilisé juste après.
+        script: xcode-project use-profiles
+      - name: Build IPA
+        # Numéro de build = dernier TestFlight + 1 ; version : pubspec.yaml.
+        # L'app est retrouvée par son bundle (APP_STORE_APPLE_ID la force).
+        script: |
+          set -e
+          APP_ID="${APP_STORE_APPLE_ID:-}"
+          [ -n "$APP_ID" ] || APP_ID=$(app-store-connect apps list \
+              --bundle-id-identifier "$BUNDLE_ID" --json \
+            | python3 -c 'import json,os,sys; d=[a for a in json.load(sys.stdin) if a["attributes"]["bundleId"]==os.environ["BUNDLE_ID"]]; print(d[0]["id"] if d else "")' \
+            || true)
+          if [ -z "$APP_ID" ]; then
+            echo "Aucune app App Store Connect pour $BUNDLE_ID : la créer d'abord (docs/IOS_TESTFLIGHT.md, étape 2)."
+            exit 1
+          fi
+          echo "App Store Connect : app $APP_ID"
+          # Identifiant Firebase propre à l'app (groupe chic_residence_firebase).
+          FIREBASE_APP_VAR="FIREBASE_IOS_APP_ID_${CHIC_FIREBASE_APP}"
+          DERNIER=$(app-store-connect get-latest-testflight-build-number "$APP_ID" || echo 0)
+          flutter build ipa --release \
+            --build-number=$((DERNIER + 1)) \
+            --export-options-plist=/Users/builder/export_options.plist \
+            --dart-define=FIREBASE_IOS_API_KEY="${FIREBASE_IOS_API_KEY:-}" \
+            --dart-define=FIREBASE_IOS_APP_ID="${!FIREBASE_APP_VAR:-}" \
+            --dart-define=FIREBASE_IOS_BUNDLE_ID="$BUNDLE_ID"
+    artifacts: &chic_testflight_artifacts
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing: &chic_testflight_publishing
+      app_store_connect:
+        auth: integration
+        # false : TestFlight en test INTERNE, sans revue bêta d'Apple.
+        submit_to_testflight: false
+
+  chic-gestion-ios-testflight:
+    name: Chic Résidence · Gestionnaire · iOS TestFlight
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    working_directory: Applications Chic Residence/Application gestionnaire Mobile
+    integrations:
+      app_store_connect: Prepaxia ASC
+    environment:
+      flutter: 3.38.4
+      xcode: latest
+      cocoapods: default
+      groups:
+        - chic_residence_firebase
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.chicresidence.chicResidenceGestionnaire   # = BUNDLE_ID
+      vars:
+        BUNDLE_ID: com.chicresidence.chicResidenceGestionnaire
+        CHIC_FIREBASE_APP: GESTIONNAIRE
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: chic-gestion/ios-testflight
+          include: true
+      cancel_previous_builds: true
+    scripts: *chic_testflight_scripts
+    artifacts: *chic_testflight_artifacts
+    publishing: *chic_testflight_publishing
+
+  chic-admin-ios-testflight:
+    name: Chic Résidence · Backoffice · iOS TestFlight
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    working_directory: Applications Chic Residence/Application Backoffice Mobile(Gestionnaire visualisation)
+    integrations:
+      app_store_connect: Prepaxia ASC
+    environment:
+      flutter: 3.38.4
+      xcode: latest
+      cocoapods: default
+      groups:
+        - chic_residence_firebase
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.chicresidence.chicResidenceBackoffice   # = BUNDLE_ID
+      vars:
+        BUNDLE_ID: com.chicresidence.chicResidenceBackoffice
+        CHIC_FIREBASE_APP: BACKOFFICE
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: chic-admin/ios-testflight
+          include: true
+      cancel_previous_builds: true
+    scripts: *chic_testflight_scripts
+    artifacts: *chic_testflight_artifacts
+    publishing: *chic_testflight_publishing

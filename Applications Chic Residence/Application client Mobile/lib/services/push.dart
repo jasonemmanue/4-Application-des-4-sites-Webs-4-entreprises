@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -24,7 +25,7 @@ class PushService {
   static Future<bool> init() async {
     if (_ready) return true;
     try {
-      await Firebase.initializeApp();
+      await Firebase.initializeApp(options: _iosOptions());
       final fm = FirebaseMessaging.instance;
       await fm.requestPermission(alert: true, badge: true, sound: true);
       FirebaseMessaging.onMessage.listen(_messages.add);
@@ -36,6 +37,24 @@ class PushService {
       _ready = false;
     }
     return _ready;
+  }
+
+  /// iOS : pas de `GoogleService-Info.plist` dans le dépôt (comme le
+  /// `google-services.json` d'Android, il reste hors de Git). Les identifiants
+  /// arrivent au build par Codemagic. Android lit `google-services.json`.
+  static FirebaseOptions? _iosOptions() {
+    if (!Platform.isIOS) return null;
+    const apiKey = String.fromEnvironment('FIREBASE_IOS_API_KEY');
+    const appId = String.fromEnvironment('FIREBASE_IOS_APP_ID');
+    if (apiKey.isEmpty || appId.isEmpty) return null;
+    return const FirebaseOptions(
+      apiKey: apiKey,
+      appId: appId,
+      messagingSenderId: '1053030542423',
+      projectId: 'chic-residence-meuble',
+      storageBucket: 'chic-residence-meuble.firebasestorage.app',
+      iosBundleId: String.fromEnvironment('FIREBASE_IOS_BUNDLE_ID'),
+    );
   }
 
   static Future<String?> token() async {

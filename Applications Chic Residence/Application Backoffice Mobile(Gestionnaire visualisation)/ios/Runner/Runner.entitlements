@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Notifications push. La capacité « Push Notifications » doit aussi être
+	     cochée sur l'App ID (developer.apple.com) AVANT de créer le profil.
+	     Debug : profil de développement, serveur APNs de développement. -->
+	<key>aps-environment</key>
+	<string>development</string>
+</dict>
+</plist>
